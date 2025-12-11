@@ -4,6 +4,14 @@ import { warn } from "console";
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
+    screens: {
+      'sx': '320px',
+      'sm': '640px', 
+      'md': '768px',
+      'lg': '1152px',
+      'xl': '1440px',
+      '2xl': '1920px',
+    },
     extend: {
       colors: {
         primary: {
@@ -47,6 +55,8 @@ export default {
       fontFamily: {
         sans: ['"Roboto"', "sans-serif"],
       },
+
+
     },
   },
   plugins: [],
