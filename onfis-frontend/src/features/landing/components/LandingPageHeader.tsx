@@ -72,33 +72,33 @@ export default function LandingPageHeader() {
       <div className="hidden md:flex paragraph-p2-medium gap-4">
         {/* Language button */}
         <Dropdown
-            isOpen={openDropdown === 'language'}
-            widthClass="w-full" 
-            trigger={
-              <button 
-                onClick={() => handleToggleDropdown('language')} 
-                className={`
-                  px-[15px] py-2.5 bg-transparent flex justify-center items-center gap-4 border-2 rounded-[8px] relative cursor-pointer transition text-neutral-900
-                `}
-              >
-                <div className="flex gap-1.5">
-                  <LanguageOutlined />
-                  {language}
-                </div>
-                {openDropdown === 'language' ? <KeyboardArrowUpOutlined /> : <KeyboardArrowDownOutlined />}
-              </button>
-            }
-          >
-            {languages.map((language, index) => (
-              <button 
-                key={index} 
-                onClick={() => handleLanguageOption(language.code)} 
-                className="block w-full text-left px-4 py-2 text-neutral-900 hover:bg-neutral-200 transition cursor-pointer" 
-              >
-                {language.title}
-              </button>
-            ))}
-          </Dropdown>
+          isOpen={openDropdown === 'language'}
+          widthClass="w-full" 
+          trigger={
+            <button 
+              onClick={() => handleToggleDropdown('language')} 
+              className={`
+                px-[15px] py-2.5 bg-transparent flex justify-center items-center gap-4 border-2 rounded-[8px] relative cursor-pointer transition text-neutral-900
+              `}
+            >
+              <div className="flex gap-1.5">
+                <LanguageOutlined />
+                {language}
+              </div>
+              {openDropdown === 'language' ? <KeyboardArrowUpOutlined /> : <KeyboardArrowDownOutlined />}
+            </button>
+          }
+        >
+          {languages.map((language, index) => (
+            <button 
+              key={index} 
+              onClick={() => handleLanguageOption(language.code)} 
+              className="block w-full text-left px-4 py-2 text-neutral-900 hover:bg-neutral-200 transition cursor-pointer" 
+            >
+              {language.title}
+            </button>
+          ))}
+        </Dropdown>
 
         {/* Login button */}
         <button className="px-5 rounded-[8px] bg-transparent hover:bg-neutral-200 text-primary border border-primary transition cursor-pointer">
@@ -109,7 +109,6 @@ export default function LandingPageHeader() {
         <button className="px-5 rounded-[8px] bg-primary hover:bg-primary-hover text-neutral-50 border transition cursor-pointer flex items-center gap-1">
           Try for free <span><ArrowRightAltOutlined /></span>
         </button>
-
       </div>
 
       {/* Mobile - Log in/Sign up/Language buttons*/}
@@ -172,6 +171,16 @@ export default function LandingPageHeader() {
               </button>
             ))}
           </Dropdown>
+          
+          {/* Login button */}
+          <button className="px-5 rounded-[8px] bg-transparent hover:bg-neutral-200 text-primary border border-primary transition cursor-pointer">
+            Login
+          </button>
+
+          {/* Sign up button */}
+          <button className="px-5 rounded-[8px] bg-primary hover:bg-primary-hover text-neutral-50 border transition cursor-pointer flex items-center gap-1">
+            Try for free <span><ArrowRightAltOutlined /></span>
+          </button>
         </div>
       </div>
     </div>
