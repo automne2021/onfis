@@ -40,7 +40,7 @@ export default function LandingPageHeader() {
   }
 
   return(
-    <div className={`fixed flex items-center justify-between w-full h-[64px] px-4 md:px-5 xl:px-8 2xl:px-[220px] py-4 transition-all duration-300 ease-in-out bg-neutral-50 shadow-md`}>
+    <header className={`fixed top-0 z-50 flex items-center justify-between w-full h-[64px] px-4 md:px-5 xl:px-8 2xl:px-[220px] py-4 transition-all duration-300 ease-in-out bg-neutral-50 shadow-md`}>
       {/* Logo */}
       <div>
         <Link to={`/`}>
@@ -189,6 +189,6 @@ export default function LandingPageHeader() {
           </div>
         </div>
       </div>
-    </div>
+    </header>
   )
 }
