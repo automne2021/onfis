@@ -1,0 +1,65 @@
+# Node.js Frontend
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+.env.local
+.env.*.local
+
+# Java Backend
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+.mvn/
+.settings/
+.classpath
+.project
+.factorypath
+*.iml
+.idea/
+*.iws
+*.ipr
+
+# Spring Boot
+HELP.md
+.gradle
+build/
+
+# Docker
+docker-compose.override.yml
+
+# Environment
+.env
+.env.production
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+coverage/
+*.lcov
+
+# Build outputs
+*.out
