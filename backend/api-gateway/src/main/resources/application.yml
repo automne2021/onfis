@@ -1,0 +1,86 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: 
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowed-headers:
+              - "*"
+            allow-credentials: true
+      routes:
+        # User Service Routes
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/**,/api/auth/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            
+        # Project Service Routes
+        - id: project-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/projects/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            
+        # Position Service Routes
+        - id: position-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/positions/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            
+        # Admin Service Routes
+        - id: admin-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            
+        # Chat Service Routes
+        - id: chat-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/chat/**,/ws/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            
+        # Announcement Service Routes
+        - id: announcement-service
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/announcements/**
+          filters:
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
