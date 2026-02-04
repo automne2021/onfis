@@ -28,7 +28,8 @@ export default function Dropdown({
         leaveFrom="opacity-100 translate-y-0"
         leaveTo="opacity-0 -translate-y-2"
       >
-        <div className={`absolute right-0 mt-2 ${widthClass} origin-top-right rounded-md bg-card shadow-lg hover:bg-neutral-200 transition focus:outline-none`}>
+        {/* <div className={`absolute right-0 mt-2 ${widthClass} origin-top-right rounded-md bg-white shadow-lg ${isButton && 'hover:bg-neutral-200 transition'} focus:outline-none`}> */}
+        <div className={`absolute right-0 mt-2 ${widthClass} origin-top-right rounded-md bg-white shadow-lg focus:outline-none`}>
           <div className="py-1">
             {children}
           </div>
