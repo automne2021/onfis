@@ -1,5 +1,5 @@
 interface ContentListProps {
-  data?: string[] | null; 
+  data?: React.ReactNode[] | null; 
   emptyLabel: string;
 }
 
