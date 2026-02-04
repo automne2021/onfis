@@ -1,9 +1,15 @@
-interface ContentListProps {
-  data?: React.ReactNode[] | null; 
-  emptyLabel: string;
+export interface ContentItem {
+  content: React.ReactNode
+  onClick?: () => void
 }
 
-export function ContentList({ data, emptyLabel }: ContentListProps) {
+interface ContentListProps {
+  data?: ContentItem[] | null; 
+  emptyLabel: string;
+  onItemClick?: () => void;
+}
+
+export function ContentList({ data, emptyLabel, onItemClick }: ContentListProps) {
   if (!data || data.length === 0) {
     return <div className="p-4 text-sm text-neutral-500 italic">{emptyLabel}</div>;
   }
@@ -13,9 +19,13 @@ export function ContentList({ data, emptyLabel }: ContentListProps) {
       {data.map((item, index) => (
         <li 
           key={index}
+          onClick={() => {
+            item.onClick?.()  // Chạy logic riêng của item này
+            onItemClick?.()   // Chạy logic chung (Đóng Menu) 
+          }}
           className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200 cursor-pointer transition-colors border-b border-neutral-50 last:border-none"
         >
-          {item}
+          {item.content}
         </li>
       ))}
     </ul>

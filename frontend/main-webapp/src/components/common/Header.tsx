@@ -6,39 +6,55 @@ import logo from "../../assets/logo-without-text.svg"
 import userProfileImg from "../../assets/images/user-profile-img.png"
 import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
-import { ContentList } from './Dropdown/ContentList';
+import { ContentList, type ContentItem } from './Dropdown/ContentList';
 
 interface HeaderProps {
   companyName: string
   userImg?: string
-  messageContents?: string[] | null
-  notificationContents?: string[] | null
+  messageContents?: ContentItem[] | null
+  notificationContents?: ContentItem[] | null
 }
 
-
 export function Header({ companyName, userImg, messageContents, notificationContents }: HeaderProps){
+
+  // States management
+  const [activeMenu, setActiveMenu] = useState<string|null>(null)
+
+  // Functions
+  const toggleMenu = (menuId: string) => {
+    setActiveMenu(activeMenu === menuId ? null : menuId)
+  }
+
+  const closeMenu = () => setActiveMenu(null); 
+
   // Data 
   const avatarImg = userImg? userImg : userProfileImg
   const iconButtons = [
     {
       id: 'chat',
       icon: <Chat />,
-      content: <ContentList data={messageContents} emptyLabel='No messages available' />
+      content: <ContentList data={messageContents} emptyLabel='No messages available' onItemClick={closeMenu}/>
     }, 
     {
       id: 'noti',
       icon: <Notifications />,
-      content: <ContentList data={notificationContents} emptyLabel='No notifications available' />
+      content: <ContentList data={notificationContents} emptyLabel='No notifications available' onItemClick={closeMenu}/>
     }
   ] 
-  const profileContents = ["User Profile", "Settings", "Log out"]
-
-  // States management
-  const [activeMenu, setActiveMenu] = useState<string|null>(null)
-
-  const toggleMenu = (menuId: string) => {
-    setActiveMenu(activeMenu === menuId ? null : menuId)
-  }
+  const profileContents: ContentItem[] = [
+    {
+      content: "User Profile",
+      onClick: () => console.log("User profile")
+    }, 
+    {
+      content: "Settings",
+      onClick: () => console.log("Settings")
+    }, 
+    {
+      content: "Log out",
+      onClick: () => console.log("Log out")
+    }, 
+  ]
 
   return(
     <header className="fixed top-0 z-50 flex items-center justify-between w-full h-[60px] px-4 md:px-5 xl:px-8 2xl:px-[220px] py-4 transition-all duration-300 ease-in-out bg-white shadow-md shadow-neutral-200">
@@ -81,7 +97,13 @@ export function Header({ companyName, userImg, messageContents, notificationCont
                 />
             </div>
           }
-          children={<ContentList data={profileContents} emptyLabel=''/>}
+          children={
+            <ContentList 
+              data={profileContents} 
+              emptyLabel=''
+              onItemClick={closeMenu}
+            />
+          }
           widthClass='w-32'
         />
       </div>
