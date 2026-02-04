@@ -41,7 +41,7 @@ export function Header({ companyName, userImg, messageContents, notificationCont
   }
 
   return(
-    <header className="fixed top-0 z-50 flex items-center justify-between w-full h-[60px] px-4 md:px-5 xl:px-8 2xl:px-[220px] py-4 transition-all duration-300 ease-in-out bg-neutral-50 shadow-md shadow-neutral-200">
+    <header className="fixed top-0 z-50 flex items-center justify-between w-full h-[60px] px-4 md:px-5 xl:px-8 2xl:px-[220px] py-4 transition-all duration-300 ease-in-out bg-white shadow-md shadow-neutral-200">
       {/* Left side - Logo */}
       <div className="flex items-center gap-4">
         <img src={logo} alt="Logo" className="text-primary"/>
