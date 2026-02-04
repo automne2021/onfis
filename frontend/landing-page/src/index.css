@@ -1,68 +1,87 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+html {
+  scroll-behavior: smooth;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer base{
+  body {
+    @apply font-sans text-neutral-900 bg-neutral-50;
   }
-  a:hover {
-    color: #747bff;
+}
+
+/* COMPONENTS */
+@layer components {
+  /* --- HEADLINES --- */
+  /* Format: Font-Weight Size / Line-Height */
+  
+  .header-h1 {
+    @apply font-bold text-[72px] leading-[76px];
   }
-  button {
-    background-color: #f9f9f9;
+
+  .header-h2 {
+    @apply font-bold text-[64px] leading-[76px];
+  }
+
+  .header-h3 {
+    @apply font-bold text-[42px] leading-[76px];
+  }
+
+  .header-h4 {
+    @apply font-bold text-[36px] leading-[76px];
+  }
+
+  .header-h5 {
+    @apply font-bold text-[28px] leading-[76px];
+  }
+
+  .header-h6 {
+    @apply font-bold text-[22px] leading-[76px];
+  }
+
+  /* --- BODY TEXT: REGULAR --- */
+  
+  /* Body 1: Regular, 18/28 */
+  .body-1-regular {
+    @apply font-normal text-[18px] leading-[28px];
+  }
+
+  /* Body 2: Regular, 16/24 */
+  .body-2-regular {
+    @apply font-normal text-[16px] leading-[24px];
+  }
+
+  /* Body 3: Regular, 14/20 */
+  .body-3-regular {
+    @apply font-normal text-[14px] leading-[20px];
+  }
+
+  /* Body 4: Regular, 12/16 */
+  .body-4-regular {
+    @apply font-normal text-[12px] leading-[16px];
+  }
+
+  /* --- BODY TEXT: MEDIUM --- */
+
+  /* Body 1: Medium, 18/28 */
+  .body-1-medium {
+    @apply font-medium text-[18px] leading-[28px];
+  }
+
+  /* Body 2: Medium, 16/24 */
+  .body-2-medium {
+    @apply font-medium text-[16px] leading-[24px];
+  }
+
+  /* Body 3: Medium, 14/20 */
+  .body-3-medium {
+    @apply font-medium text-[14px] leading-[20px];
+  }
+
+  /* Body 4: Medium, 12/16 */
+  .body-4-medium {
+    @apply font-medium text-[12px] leading-[16px];
   }
 }
