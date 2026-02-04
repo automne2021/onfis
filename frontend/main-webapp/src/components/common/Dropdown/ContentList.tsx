@@ -13,7 +13,7 @@ export function ContentList({ data, emptyLabel }: ContentListProps) {
       {data.map((item, index) => (
         <li 
           key={index}
-          className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 cursor-pointer transition-colors border-b border-neutral-50 last:border-none"
+          className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200 cursor-pointer transition-colors border-b border-neutral-50 last:border-none"
         >
           {item}
         </li>
