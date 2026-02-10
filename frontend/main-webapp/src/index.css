@@ -87,11 +87,11 @@ html {
 
   /* --- SECTION --- */
   .onfis-section {
-    @apply w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] pt-[60px] flex items-center bg-neutral-50;
+    @apply w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] py-[60px] flex justify-center bg-neutral-50 flex-col;
   }
 
   /* --- NAVBAR --- */
   .navbar-style {
-    @apply w-full px-10 py-3 mt-6 mx-4 md:mx-5 xl:mx-8 2xl:mx-[220px] flex items-center bg-white rounded-[20px] shadow-md shadow-neutral-200 flex items-center justify-between;
+    @apply w-full px-10 py-3 mt-6 flex items-center bg-white rounded-[20px] shadow-md shadow-neutral-200 flex items-center justify-between;
   }
 }

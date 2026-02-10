@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
+import { FilterList } from '@mui/icons-material';
 
 import Dropdown from "../../../components/common/Dropdown/Dropdown";
-import { FilterButton } from "../../../components/common/Buttons/FilterButton";
+import { Button } from "../../../components/common/Buttons/Button";
 import { ContentList, type ContentItem } from "../../../components/common/Dropdown/ContentList";
+import { SearchBar, type SearchResult } from "../../../components/common/SearchBar";
 
 export function Navbar() {
 
   // States management
-  const [activeMenu, setActiveMenu] = useState<string|null>(null)
+  const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
   // Data
   const filterContents: ContentItem[] = [
@@ -33,6 +36,22 @@ export function Navbar() {
 
   const closeMenu = () => setActiveMenu(null)
 
+  const handleSearchResultClick = (item: SearchResult) => {
+    console.log("Navigate to: ", item.url)
+    // Can use router.push(item.url)
+    closeMenu()
+    setSearchResults([])
+  }
+
+  const searchContentItem: ContentItem[] = searchResults.slice(0,5).map(item => ({
+    content: item.title,
+    onClick: () => handleSearchResultClick(item)
+  }))
+
+  const handleSearchData = useCallback((results: SearchResult[]) => {
+    setSearchResults(results);
+  }, []);
+
   return(
     <nav className="navbar-style">
       {/* Tên */}
@@ -41,17 +60,41 @@ export function Navbar() {
       </p>
 
       {/* Search bar */}
-
+      <Dropdown
+        isOpen={activeMenu === 'search'}
+        trigger={
+          <div onClick={() => setActiveMenu('search')}>
+            <SearchBar 
+              scope="announcement" 
+              onSearch={handleSearchData}
+            />
+          </div>
+        }
+        children={
+          <ContentList 
+            data={searchContentItem}
+            emptyLabel="No result available"
+            onItemClick={closeMenu}
+          />
+        }
+        widthClass="w-full"
+        onClose={closeMenu}
+      />
 
       {/* Filter */}
       <Dropdown 
         isOpen={activeMenu === 'filter'}
         trigger={
-          <FilterButton
+          <Button
+            title="Filter"
+            iconLeft={<FilterList />}
             onClick={() => toggleMenu('filter')}
+            style='sub'
+            textStyle="body-2-medium"
           />
         }
         children={<ContentList data={filterContents} emptyLabel="" onItemClick={closeMenu}/>}
+        onClose={() => setActiveMenu(null)}
       />
       
     </nav>
