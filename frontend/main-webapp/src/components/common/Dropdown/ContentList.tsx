@@ -15,7 +15,7 @@ export function ContentList({ data, emptyLabel, onItemClick }: ContentListProps)
   }
 
   return (
-    <ul className="py-1 max-h-64 overflow-y-auto scrollbar-thin"> 
+    <ul className="py-1 max-h-48 overflow-y-auto scrollbar-thin"> 
       {data.map((item, index) => (
         <li 
           key={index}

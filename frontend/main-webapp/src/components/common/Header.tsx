@@ -10,12 +10,12 @@ import { ContentList, type ContentItem } from './Dropdown/ContentList';
 
 interface HeaderProps {
   companyName: string
-  userImg?: string
+  avatarUrl?: string
   messageContents?: ContentItem[] | null
   notificationContents?: ContentItem[] | null
 }
 
-export function Header({ companyName, userImg, messageContents, notificationContents }: HeaderProps){
+export function Header({ companyName, avatarUrl, messageContents, notificationContents }: HeaderProps){
 
   // States management
   const [activeMenu, setActiveMenu] = useState<string|null>(null)
@@ -28,7 +28,7 @@ export function Header({ companyName, userImg, messageContents, notificationCont
   const closeMenu = () => setActiveMenu(null); 
 
   // Data 
-  const avatarImg = userImg? userImg : userProfileImg
+  const avatarImg = avatarUrl? avatarUrl : userProfileImg
   const iconButtons = [
     {
       id: 'chat',
@@ -79,6 +79,7 @@ export function Header({ companyName, userImg, messageContents, notificationCont
               />
             }
             children={item.content}
+            onClose={() => setActiveMenu(null)}
           />
         )) }
 
@@ -87,8 +88,8 @@ export function Header({ companyName, userImg, messageContents, notificationCont
           isOpen={activeMenu === 'profile'}
           trigger={
             <div 
-            onClick={() => toggleMenu('profile')}
-            className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => toggleMenu('profile')}
+              className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
             >
               <img 
                 src={avatarImg}
@@ -105,6 +106,7 @@ export function Header({ companyName, userImg, messageContents, notificationCont
             />
           }
           widthClass='w-32'
+          onClose={() => setActiveMenu(null)}
         />
       </div>
 
