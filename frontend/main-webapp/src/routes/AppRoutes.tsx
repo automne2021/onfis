@@ -3,6 +3,7 @@ import AuthLayout from '../layouts/AuthLayout';
 import MainLayout from '../layouts/MainLayout';
 
 import { Announcement } from '../features/announcements/pages/Announcement';
+import { AnnouncementDetail } from '../features/announcements/pages/AnnouncementDetail';
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -11,7 +12,9 @@ export const router = createBrowserRouter(
         <Route path="login" />
       </Route>
       <Route path="/" element={<MainLayout />}>
-        <Route path="announcement" element={<Announcement />}>
+        <Route path="announcement">
+          <Route index element={<Announcement />} />
+          <Route path=':id/:slug' element={<AnnouncementDetail />}/>
         </Route>
         <Route path="register" />
       </Route>
