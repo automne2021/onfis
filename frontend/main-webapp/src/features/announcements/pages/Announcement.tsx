@@ -34,24 +34,44 @@ export function Announcement() {
   }
 
   const filteredAnnouncement = useMemo(() => {
-    return MOCK_ANNOUNCEMENTS.filter((item) => {
+    // Lọc dữ liệu theo Tab (View)
+    const filtered = MOCK_ANNOUNCEMENTS.filter((item) => {
       switch (currentView) {
-        case 'all':
-          return true
-        
         case 'company':
           return item.scope === 'company'
-
         case 'department':
           return item.scope === 'department'
-
         case 'pinned':
           return item.isPinned === true
-
+        case 'all':
         default:
           return true
       }
-    })
+    });
+
+    // Duyệt qua mảng đã lọc để tính toán số Like và Comment
+    return filtered.map((item) => {
+      // Tính tổng số Like
+      const calculatedLikes = Array.isArray(item.likes) 
+        ? item.likes.length 
+        : 0;
+
+      // Tính tổng số Comment + Replies
+      let calculatedComments = 0;
+      if (item.comments && Array.isArray(item.comments)) {
+        calculatedComments = item.comments.reduce((total, comment) => {
+          const repliesCount = comment.replies ? comment.replies.length : 0;
+          return total + 1 + repliesCount;
+        }, 0);
+      }
+
+      // Trả về item gốc kèm theo 2 biến mới chứa kết quả đã tính
+      return {
+        ...item,
+        calculatedLikes,
+        calculatedComments
+      };
+    });
   }, [currentView])
 
   return(
@@ -88,9 +108,10 @@ export function Announcement() {
                 <AnnouncementCard
                   key={item.id}
                   id={item.id}
+                  authId={item.authId}
                   authName={item.authName}
                   position={item.position}
-                  time={item.time}
+                  date={item.date}
                   avatarUrl={item.avatarUrl}
                   isPinned={item.isPinned}
                   scope={item.scope}
@@ -99,8 +120,8 @@ export function Announcement() {
                   content={item.content}
                   attachments={item.attachments}
                   initialIsLike={item.initialIsLike}
-                  numberOfLike={item.numberOfLike}
-                  numberOfComments={item.numberOfComments}
+                  numberOfLike={item.calculatedLikes}
+                  numberOfComments={item.calculatedComments}
                   onToggleLike={handleLike}
                   onToggleComment={handleComment}
                 />
