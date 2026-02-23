@@ -6,6 +6,8 @@ interface TabItemProps {
   id: string
   label: string
   icon?: React.ReactNode
+  isLock?: boolean
+  isDisplay?: boolean
 }
 
 interface TabGroupProps {
@@ -31,15 +33,17 @@ export function TabGroup({ tabItems } : TabGroupProps) {
 
   return(
     <div className='flex'>
-      {tabItems.map((item) => (
+      {tabItems.map((item) => {
+        return item.isDisplay && (
         <Tab
           key={item.id}
           label={item.label}
           icon={item.icon}
           isActive={currentTab === item.id}
           onClick={() => handleTabChange(item.id)}
+          isLock={item.isLock}
         />
-      ))}
+      )})}
     </div>
   )
 }
