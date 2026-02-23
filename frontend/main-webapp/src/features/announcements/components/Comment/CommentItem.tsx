@@ -5,7 +5,8 @@ import { getTimeAgo } from "../../../../utils/getTime";
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
 import { CommentInput } from "./CommentInput"; // 1. IMPORT COMMENT INPUT VÀO ĐÂY
 import { findUserById } from "../../../../data/mockUserData";
-import { ProfileCard, type UserProfile } from "../Card/ProfileCard";
+import { ProfileCard } from "../Card/ProfileCard";
+import type { UserProfile } from "../../../../types/userType";
 
 export interface CommentItemProps {
   id: string | number;

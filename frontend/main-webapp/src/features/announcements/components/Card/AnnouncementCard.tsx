@@ -11,8 +11,9 @@ import { SmallTags } from "../Tags/SmallTags";
 import { Link } from "react-router-dom";
 import { generateSlug } from "../../../../utils/generateSlug";
 import { getTimeAgo } from "../../../../utils/getTime";
-import { ProfileCard, type UserProfile } from "./ProfileCard";
+import { ProfileCard } from "./ProfileCard";
 import { findUserById } from "../../../../data/mockUserData";
+import type { UserProfile } from "../../../../types/userType";
 
 export interface AttachmentITem {
   id: string | number

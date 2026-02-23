@@ -7,17 +7,7 @@ import {
 } from '@mui/icons-material';
 import { Link } from "react-router-dom"; 
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
-
-export interface UserProfile {
-  id: string | number
-  name: string
-  position: string
-  department: string
-  email: string
-  phone?: string
-  location?: string
-  avatarUrl?: string
-}
+import type { UserProfile } from '../../../../types/userType';
 
 interface ProfileCardProps {
   user: UserProfile;

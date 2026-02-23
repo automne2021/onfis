@@ -16,8 +16,9 @@ import { CommentItem } from "../components/Comment/CommentItem"
 import { CommentInput } from "../components/Comment/CommentInput"
 import { Loading } from "../components/Loading"
 import { findUserById } from "../../../data/mockUserData"
-import { ProfileCard, type UserProfile } from "../components/Card/ProfileCard"
+import { ProfileCard } from "../components/Card/ProfileCard"
 import type { AnnouncementData } from "../types/AnnouncementTypes"
+import type { UserProfile } from "../../../types/userType"
 
 export function AnnouncementDetail() {
   const { id } = useParams<{ id: string }>()
