@@ -9,6 +9,10 @@ import { ContentList } from "../../../../components/common/Dropdown/ContentList"
 import { getFileType } from "../../../../config/fileConfig";
 import { SmallTags } from "../Tags/SmallTags";
 import { Link } from "react-router-dom";
+import { generateSlug } from "../../../../utils/generateSlug";
+import { getTimeAgo } from "../../../../utils/getTime";
+import { ProfileCard, type UserProfile } from "./ProfileCard";
+import { findUserById } from "../../../../data/mockUserData";
 
 export interface AttachmentITem {
   id: string | number
@@ -19,9 +23,10 @@ export interface AttachmentITem {
 
 interface AnnouncementCardProps {
   id: string | number
+  authId: string | number
   authName: string
   position?: string
-  time?: string
+  date?: string
   avatarUrl?: string
   isPinned?: boolean
   scope: string
@@ -36,18 +41,31 @@ interface AnnouncementCardProps {
   onToggleComment?: (announcementId: string | number) => void
 }
 
-export function AnnouncementCard({ id, authName, position, time, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment } : AnnouncementCardProps) {
+export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment } : AnnouncementCardProps) {
 
   const [activeMenu, setActiveMenu] = useState(false)
-  const [isLiked, setIsLiked] = useState(initialIsLike);
-  const [likeCount, setLikeCount] = useState(numberOfLike);
+  const [isLiked, setIsLiked] = useState(initialIsLike)
+  const [likeCount, setLikeCount] = useState(numberOfLike)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const avatarImg = avatarUrl? avatarUrl : userProfileImg
   const remainingCount = departments ? departments.length - 2 : 0
+  const slug = generateSlug(title)
+  const timeAgoString = date ? getTimeAgo(date) : "";
+
+  const authorProfile = findUserById(authId)
+    const profileCardData: UserProfile = authorProfile || {
+      id: "unknown",
+      name: authName,
+      position: position || "Employee",
+      department: "Company",
+      email: "unknown@company.com",
+      avatarUrl: avatarUrl
+    };
 
   // Functions
   const togglePersonalInformationCard = () => {
-
+    setIsProfileOpen(prev => !prev);
   }
 
   const toggleMenu = () => setActiveMenu(prev => !prev);
@@ -66,27 +84,36 @@ export function AnnouncementCard({ id, authName, position, time, avatarUrl, isPi
 
   return(
     <div 
-      className="bg-white py-5 px-6 rounded-xl border border-neutral-200 hover:border-primary hover:bg-neutral-50 transition cursor-pointer"
+      className="bg-white py-5 px-6 rounded-xl border border-neutral-200 hover:border-primary hover:bg-neutral-50 transition"
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* User avatar */}
-          <div 
-            onClick={() => togglePersonalInformationCard()}
-            className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <img 
-              src={avatarImg}
-              alt="User Avatar"
-              className="w-full h-full object-cover"
+          <div className="relative">
+            <div 
+              onClick={() => togglePersonalInformationCard()}
+              className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              <img 
+                src={avatarImg}
+                alt="User Avatar"
+                className="w-full h-full object-cover"
+                />
+            </div>
+
+            {isProfileOpen && (
+              <ProfileCard 
+                user={profileCardData} 
+                onClose={() => setIsProfileOpen(false)} 
               />
+            )}
           </div>
           {/* Text */}
           <div className="flex flex-col">
             <p className="body-3-medium text-neutral-900">{authName}</p>
             <p className="body-3-medium text-neutral-500">
-              {position}<span className="mx-1">•</span>{time}
+              {position}<span className="mx-1">•</span>{timeAgoString}
             </p>
           </div>
         </div>
@@ -185,7 +212,7 @@ export function AnnouncementCard({ id, authName, position, time, avatarUrl, isPi
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-neutral-200 pt-3">
         <Link 
-          to={`./`} 
+          to={`./${id}/${slug}`} 
           className="text-primary underline-animation body-3-medium"
         >
           Read more <ArrowForwardOutlined sx={{ fontSize: 14 }}/>
