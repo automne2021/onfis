@@ -92,7 +92,7 @@ export function AnnouncementDetail() {
   }
   
   if (!detail) {
-    return <div className="p-4 text-center text-red-500">No announcement available!</div>;
+    return <div className="p-4 text-center text-neutral-500">No announcement available!</div>;
   }
 
   const avatarImg = detail.avatarUrl ? detail.avatarUrl : userProfileImg
