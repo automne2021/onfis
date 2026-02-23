@@ -97,7 +97,7 @@ export function Announcement() {
           {/* Navigation Tabs */}
           <div className="flex items-center justify-between border-b border-neutral-300 px-4 py-2 mt-[24px]">
             {/* Tab group*/}
-            <TabGroup tabItems={tabItems} />
+            <TabGroup tabItems={tabItems} defaultTab='all' />
 
             {/* Add button */}
             <Button 
