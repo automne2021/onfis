@@ -12,14 +12,15 @@ interface TabItemProps {
 
 interface TabGroupProps {
   tabItems: TabItemProps[]
+  defaultTab: string
 }
 
-export function TabGroup({ tabItems } : TabGroupProps) {
+export function TabGroup({ tabItems, defaultTab } : TabGroupProps) {
 
   // State Managements
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const currentTab = searchParams.get('view') || 'all'
+  const currentTab = searchParams.get('view') || defaultTab
 
   // Functions
   const handleTabChange = (tabId: string) => {
