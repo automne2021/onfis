@@ -4,7 +4,7 @@ import { Navbar } from "../components/Navbar";
 import { Button } from '../../../components/common/Buttons/Button';
 
 import { Add } from '@mui/icons-material';
-import { TabGroup } from '../components/Tab/TabGroup';
+import { TabGroup } from '../../../components/common/Tab/TabGroup';
 import { AnnouncementForm } from '../components/AnnouncementForm';
 import { MOCK_ANNOUNCEMENTS } from '../../../data/mockAnnouncement';
 import { AnnouncementCard } from '../components/Card/AnnouncementCard';
