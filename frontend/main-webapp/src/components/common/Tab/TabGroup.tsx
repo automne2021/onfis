@@ -1,16 +1,18 @@
 import { useSearchParams } from 'react-router-dom';
 
-import { PushPin } from '@mui/icons-material';
 import { Tab } from './Tab';
 
-const tabItems = [
-  { id: 'all', label: "All News" },
-  { id: 'department', label: "My Department" },
-  { id: 'company', label: "Company Wide" },
-  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small'/> },
-]
+interface TabItemProps {
+  id: string
+  label: string
+  icon?: React.ReactNode
+}
 
-export function TabGroup() {
+interface TabGroupProps {
+  tabItems: TabItemProps[]
+}
+
+export function TabGroup({ tabItems } : TabGroupProps) {
 
   // State Managements
   const [searchParams, setSearchParams] = useSearchParams()
