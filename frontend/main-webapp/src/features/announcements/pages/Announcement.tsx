@@ -14,8 +14,8 @@ import { useSearchParams } from 'react-router-dom';
 const tabItems = [
   { id: 'all', label: "All News", isDisplay: true },
   { id: 'department', label: "My Department", isDisplay: true },
-  { id: 'company', label: "Company Wide",isDisplay: true },
-  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small'/>,isDisplay: true },
+  { id: 'company', label: "Company Wide", isDisplay: true },
+  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small'/>, isDisplay: true },
 ]
 
 export function Announcement() {
