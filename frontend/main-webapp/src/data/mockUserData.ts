@@ -13,7 +13,8 @@ export const MOCK_USERS: UserProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=sarah",
 
     team: "Executive Leadership",
-    reportsTo: "Board of Directors",
+    reportsTo: 1,
+    reportsToName: "Board of Directors",
     bio: "Visionary Chief Executive Officer with over 15 years of experience leading tech companies to scale. Passionate about innovation, building high-performing teams, and driving sustainable growth.",
     skills: ["Strategic Leadership", "Business Development", "Public Speaking", "M&A", "Corporate Finance"],
 
@@ -58,8 +59,15 @@ export const MOCK_USERS: UserProfile[] = [
       endDate: "-",
       noticePeriod: "6 Months",
       probationPeriod: "Passed",
-      documentName: "SJ_Executive_Agreement.pdf"
-    }
+      fileName: "SJ_Executive_Agreement.pdf",
+      fileUrl: "#",
+      fileSize: "10MB",
+      uploadDate: "Oct 12, 2020"
+    },
+    documents: [
+      { id: "doc_101_1", fileName: "Executive_Compensation_Plan.pdf", fileSize: "3.2 MB", uploadDate: "Jan 12, 2018", isConfidential: true },
+      { id: "doc_101_2", fileName: "SJ_Passport_Copy.jpg", fileSize: "1.5 MB", uploadDate: "Jan 10, 2018", isConfidential: true },
+    ]
   },
 
   // --- 2. MICHAEL CHEN (HEAD OF ENGINEERING) ---
@@ -74,7 +82,9 @@ export const MOCK_USERS: UserProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=michael",
 
     team: "Engineering Leadership",
-    reportsTo: "Sarah Jenkins",
+    reportsTo: 101,
+    reportsToName: "Sarah Jenkins",
+    reportsToAvatar: "https://i.pravatar.cc/150?u=sarah",
     bio: "Experienced engineering leader focused on building scalable, resilient cloud architectures. Advocate for open-source technologies and agile methodologies. Leading a global team of 50+ engineers.",
     skills: ["System Architecture", "Cloud Computing", "Team Building", "Go", "Kubernetes", "Python"],
 
@@ -119,8 +129,15 @@ export const MOCK_USERS: UserProfile[] = [
       endDate: "-",
       noticePeriod: "2 Months",
       probationPeriod: "Passed",
-      documentName: "MC_Employment_Contract.pdf"
-    }
+      fileName: "MC_Employment_Contract.pdf",
+      fileUrl: "#",
+      fileSize: "10MB",
+      uploadDate: "Oct 12, 2020"
+    },
+    documents: [
+      { id: "doc_102_1", fileName: "NDA_Signed_MichaelChen.pdf", fileSize: "1.1 MB", uploadDate: "Mar 15, 2019", isConfidential: true },
+      { id: "doc_102_2", fileName: "Canadian_Visa_WorkPermit.pdf", fileSize: "4.5 MB", uploadDate: "Mar 10, 2019", isConfidential: true },
+    ]
   },
 
   // --- 3. EMILY BLUNT (HR MANAGER) ---
@@ -135,7 +152,9 @@ export const MOCK_USERS: UserProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=emily",
 
     team: "People & Culture",
-    reportsTo: "Sarah Jenkins",
+    reportsTo: 101,
+    reportsToName: "Sarah Jenkins",
+    reportsToAvatar: "https://i.pravatar.cc/150?u=sarah",
     bio: "Dedicated HR professional with a focus on employee well-being, talent acquisition, and fostering an inclusive workplace culture. Believes that people are a company's greatest asset.",
     skills: ["Talent Acquisition", "Employee Relations", "Conflict Resolution", "Workday", "Performance Management"],
 
@@ -180,8 +199,14 @@ export const MOCK_USERS: UserProfile[] = [
       endDate: "-",
       noticePeriod: "1 Month",
       probationPeriod: "Passed",
-      documentName: "EB_Contract_2021.pdf"
-    }
+      fileName: "EB_Contract_2021.pdf",
+      fileUrl: "#",
+      fileSize: "10MB",
+      uploadDate: "Oct 12, 2020"
+    },
+    documents: [
+      { id: "doc_103_1", fileName: "HR_Certification_SHRM.pdf", fileSize: "2.8 MB", uploadDate: "Aug 02, 2021", isConfidential: false },
+    ]
   },
 
   // --- 4. JONE SMITH (SENIOR DEVELOPER) ---
@@ -196,7 +221,9 @@ export const MOCK_USERS: UserProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=jone",
 
     team: "Core Platform Experience",
-    reportsTo: "Michael Chen",
+    reportsTo: 102,
+    reportsToName: "Michael Chen",
+    reportsToAvatar: "https://i.pravatar.cc/150?u=michael",
     bio: "Passionate full-stack developer who loves crafting beautiful UIs and robust backend APIs. When not coding, I'm usually hiking or contributing to open-source React libraries.",
     skills: ["React", "TypeScript", "Node.js", "Tailwind CSS", "PostgreSQL", "GraphQL"],
 
@@ -241,7 +268,10 @@ export const MOCK_USERS: UserProfile[] = [
       endDate: "-",
       noticePeriod: "1 Month",
       probationPeriod: "Passed",
-      documentName: "JS_Remote_Agreement.pdf"
+      fileName: "JS_Remote_Agreement.pdf",
+      fileUrl: "#",
+      fileSize: "10MB",
+      uploadDate: "Oct 12, 2020"
     }
   },
 
@@ -257,7 +287,9 @@ export const MOCK_USERS: UserProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=alex",
 
     team: "Core Platform Experience",
-    reportsTo: "Sarah Jenkins",
+    reportsTo: 101,
+    reportsToName: "Sarah Jenkins",
+    reportsToAvatar: "https://i.pravatar.cc/150?u=sarah",
     bio: "Experienced Product Manager with over 7 years in SaaS platform development. Passionate about user-centric design and agile methodologies. Previously led product initiatives at TechFlow and Streamline Systems. Currently focused on enhancing the core user experience and streamlining onboarding workflows for enterprise clients.",
     skills: ["Product Strategy", "Agile / Scrum", "TypeScript", "React", "Data Analytics", "User Research", "JIRA"],
 
@@ -302,8 +334,17 @@ export const MOCK_USERS: UserProfile[] = [
       endDate: "-", 
       noticePeriod: "1 Month",
       probationPeriod: "Passed",
-      documentName: "Signed_Employment_Agreement_2020.pdf"
-    }
+      fileName: "Signed_Employment_Agreement_2020.pdf",
+      fileUrl: "#",
+      fileSize: "10MB",
+      uploadDate: "Oct 12, 2020"
+    },
+    documents: [
+      { id: "doc_105_1", fileName: "Resume_Alex_Rivera_2024.pdf", fileSize: "2.4 MB", uploadDate: "Added 2 days ago", isConfidential: false },
+      { id: "doc_105_2", fileName: "Employment_Contract_Signed.docx", fileSize: "8.1 MB", uploadDate: "Oct 12, 2019", isConfidential: true },
+      { id: "doc_105_3", fileName: "ID_Scan_Passport.png", fileSize: "4.2 MB", uploadDate: "Oct 10, 2019", isConfidential: true },
+      { id: "doc_105_4", fileName: "Masters_Diploma_Stanford.pdf", fileSize: "1.8 MB", uploadDate: "Sep 15, 2018", isConfidential: false },
+    ]
   }
 ];
 

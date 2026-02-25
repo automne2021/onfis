@@ -1,4 +1,14 @@
 // Định nghĩa cấu trúc cho thông tin chi tiết của nhân viên
+
+export interface UserDocument {
+  id: string;
+  fileName: string;
+  fileSize: string;
+  uploadDate: string;
+  isConfidential: boolean;
+  fileUrl?: string;
+}
+
 export interface UserProfile {
   id: string | number;
   name: string;
@@ -11,7 +21,9 @@ export interface UserProfile {
 
   // --- THÔNG TIN TỪ TAB OVERVIEW ---
   team?: string;
-  reportsTo?: string; // Tên của quản lý
+  reportsTo?: string | number;
+  reportsToName?: string; // Tên của quản lý
+  reportsToAvatar?: string;
   bio?: string;
   skills?: string[];
 
@@ -58,6 +70,10 @@ export interface UserProfile {
     endDate?: string | null;
     noticePeriod: string;
     probationPeriod: string;
-    documentName?: string;
+    fileName?: string;
+    fileSize?: string;
+    fileUrl?: string;
+    uploadDate?: string;
   };
+  documents?: UserDocument[];
 }

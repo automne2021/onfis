@@ -7,16 +7,22 @@ import userProfileImg from "../../assets/images/user-profile-img.png"
 import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
+import { findUserById } from '../../data/mockUserData';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   companyName: string
-  avatarUrl?: string
   messageContents?: ContentItem[] | null
   notificationContents?: ContentItem[] | null
 }
 
-export function Header({ companyName, avatarUrl, messageContents, notificationContents }: HeaderProps){
+export function Header({ companyName, messageContents, notificationContents }: HeaderProps){
 
+  // MOCK DATA
+  const currentUser = findUserById(105)
+
+  const navigate = useNavigate()
+  
   // States management
   const [activeMenu, setActiveMenu] = useState<string|null>(null)
 
@@ -28,7 +34,7 @@ export function Header({ companyName, avatarUrl, messageContents, notificationCo
   const closeMenu = () => setActiveMenu(null); 
 
   // Data 
-  const avatarImg = avatarUrl? avatarUrl : userProfileImg
+  const avatarImg = currentUser?.avatarUrl ? currentUser.avatarUrl : userProfileImg
   const iconButtons = [
     {
       id: 'chat',
@@ -44,7 +50,11 @@ export function Header({ companyName, avatarUrl, messageContents, notificationCo
   const profileContents: ContentItem[] = [
     {
       content: "User Profile",
-      onClick: () => console.log("User profile")
+      onClick: () => {
+        closeMenu()
+        console.log("User profile")
+        navigate(`/profile/${currentUser?.id || 105}`)
+      }
     }, 
     {
       content: "Settings",
