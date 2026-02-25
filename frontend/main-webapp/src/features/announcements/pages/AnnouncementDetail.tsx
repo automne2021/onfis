@@ -16,7 +16,7 @@ import { CommentItem } from "../components/Comment/CommentItem"
 import { CommentInput } from "../components/Comment/CommentInput"
 import { Loading } from "../components/Loading"
 import { findUserById } from "../../../data/mockUserData"
-import { ProfileCard } from "../components/Card/ProfileCard"
+import { ProfileCard } from "../../../components/common/Card/ProfileCard"
 import type { AnnouncementData } from "../types/AnnouncementTypes"
 import type { UserProfile } from "../../../types/userType"
 
@@ -101,11 +101,11 @@ export function AnnouncementDetail() {
   const authorProfile = findUserById(detail.authId)
   const profileCardData: UserProfile = authorProfile || {
     id: "unknown",
-    name: detail.authName,
-    position: detail.position || "Employee",
+    name: "N/A",
+    position: "N/A",
     department: "Company",
     email: "unknown@company.com",
-    avatarUrl: detail.avatarUrl
+    avatarUrl: userProfileImg
   };
 
   return(
