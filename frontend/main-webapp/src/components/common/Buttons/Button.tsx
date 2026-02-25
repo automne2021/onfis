@@ -1,6 +1,6 @@
 interface ButtonProps {
   id?: string
-  title: string
+  title?: string
   iconLeft?: React.ReactNode
   iconRight?: React.ReactNode
   onClick?: () => void
@@ -9,18 +9,23 @@ interface ButtonProps {
   bgColor?: string
   bgHoverColor?: string
   textColor?: string
+  border?: boolean
   borderColor?: string
   type?: "button" | "submit" | "reset" | undefined
   loading?: boolean
+  size?: "default" | "square"
 }
 
-export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle='body-3-medium', type='button', bgColor, bgHoverColor, textColor, borderColor, loading=false } : ButtonProps) {
+export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle='body-3-medium', type='button', bgColor, bgHoverColor, textColor, border=true, borderColor, loading=false, size='default' } : ButtonProps) {
   return(
     <button 
       key={id}
       type={type}
       onClick={onClick}
-      className={`px-4 py-2 border rounded-lg flex items-center justify-center gap-2 transition cursor-pointer ${textStyle}
+      className={`rounded-lg flex items-center justify-center gap-2 transition cursor-pointer ${textStyle}
+      ${border ? 'border' : ''}
+        ${size === 'default' && 'px-4 py-2'}
+        ${size === 'square' && 'p-2'}
         ${style === 'primary' && 'border-primary bg-secondary text-primary hover:bg-secondary-hover'} 
         ${style === 'sub' && 'border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-200'}
         ${style === 'custom' && `${borderColor} ${bgColor} ${textColor} hover:${bgHoverColor}`}
