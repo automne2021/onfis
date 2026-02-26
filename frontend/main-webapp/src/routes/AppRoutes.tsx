@@ -5,6 +5,7 @@ import MainLayout from '../layouts/MainLayout';
 import { Announcement } from '../features/announcements/pages/Announcement';
 import { AnnouncementDetail } from '../features/announcements/pages/AnnouncementDetail';
 import { UserProfile } from '../features/profile/pages/UserProfile';
+import { ChatPage } from '../features/chat/pages/ChatPage';
 
 export const router = createBrowserRouter(
   createRoutesFromElements(
@@ -16,6 +17,9 @@ export const router = createBrowserRouter(
         <Route path="announcement">
           <Route index element={<Announcement />} />
           <Route path=':id/:slug' element={<AnnouncementDetail />}/>
+        </Route>
+        <Route path='chat'>
+          <Route index element={<ChatPage />}/>
         </Route>
         <Route path='profile'>
           <Route path=':id' element={<UserProfile />}/>
