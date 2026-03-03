@@ -3,13 +3,20 @@ import { useMemo, useState } from 'react';
 import { Navbar } from "../components/Navbar";
 import { Button } from '../../../components/common/Buttons/Button';
 
-import { Add } from '@mui/icons-material';
-import { TabGroup } from '../components/Tab/TabGroup';
+import { Add, PushPin } from '@mui/icons-material';
+import { TabGroup } from '../../../components/common/Tab/TabGroup';
 import { AnnouncementForm } from '../components/AnnouncementForm';
 import { MOCK_ANNOUNCEMENTS } from '../../../data/mockAnnouncement';
 import { AnnouncementCard } from '../components/Card/AnnouncementCard';
 import { useSearchParams } from 'react-router-dom';
 
+
+const tabItems = [
+  { id: 'all', label: "All News", isDisplay: true },
+  { id: 'department', label: "My Department", isDisplay: true },
+  { id: 'company', label: "Company Wide", isDisplay: true },
+  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small'/>, isDisplay: true },
+]
 
 export function Announcement() {
 
@@ -90,7 +97,7 @@ export function Announcement() {
           {/* Navigation Tabs */}
           <div className="flex items-center justify-between border-b border-neutral-300 px-4 py-2 mt-[24px]">
             {/* Tab group*/}
-            <TabGroup />
+            <TabGroup tabItems={tabItems} defaultTab='all' />
 
             {/* Add button */}
             <Button 

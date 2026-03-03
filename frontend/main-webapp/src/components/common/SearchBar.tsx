@@ -6,12 +6,12 @@ import { fetchResultsFromDB } from "../../services/searchService";
 export interface SearchResult {
   id: string
   title: string
-  type: 'projects' | 'tasks' | 'announcement' | 'discuss' | 'users' | 'positions'
+  type: 'projects' | 'tasks' | 'announcement' | 'discuss' | 'users' | 'positions' | 'documents'
   url?: string
 }
 
 interface SearchBarProps {
-  scope: 'projects' | 'tasks' | 'announcement' | 'discuss' | 'users' | 'positions' // tùy chỉnh sau (Nhớ chỉnh này nếu chưa thấy hợp lý nhé)
+  scope: 'projects' | 'tasks' | 'announcement' | 'discuss' | 'users' | 'positions' | 'documents' // tùy chỉnh sau (Nhớ chỉnh này nếu chưa thấy hợp lý nhé)
   onSearch: (value: SearchResult[]) => void // Xử lý data khác nhau tùy nơi gọi
   width?: string
 }
@@ -39,7 +39,7 @@ export function SearchBar({ scope, onSearch, width='w-[220px] md:w-[400px] lg:w-
   }, [searchTerm, scope, onSearch])
 
   return(
-    <div className={`flex gap-2 items-center px-4 py-2 border border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white ${width}`}>
+    <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white ${width}`}>
       <Search className="text-neutral-500"/>
       <input 
         type="text" 

@@ -6,8 +6,11 @@ import {
   CloseOutlined
 } from '@mui/icons-material';
 import { Link } from "react-router-dom"; 
-import userProfileImg from "../../../../assets/images/user-profile-img.png";
-import type { UserProfile } from '../../../../types/userType';
+// Thêm các hook cần thiết từ React
+import { useRef, useLayoutEffect, useState } from "react"; 
+
+import userProfileImg from "../../../assets/images/user-profile-img.png";
+import type { UserProfile } from '../../../types/userType';
 
 interface ProfileCardProps {
   user: UserProfile;
@@ -16,6 +19,27 @@ interface ProfileCardProps {
 
 export function ProfileCard({ user, onClose }: ProfileCardProps) {
   const avatarImg = user.avatarUrl || userProfileImg;
+  
+  // 1. Khởi tạo các State và Ref để tự động tính toán vị trí
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [positionClass, setPositionClass] = useState("top-12"); // Mặc định rớt xuống dưới
+  const [isVisible, setIsVisible] = useState(false); // Ẩn lúc mới render để đo đạc tránh giật khung hình
+
+  useLayoutEffect(() => {
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      
+      // Chờ trình duyệt rảnh tay một chút rồi mới update state
+      requestAnimationFrame(() => {
+        if (rect.bottom > window.innerHeight - 20) {
+          setPositionClass("bottom-12 mb-2"); 
+        } else {
+          setPositionClass("top-12 mt-2"); 
+        }
+        setIsVisible(true);
+      });
+    }
+  }, []);
 
   return (
     <>
@@ -26,7 +50,11 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
       ></div>
 
       {/* Nội dung chính của Profile Card */}
-      <div className="absolute z-50 top-12 left-0 w-72 bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden animate-fade-in-up">
+      <div 
+        ref={cardRef}
+        // 2. Nhúng positionClass và visibility vào Tailwind
+        className={`absolute z-50 left-0 w-72 bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden transition-all duration-200 ${positionClass} ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
+      >
         
         {/* Nút đóng */}
         <button 
@@ -37,15 +65,15 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
         </button>
 
         {/* Ảnh bìa (Cover) */}
-        <div className="h-16 bg-gradient-to-r from-primary via-blue-500 to-cyan-500"></div>
+        <div className="h-16 bg-gradient-to-r from-blue-500 via-blue-600 to-cyan-500"></div>
         
         {/* Avatar đè lên viền */}
         <div className="relative -mt-8 flex justify-center">
-          <Link to={`/profile/${user.id}`} onClick={onClose}> {/* Cho phép click avatar */}
+          <Link to={`/profile/${user.id}`} onClick={onClose}>
             <img 
               src={avatarImg} 
               alt={user.name} 
-              className="w-16 h-16 rounded-full border-4 border-white object-cover bg-white hover:opacity-90 transition"
+              className="w-16 h-16 rounded-full border-4 border-white object-cover bg-white hover:opacity-90 transition shadow-sm"
             />
           </Link>
         </div>
@@ -53,21 +81,20 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
         {/* Thông tin chính */}
         <div className="px-5 pb-5 pt-2 text-center flex flex-col items-center">
           
-          {/* 2. SỬA TÊN THÀNH LINK (Cho phép hover có gạch chân) */}
           <Link 
             to={`/profile/${user.id}`} 
             onClick={onClose}
-            className="body-1-medium text-neutral-900 hover:text-primary hover:underline transition"
+            className="body-1-medium text-neutral-900 hover:text-blue-600 hover:underline transition"
           >
             {user.name}
           </Link>
-          <p className="body-3-regular text-primary">{user.position}</p>
+          <p className="body-3-regular text-blue-600">{user.position}</p>
 
           {/* Đường kẻ ngang */}
-          <hr className="my-3 border-neutral-200 w-full" />
+          <hr className="my-3 border-neutral-100 w-full" />
 
           {/* Thông tin chi tiết */}
-          <div className="flex flex-col gap-2.5 w-full text-left text-neutral-600 body-3-regular">
+          <div className="flex flex-col gap-3 w-full text-left text-neutral-600 body-3-regular">
             <div className="flex items-center gap-3">
               <BusinessOutlined sx={{ fontSize: 18 }} className="text-neutral-400" />
               <span>{user.department}</span>
@@ -93,7 +120,7 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
           <Link 
             to={`/profile/${user.id}`}
             onClick={onClose}
-            className="mt-4 w-full block text-center py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 body-3-medium rounded-lg transition"
+            className="mt-5 w-full block text-center py-2.5 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 body-3-medium rounded-lg transition border border-neutral-200"
           >
             View full profile
           </Link>

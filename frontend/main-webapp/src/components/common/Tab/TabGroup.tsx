@@ -1,21 +1,26 @@
 import { useSearchParams } from 'react-router-dom';
 
-import { PushPin } from '@mui/icons-material';
 import { Tab } from './Tab';
 
-const tabItems = [
-  { id: 'all', label: "All News" },
-  { id: 'department', label: "My Department" },
-  { id: 'company', label: "Company Wide" },
-  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small'/> },
-]
+interface TabItemProps {
+  id: string
+  label: string
+  icon?: React.ReactNode
+  isLock?: boolean
+  isDisplay?: boolean
+}
 
-export function TabGroup() {
+interface TabGroupProps {
+  tabItems: TabItemProps[]
+  defaultTab: string
+}
+
+export function TabGroup({ tabItems, defaultTab } : TabGroupProps) {
 
   // State Managements
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const currentTab = searchParams.get('view') || 'all'
+  const currentTab = searchParams.get('view') || defaultTab
 
   // Functions
   const handleTabChange = (tabId: string) => {
@@ -29,15 +34,17 @@ export function TabGroup() {
 
   return(
     <div className='flex'>
-      {tabItems.map((item) => (
+      {tabItems.map((item) => {
+        return item.isDisplay && (
         <Tab
           key={item.id}
           label={item.label}
           icon={item.icon}
           isActive={currentTab === item.id}
           onClick={() => handleTabChange(item.id)}
+          isLock={item.isLock}
         />
-      ))}
+      )})}
     </div>
   )
 }
