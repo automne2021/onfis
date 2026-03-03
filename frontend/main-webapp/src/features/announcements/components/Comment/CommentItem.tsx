@@ -5,7 +5,7 @@ import { getTimeAgo } from "../../../../utils/getTime";
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
 import { CommentInput } from "./CommentInput"; // 1. IMPORT COMMENT INPUT VÀO ĐÂY
 import { findUserById } from "../../../../data/mockUserData";
-import { ProfileCard } from "../Card/ProfileCard";
+import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
 import type { UserProfile } from "../../../../types/userType";
 
 export interface CommentItemProps {
@@ -73,11 +73,11 @@ export function CommentItem({
   const commentAuthorProfile = findUserById(userId);
   const profileCardData: UserProfile = commentAuthorProfile || {
     id: "unknown",
-    name: name,
-    position: "Employee",
+    name: "N/A",
+    position: "N/A",
     department: "Company",
     email: "unknown@company.com",
-    avatarUrl: avatarImg
+    avatarUrl: userProfileImg
   };
 
   return(

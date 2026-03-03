@@ -1,7 +1,7 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
 import avatarImg from "../../../../assets/images/user-profile-img.png"
 import { useState } from "react";
-import { ProfileCard } from "../../../announcements/components/Card/ProfileCard";
+import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
 import { findUserById } from "../../../../data/mockUserData";
 import type { UserProfile } from "../../../../types/userType";
 

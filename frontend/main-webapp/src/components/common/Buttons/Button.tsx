@@ -14,9 +14,11 @@ interface ButtonProps {
   type?: "button" | "submit" | "reset" | undefined
   loading?: boolean
   size?: "default" | "square"
+  width?: string
+  customStyle?: string
 }
 
-export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle='body-3-medium', type='button', bgColor, bgHoverColor, textColor, border=true, borderColor, loading=false, size='default' } : ButtonProps) {
+export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle='body-3-medium', type='button', bgColor, bgHoverColor, textColor, border=true, borderColor, loading=false, size='default', width, customStyle } : ButtonProps) {
   return(
     <button 
       key={id}
@@ -30,6 +32,8 @@ export function Button({ id, title, iconLeft, iconRight, onClick, style, textSty
         ${style === 'sub' && 'border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-200'}
         ${style === 'custom' && `${borderColor} ${bgColor} ${textColor} hover:${bgHoverColor}`}
         ${loading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}
+        ${width}
+        ${customStyle}
       `}
     >
       {iconLeft && iconLeft}

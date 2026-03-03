@@ -90,8 +90,12 @@ html {
     @apply w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] py-[60px] flex justify-center bg-neutral-50 flex-col;
   }
 
+  .chat-section {
+    @apply flex w-full h-screen pt-[60px] bg-neutral-50 rounded-xl border border-gray-200 shadow-sm overflow-hidden relative;
+  }
+
   /* --- NAVBAR --- */
   .navbar-style {
-    @apply w-full px-10 py-3 mt-6 flex items-center bg-white rounded-[20px] shadow-md shadow-neutral-200 flex items-center justify-between;
+    @apply w-full px-10 py-3 mt-6 flex items-center justify-between bg-white rounded-[20px] shadow-md shadow-neutral-200;
   }
 }

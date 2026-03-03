@@ -11,7 +11,7 @@ import { SmallTags } from "../Tags/SmallTags";
 import { Link } from "react-router-dom";
 import { generateSlug } from "../../../../utils/generateSlug";
 import { getTimeAgo } from "../../../../utils/getTime";
-import { ProfileCard } from "./ProfileCard";
+import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
 import { findUserById } from "../../../../data/mockUserData";
 import type { UserProfile } from "../../../../types/userType";
 
@@ -57,11 +57,11 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
   const authorProfile = findUserById(authId)
     const profileCardData: UserProfile = authorProfile || {
       id: "unknown",
-      name: authName,
-      position: position || "Employee",
+      name: "N/A",
+      position: "N/A",
       department: "Company",
       email: "unknown@company.com",
-      avatarUrl: avatarUrl
+      avatarUrl: userProfileImg
     };
 
   // Functions
