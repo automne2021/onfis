@@ -18,6 +18,40 @@
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
+/* Placeholder styling cho Tiptap */
+.ProseMirror .is-editor-empty:first-child::before {
+  color: #adb5bd; 
+  content: attr(data-placeholder); 
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.underline-animation {
+  display: inline-block;
+  position: relative;
+  color: theme('colors.primary.DEFAULT');
+  text-decoration: none;
+}
+
+.underline-animation::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: theme('colors.primary.DEFAULT');
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.underline-animation:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -25,6 +59,18 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes loading-dots {
+  0% { content: ''; }
+  33% { content: '.'; }
+  66% { content: '..'; }
+  100% { content: '...'; }
+}
+
+.animate-dots::after {
+  content: '';
+  animation: loading-dots 1.5s infinite;
 }
 
 @media (prefers-reduced-motion: no-preference) {

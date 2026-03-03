@@ -6,39 +6,55 @@ import logo from "../../assets/logo-without-text.svg"
 import userProfileImg from "../../assets/images/user-profile-img.png"
 import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
-import { ContentList } from './Dropdown/ContentList';
+import { ContentList, type ContentItem } from './Dropdown/ContentList';
 
 interface HeaderProps {
   companyName: string
-  userImg?: string
-  messageContents?: string[] | null
-  notificationContents?: string[] | null
+  avatarUrl?: string
+  messageContents?: ContentItem[] | null
+  notificationContents?: ContentItem[] | null
 }
 
-
-export function Header({ companyName, userImg, messageContents, notificationContents }: HeaderProps){
-  // Data 
-  const avatarImg = userImg? userImg : userProfileImg
-  const iconButtons = [
-    {
-      id: 'chat',
-      icon: <Chat />,
-      content: <ContentList data={messageContents} emptyLabel='No messages available' />
-    }, 
-    {
-      id: 'noti',
-      icon: <Notifications />,
-      content: <ContentList data={notificationContents} emptyLabel='No notifications available' />
-    }
-  ] 
-  const profileContents = ["User Profile", "Settings", "Log out"]
+export function Header({ companyName, avatarUrl, messageContents, notificationContents }: HeaderProps){
 
   // States management
   const [activeMenu, setActiveMenu] = useState<string|null>(null)
 
+  // Functions
   const toggleMenu = (menuId: string) => {
     setActiveMenu(activeMenu === menuId ? null : menuId)
   }
+
+  const closeMenu = () => setActiveMenu(null); 
+
+  // Data 
+  const avatarImg = avatarUrl? avatarUrl : userProfileImg
+  const iconButtons = [
+    {
+      id: 'chat',
+      icon: <Chat />,
+      content: <ContentList data={messageContents} emptyLabel='No messages available' onItemClick={closeMenu}/>
+    }, 
+    {
+      id: 'noti',
+      icon: <Notifications />,
+      content: <ContentList data={notificationContents} emptyLabel='No notifications available' onItemClick={closeMenu}/>
+    }
+  ] 
+  const profileContents: ContentItem[] = [
+    {
+      content: "User Profile",
+      onClick: () => console.log("User profile")
+    }, 
+    {
+      content: "Settings",
+      onClick: () => console.log("Settings")
+    }, 
+    {
+      content: "Log out",
+      onClick: () => console.log("Log out")
+    }, 
+  ]
 
   return(
     <header className="fixed top-0 z-50 flex items-center justify-between w-full h-[60px] px-4 md:px-5 xl:px-8 2xl:px-[220px] py-4 transition-all duration-300 ease-in-out bg-white shadow-md shadow-neutral-200">
@@ -63,6 +79,7 @@ export function Header({ companyName, userImg, messageContents, notificationCont
               />
             }
             children={item.content}
+            onClose={() => setActiveMenu(null)}
           />
         )) }
 
@@ -71,8 +88,8 @@ export function Header({ companyName, userImg, messageContents, notificationCont
           isOpen={activeMenu === 'profile'}
           trigger={
             <div 
-            onClick={() => toggleMenu('profile')}
-            className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => toggleMenu('profile')}
+              className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
             >
               <img 
                 src={avatarImg}
@@ -81,8 +98,15 @@ export function Header({ companyName, userImg, messageContents, notificationCont
                 />
             </div>
           }
-          children={<ContentList data={profileContents} emptyLabel=''/>}
+          children={
+            <ContentList 
+              data={profileContents} 
+              emptyLabel=''
+              onItemClick={closeMenu}
+            />
+          }
           widthClass='w-32'
+          onClose={() => setActiveMenu(null)}
         />
       </div>
 

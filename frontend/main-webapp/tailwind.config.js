@@ -15,13 +15,13 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#0044A6",
-          hover: "#0175C8",
+          DEFAULT: "#0014A8",
+          hover: "#000F80",
         },
 
         secondary: {
-          DEFAULT: "#29ABCB",
-          hover: "#2189a3",
+          DEFAULT: "#E9ECFF",
+          hover: "#D2D7FF",
         },
         muted: "#89939E",
 
