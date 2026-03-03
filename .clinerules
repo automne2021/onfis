@@ -1,0 +1,3 @@
+# CAPABILITIES
+- You have a specialized skill for Figma conversion.
+- If I ask for "Figma to Code" or "Figma Skill", you MUST read the file `.claude/skills/figma-code/SKILL.md` first and follow its protocol.

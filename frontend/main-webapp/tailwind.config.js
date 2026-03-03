@@ -16,33 +16,49 @@ export default {
       colors: {
         primary: {
           DEFAULT: "#0014A8",
-          hover: "#000F80",
+          hover: "#0175C8",
         },
 
         secondary: {
           DEFAULT: "#E9ECFF",
-          hover: "#D2D7FF",
+          hover: "#2189a3",
         },
         muted: "#89939E",
 
         neutral: {
-          50: "#F9FAFB", // app background
-          100: "#F5F7FA", // background secondary, border
-          200: "#E4EEF4",
-          300: "#ABBED1",
-          500: "#89939E", // secondary text
-          900: "#263238", // primary text
+          50: "#F8FAFC", // app background
+          200: "#E2E8F0",
+          400: "#90A1B9",
+          500: "#62748E", // secondary text
+          900: "#0F172B", // primary text
         },
 
-        danger: "#E53835",
-        warning: "#FBC02D",
-        success: "#2E7D31",
+        action: {
+          error: "#E53835",
+          warning: "#FBC02D",
+          success: "#2E7D31",
+        },
 
         status: {
-          pending: "#29ABCB",
-          in_progress: "#FBC02D",
-          blocked: "#E53835",
-          done: "#2E7D31",
+          to_do: "#00A1ED",
+          on_track: "#FFD230",
+          off_track: "#E7000B",
+          on_hold: "#99A1AF",
+          done: "#00A63E",
+        },
+
+        star: "#FFD230",
+
+        tag: {
+          department: "#00B8DB",
+          scope: "#8200DB",
+        },
+
+        priority: {
+          urgent: "#E7000B",
+          high: "#FF6900",
+          medium: "#FFD230",
+          low: "#99A1AF",
         },
 
         chart: {

@@ -6,7 +6,7 @@ html {
   scroll-behavior: smooth;
 }
 
-@layer base{
+@layer base {
   body {
     @apply font-sans text-neutral-900 bg-neutral-50;
   }
@@ -16,7 +16,7 @@ html {
 @layer components {
   /* --- HEADLINES --- */
   /* Format: Font-Weight Size / Line-Height */
-  
+
   .header-h1 {
     @apply font-bold text-[72px] leading-[76px];
   }
@@ -42,7 +42,7 @@ html {
   }
 
   /* --- BODY TEXT: REGULAR --- */
-  
+
   /* Body 1: Regular, 18/28 */
   .body-1-regular {
     @apply font-normal text-[18px] leading-[28px];
@@ -84,18 +84,149 @@ html {
   .body-4-medium {
     @apply font-medium text-[12px] leading-[16px];
   }
+}
 
-  /* --- SECTION --- */
-  .onfis-section {
-    @apply w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] py-[60px] flex justify-center bg-neutral-50 flex-col;
+/* ANIMATIONS */
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
   }
 
-  .chat-section {
-    @apply flex w-full h-screen pt-[60px] bg-neutral-50 rounded-xl border border-gray-200 shadow-sm overflow-hidden relative;
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out;
   }
 
-  /* --- NAVBAR --- */
-  .navbar-style {
-    @apply w-full px-10 py-3 mt-6 flex items-center justify-between bg-white rounded-[20px] shadow-md shadow-neutral-200;
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-page-enter {
+    animation: pageEnter 0.3s ease-out both;
+  }
+
+  /* Dropdown pop-in */
+  @keyframes dropdownIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-dropdown {
+    animation: dropdownIn 0.15s ease-out both;
+  }
+
+  /* Stage slide-in for new columns */
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out both;
+  }
+
+  /* ---- Card hover: lift + shadow + border glow ---- */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    border-color: #c7d2fe;
+    /* indigo-200 tint */
+  }
+
+  .card-hover:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ---- Button hover: scale + glow ---- */
+  .btn-hover {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .btn-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-hover:active {
+    transform: scale(0.97) translateY(0);
+    box-shadow: none;
+  }
+
+  /* ---- Row hover: subtle background ---- */
+  .row-hover {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .row-hover:hover {
+    background-color: #f8fafc;
+    /* slate-50 */
+    box-shadow: inset 3px 0 0 0 #6366f1;
+    /* left accent bar */
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
   }
 }
