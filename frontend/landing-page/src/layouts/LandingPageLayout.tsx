@@ -6,7 +6,7 @@ export default function LandingPageLayout() {
   return(
     <main>
       <LandingPageHeader />
-      <Outlet />
+        <Outlet />
       <LandingPageFooter />
     </main>
   );
