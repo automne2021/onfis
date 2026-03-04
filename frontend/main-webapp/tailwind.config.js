@@ -5,44 +5,73 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     screens: {
-      'sx': '320px',
-      'sm': '640px', 
-      'md': '768px',
-      'lg': '1152px',
-      'xl': '1440px',
-      '2xl': '1920px',
+      sx: "320px",
+      sm: "640px",
+      md: "768px",
+      lg: "1152px",
+      xl: "1440px",
+      "2xl": "1920px",
     },
     extend: {
       colors: {
         primary: {
           DEFAULT: "#0014A8",
-          hover: "#000F80",
+          hover: "#0175C8",
         },
 
         secondary: {
           DEFAULT: "#E9ECFF",
-          hover: "#D2D7FF",
+          hover: "#2189a3",
         },
         muted: "#89939E",
 
         neutral: {
-          50: "#F9FAFB", // app background
+          50: "#F8FAFC", // app background
           100: "#F5F7FA", // background secondary, border
-          200: "#E4EEF4",
+          200: "#E2E8F0",
           300: "#ABBED1",
-          500: "#89939E", // secondary text
-          900: "#263238", // primary text
+          400: "#90A1B9",
+          500: "#62748E", // secondary text
+          900: "#0F172B", // primary text
         },
 
+        // Keep frontend aliases
         danger: "#E53835",
         warning: "#FBC02D",
         success: "#2E7D31",
 
+        // frontend-projects action colors
+        action: {
+          error: "#E53835",
+          warning: "#FBC02D",
+          success: "#2E7D31",
+        },
+
         status: {
+          // frontend-projects statuses
+          to_do: "#00A1ED",
+          on_track: "#FFD230",
+          off_track: "#E7000B",
+          on_hold: "#99A1AF",
+          done: "#00A63E",
+          // frontend statuses (kept as aliases)
           pending: "#29ABCB",
           in_progress: "#FBC02D",
           blocked: "#E53835",
-          done: "#2E7D31",
+        },
+
+        star: "#FFD230",
+
+        tag: {
+          department: "#00B8DB",
+          scope: "#8200DB",
+        },
+
+        priority: {
+          urgent: "#E7000B",
+          high: "#FF6900",
+          medium: "#FFD230",
+          low: "#99A1AF",
         },
 
         chart: {
@@ -60,22 +89,21 @@ export default {
       },
 
       keyframes: {
-        'gradient-x': {
-          '0%, 100%': {
-            'background-size': '200% 200%',
-            'background-position': 'left center'
+        "gradient-x": {
+          "0%, 100%": {
+            "background-size": "200% 200%",
+            "background-position": "left center",
           },
-          '50%': {
-            'background-size': '200% 200%',
-            'background-position': 'right center'
+          "50%": {
+            "background-size": "200% 200%",
+            "background-position": "right center",
           },
         },
       },
-      
-      animation: {
-        'gradient-x': 'gradient-x 3s ease infinite',
-      },
 
+      animation: {
+        "gradient-x": "gradient-x 3s ease infinite",
+      },
     },
   },
   plugins: [],

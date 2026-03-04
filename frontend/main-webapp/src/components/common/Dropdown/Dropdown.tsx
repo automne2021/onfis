@@ -6,7 +6,7 @@ interface DropdownProps {
   trigger: React.ReactNode;  // trigger button
   children: React.ReactNode; // dropdown's content
   widthClass?: string;       // Class modifies the width 
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export default function Dropdown({ 
