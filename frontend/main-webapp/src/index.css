@@ -87,16 +87,16 @@ html {
 
   /* --- SECTION --- */
   .onfis-section {
-    @apply w-full px-4 md:px-5 xl:px-8 py-6 flex justify-center bg-neutral-50 flex-col;
+    @apply w-full px-4 md:px-5 xl:px-8 py-6 flex justify-center bg-neutral-50 flex-col min-h-[calc(100vh-60px-24px)];
   }
 
   .chat-section {
-    @apply flex w-full h-full bg-neutral-50 rounded-xl border border-gray-200 shadow-sm overflow-hidden relative;
+    @apply flex w-full bg-neutral-50 rounded-xl border border-gray-200 shadow-sm overflow-hidden relative h-[calc(100vh-60px-24px)];
   }
 
   /* --- NAVBAR --- */
   .navbar-style {
-    @apply w-full px-10 py-3 mt-6 flex items-center justify-between bg-white rounded-[20px] shadow-md shadow-neutral-200;
+    @apply w-full px-10 py-3 flex items-center justify-between bg-white rounded-[20px] shadow-md shadow-neutral-200;
   }
 }
 
