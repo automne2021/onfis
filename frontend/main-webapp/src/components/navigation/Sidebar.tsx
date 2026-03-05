@@ -14,8 +14,8 @@ const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
   <NavLink
     to={to}
     className={({ isActive }) =>
-      `group relative flex flex-col items-center justify-center rounded-lg transition-all duration-200 ease-out
-       ${isCollapsed ? "w-10 h-10" : "w-full py-2 px-1"}
+      `group relative flex items-center rounded-lg transition-all duration-200 ease-out overflow-hidden
+       ${isCollapsed ? "w-full h-10" : "w-full h-10 pr-3"}
        ${isActive
         ? "bg-primary/8 text-primary shadow-sm"
         : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800"
@@ -31,22 +31,23 @@ const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
           `}
         />
 
-        <Icon
-          name={icon}
-          size={20}
-          color={isActive ? "#0014A8" : "#62748E"}
-          className="transition-transform duration-200 group-hover:scale-110"
-        />
+        <div className="w-10 h-10 flex items-center justify-center shrink-0">
+          <Icon
+            name={icon}
+            size={20}
+            color={isActive ? "#0014A8" : "#62748E"}
+            className="transition-transform duration-200 group-hover:scale-110"
+          />
+        </div>
 
-        {/* Label below icon */}
-        {!isCollapsed && (
-          <span
-            className={`text-[10px] leading-tight font-medium text-center mt-1 transition-colors
-              ${isActive ? "text-primary font-semibold" : ""}`}
-          >
-            {label}
-          </span>
-        )}
+        <span
+          className={`body-3-regular whitespace-nowrap overflow-hidden text-ellipsis 
+            transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+            ${isCollapsed ? "opacity-0" : "opacity-100 delay-75"}
+            ${isActive ? "text-primary font-semibold" : ""}`}
+        >
+          {label}
+        </span>
 
         {/* Tooltip for collapsed state */}
         {isCollapsed && (
@@ -75,20 +76,22 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`bg-white flex flex-col items-center gap-1 py-3 rounded-xl shadow-sm border border-neutral-100 sticky top-0 self-start h-[calc(100vh-theme(spacing.16))]
+      className={`bg-white flex flex-col items-center gap-1 py-3 rounded-xl shadow-sm border border-neutral-100 sticky top-[72px] self-start h-[calc(100vh-60px-24px)]
                    transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
-                   ${isCollapsed ? "w-[56px] px-2" : "w-[80px] px-1.5"}`}
+                   ${isCollapsed ? "w-[56px] px-2" : "w-[160px] px-2"}`}
     >
       {/* Collapse Toggle Button */}
       <button
         type="button"
         onClick={toggleSidebar}
-        className={`flex items-center justify-center rounded-lg transition-all duration-200
+        className={`flex items-center rounded-lg transition-all duration-200
                     hover:bg-neutral-100 active:scale-95 mb-1
                     ${isCollapsed ? "w-10 h-8" : "w-full h-8"}`}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        <CollapseIcon collapsed={isCollapsed} />
+        <div className="w-10 h-full flex items-center justify-center shrink-0">
+          <CollapseIcon collapsed={isCollapsed} />
+        </div>
       </button>
 
       {/* Subtle divider */}
