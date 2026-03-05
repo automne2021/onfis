@@ -9,6 +9,7 @@ import { AnnouncementForm } from '../components/AnnouncementForm';
 import { MOCK_ANNOUNCEMENTS } from '../../../data/mockAnnouncement';
 import { AnnouncementCard } from '../components/Card/AnnouncementCard';
 import { useSearchParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 
 
 const tabItems = [
@@ -83,9 +84,9 @@ export function Announcement() {
 
   return(
     <>
-      <section className="onfis-section">
+      <section className="w-full px-4 md:px-5 xl:px-8 py-6 flex justify-center bg-neutral-50 flex-col pt-0">
         <Navbar />
-        <div className="w-full md:px-12 lg:px-24">
+        <div className="w-full px-0 lg:px-12">
           {/* Title text */}
           <p className="header-h4 text-neutral-900 mt-[24px]">
             Announcements & News
@@ -142,15 +143,17 @@ export function Announcement() {
       </section>
 
       {/* Add form */}
-      {openAddForm && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/20 backdrop-blur-sm'>
+      {openAddForm && createPortal(
+        <div className='fixed inset-0 z-[9999] flex items-center justify-center bg-neutral-900/20 backdrop-blur-sm'>
           {/* Click ở ngoài để đóng form */}
           <div className='absolute inset-0' onClick={handleToggleAddForm}/>
 
-          <div className='relative z-10'>
+          {/* Form Content */}
+          <div className='relative z-10 w-full max-w-[800px] max-h-[90vh] overflow-y-auto px-4'>
             <AnnouncementForm onClose={handleToggleAddForm}/>
           </div>
-        </div>
+        </div>,
+        document.body // Dịch chuyển toàn bộ Modal ra thẳng thẻ <body>
       )}
     </>
   );

@@ -110,7 +110,7 @@ export function AnnouncementDetail() {
 
   return(
     <>
-      <section className="w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] pt-[60px] flex justify-center bg-neutral-50 flex-col ">
+      <section className="w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] pt-3 flex justify-center bg-neutral-50 flex-col ">
         {/* Navbar */}
         <BreadCrumb title={detail.title} />
 
