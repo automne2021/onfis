@@ -18,10 +18,10 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
   const userData = MOCK_USERS
 
   return(
-    <div className="flex flex-col h-full w-full justify-between bg-white">
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col w-full bg-white h-full justify-between">
+      <div className="flex flex-col gap-2">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-6 border-b border-neutral-200 ">
+        <div className="flex items-center justify-between px-4 py-6 border-b border-neutral-200 shrink-0">
           <p className="header-h6 leading-none text-neutral-900">Messages</p>
           <Button 
             id="edit-chat"
@@ -35,7 +35,7 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
         </div>
         
         {/* Channel */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 flex-1 overflow-y-auto min-h-0 custom-scrollbar pb-4 pt-2">
           {/* Project Groups */}
           <ChatGroup title="Project Groups">
             {projectGroups.map((channel) => (
