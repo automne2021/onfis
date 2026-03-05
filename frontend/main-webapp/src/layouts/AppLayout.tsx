@@ -14,17 +14,18 @@ export default function AppLayout() {
     <AuthProvider>
       <ToastProvider>
         <SidebarProvider>
-          <div className="flex flex-col h-screen overflow-hidden bg-neutral-50">
+          <div className="">
             {/* Header - Full Width */}
             <Header companyName={mockCompanyName} />
 
             {/* Main Area: Sidebar + Content */}
-            <div className="flex flex-1 p-3 gap-3 min-h-0">
+            <div className="flex flex-1 p-3 gap-3 min-h-0 mt-[60px]">
               {/* Sidebar */}
               <Sidebar />
 
               {/* Main Content Area */}
-              <main className="flex-1 bg-white rounded-[12px] shadow-sm border border-neutral-100 p-4 overflow-auto">
+              {/* <main className="flex-1 bg-white rounded-[12px] shadow-sm border border-neutral-100 p-4 overflow-auto"> */}
+              <main className="flex-1">
                 <div key={location.pathname} className="animate-page-enter">
                   <Outlet />
                 </div>

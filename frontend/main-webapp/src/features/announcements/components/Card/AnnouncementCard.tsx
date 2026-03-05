@@ -178,7 +178,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
       {/* Body */}
       <div className="flex flex-col gap-0">
         {/* Title */}
-        <p className="header-h5 text-neutral-900">{title}</p>
+        <p className="header-h6 leading-none my-4 text-neutral-900">{title}</p>
 
         {/* Content */}
         <p className="body-3-regular text-neutral-500 mb-3 line-clamp-2 overflow-hidden text-ellipsis">

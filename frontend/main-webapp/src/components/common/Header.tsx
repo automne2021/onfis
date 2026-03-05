@@ -67,7 +67,7 @@ export function Header({ companyName, messageContents, notificationContents }: H
   ]
 
   return(
-    <header className="flex items-center justify-between w-full px-3 py-2 transition-all duration-300 ease-in-out bg-white shadow-[0px_4px_4px_0px_#e2e8f0]">
+    <header className="fixed top-0 z-50 flex items-center justify-between w-full h-[60px] px-10 py-4 transition-all duration-300 ease-in-out bg-white shadow-md shadow-neutral-200">
       {/* Left side - Logo */}
       <div className="flex items-center gap-4">
         <img src={logo} alt="Logo" className="text-primary"/>

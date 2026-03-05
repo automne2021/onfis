@@ -87,10 +87,10 @@ export function Navbar() {
         trigger={
           <Button
             title="Filter"
-            iconLeft={<FilterList />}
+            iconLeft={<FilterList fontSize="small"/>}
             onClick={() => toggleMenu('filter')}
             style='sub'
-            textStyle="body-2-medium"
+            textStyle="body-3-medium"
           />
         }
         children={<ContentList data={filterContents} emptyLabel="" onItemClick={closeMenu}/>}
