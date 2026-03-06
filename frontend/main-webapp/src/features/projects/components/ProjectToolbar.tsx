@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 import { AddIcon, SearchIcon, KanbanIcon, ListIcon, TimelineIcon, CalendarViewIcon as CalendarIcon } from "../../../components/common/Icons";
+import { useAuth } from "../../../contexts/AuthContext";
 
 type ViewMode = "kanban" | "list" | "timeline" | "calendar";
 
@@ -43,6 +44,8 @@ export default function ProjectToolbar({
   onViewModeChange,
 }: ProjectToolbarProps) {
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const { currentUser } = useAuth();
+  const isManager = currentUser.role === "manager";
 
   const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
     { mode: "kanban", icon: (active) => <KanbanIcon active={active} /> },
@@ -56,13 +59,15 @@ export default function ProjectToolbar({
       {/* Left: Breadcrumb + New Project */}
       <div className="flex items-center gap-2">
         <h1 className="font-normal text-xs leading-4 text-black">Project</h1>
-        <button
-          onClick={onNewProject}
-          className="bg-secondary border border-primary flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-primary font-medium text-xs leading-4 hover:bg-secondary/80 btn-hover"
-        >
-          <AddIcon />
-          <span>New Project</span>
-        </button>
+        {isManager && (
+          <button
+            onClick={onNewProject}
+            className="bg-secondary border border-primary flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-primary font-medium text-xs leading-4 hover:bg-secondary/80 btn-hover"
+          >
+            <AddIcon />
+            <span>New Project</span>
+          </button>
+        )}
       </div>
 
       {/* Center: Search */}

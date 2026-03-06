@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useSidebar } from "../../contexts/SidebarContext";
+import { useAuth } from "../../contexts/AuthContext";
 import Icon from "../common/Icon";
 import { CollapseIcon } from "../common/Icons";
 
@@ -64,14 +65,29 @@ const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
 
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { currentUser } = useAuth();
 
-  const navItems: Omit<NavItemProps, "isCollapsed">[] = [
+  const isManager = currentUser.role === "manager";
+
+  // Common nav items visible to all roles
+  const commonNavItems: Omit<NavItemProps, "isCollapsed">[] = [
     { to: "/dashboard", icon: "dashboard", label: "Dashboard" },
     { to: "/announcements", icon: "campaign", label: "Announce" },
     { to: "/discuss", icon: "forum", label: "Discuss" },
     { to: "/positions", icon: "account_tree", label: "Position" },
     { to: "/projects", icon: "view_kanban", label: "Project" },
+    { to: "/my-tasks", icon: "assignment", label: "My Tasks" },
   ];
+
+  // Manager-only nav items
+  const managerNavItems: Omit<NavItemProps, "isCollapsed">[] = [
+    { to: "/review-queue", icon: "rate_review", label: "Reviews" },
+    { to: "/team-workload", icon: "groups", label: "Workload" },
+  ];
+
+  const navItems = isManager
+    ? [...commonNavItems, ...managerNavItems]
+    : commonNavItems;
 
   return (
     <aside

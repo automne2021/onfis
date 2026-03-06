@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 import { Chat, Notifications } from '@mui/icons-material';
 
@@ -22,6 +23,8 @@ export function Header({ companyName, messageContents, notificationContents }: H
   const currentUser = findUserById(105)
 
   const navigate = useNavigate()
+
+  const { currentUser: currentAuthUser, setRole } = useAuth();
 
   // States management
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
@@ -76,6 +79,28 @@ export function Header({ companyName, messageContents, notificationContents }: H
 
       {/* Right side */}
       <div className="flex items-center gap-2 text-neutral-500">
+
+        {/* Dev Role Switcher */}
+        <div className="flex items-center bg-neutral-100 rounded-full p-0.5 mr-1 border border-neutral-200">
+          <button
+            onClick={() => setRole(currentAuthUser.role === 'manager' ? 'employee' : 'manager')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-200 ${currentAuthUser.role === 'manager'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-neutral-400 hover:text-neutral-600'
+              }`}
+          >
+            MGR
+          </button>
+          <button
+            onClick={() => setRole(currentAuthUser.role === 'employee' ? 'manager' : 'employee')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all duration-200 ${currentAuthUser.role === 'employee'
+                ? 'bg-emerald-500 text-white shadow-sm'
+                : 'text-neutral-400 hover:text-neutral-600'
+              }`}
+          >
+            EMP
+          </button>
+        </div>
 
         {/* Icons */}
         {iconButtons.map((item) => (

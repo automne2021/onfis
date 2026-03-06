@@ -24,6 +24,11 @@ import { ProjectsPage, ProjectDetailPage } from '../features/projects';
 // Tasks (new from frontend-projects)
 import { ProjectTasksPage } from '../features/tasks';
 
+// New task workflow pages
+import MyTasksPage from '../features/tasks/pages/MyTasksPage';
+import ReviewQueuePage from '../features/tasks/pages/ReviewQueuePage';
+import TeamWorkloadPage from '../features/tasks/pages/TeamWorkloadPage';
+
 // Positions (new from frontend-projects)
 import { PositionTreePage } from '../features/positions';
 
@@ -70,6 +75,11 @@ export const router = createBrowserRouter(
           <Route path=":projectId" element={<ProjectDetailPage />} />
           <Route path=":projectId/tasks" element={<ProjectTasksPage />} />
         </Route>
+
+        {/* New task workflow routes */}
+        <Route path="my-tasks" element={<MyTasksPage />} />
+        <Route path="review-queue" element={<ReviewQueuePage />} />
+        <Route path="team-workload" element={<TeamWorkloadPage />} />
 
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />
       </Route>

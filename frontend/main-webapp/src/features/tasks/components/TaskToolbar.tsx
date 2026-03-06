@@ -11,6 +11,7 @@ import {
 } from "../../../components/common/Icons";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 import { AddIcon } from "../../../components/common/Icons";
+import { useAuth } from "../../../contexts/AuthContext";
 
 const FILTER_CATEGORIES: FilterCategory[] = [
   {
@@ -65,6 +66,8 @@ export default function TaskToolbar({
   onViewModeChange,
 }: TaskToolbarProps) {
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const { currentUser } = useAuth();
+  const isManager = currentUser.role === "manager";
 
   const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
     { mode: "kanban", icon: (active) => <KanbanIcon active={active} /> },
@@ -91,7 +94,7 @@ export default function TaskToolbar({
             </Link>
           </span>
         </nav>
-        {onNewTask && (
+        {isManager && onNewTask && (
           <button
             onClick={onNewTask}
             className="bg-secondary border border-primary flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-primary font-medium text-xs leading-4 hover:bg-secondary/80 btn-hover"
