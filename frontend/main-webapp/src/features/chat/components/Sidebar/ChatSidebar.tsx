@@ -17,13 +17,13 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
   const directMessages = MOCK_CHANNELS.filter(channel => channel.type === 'direct');
   const userData = MOCK_USERS
 
-  return(
+  return (
     <div className="flex flex-col h-full w-full justify-between bg-white">
       <div className="flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-6 border-b border-neutral-200 ">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 ">
           <p className="header-h6 leading-none text-neutral-900">Messages</p>
-          <Button 
+          <Button
             id="edit-chat"
             iconLeft={icons && icons['edit']}
             onClick={() => console.log('Edit chat')}
@@ -33,35 +33,35 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
             size="square"
           />
         </div>
-        
+
         {/* Channel */}
         <div className="flex flex-col gap-2">
           {/* Project Groups */}
           <ChatGroup title="Project Groups">
             {projectGroups.map((channel) => (
-              <ChatItem 
+              <ChatItem
                 key={channel.id}
                 name={channel.name}
                 isActive={activeChannelId === channel.id}
                 onClick={() => onChannelSelect(channel.id)}
-                icon={icons && icons['hash']} 
+                icon={icons && icons['hash']}
               />
             ))}
           </ChatGroup>
-            
+
           {/* Direct Messages */}
           <ChatGroup title="Direct Messages">
             {directMessages.map((channel) => {
-              const userKey = channel.id.replace('dm-', ''); 
+              const userKey = channel.id.replace('dm-', '');
               const user = userData[userKey];
 
               return (
-                <ChatItem 
+                <ChatItem
                   key={channel.id}
                   name={channel.name}
                   isActive={activeChannelId === channel.id}
                   onClick={() => onChannelSelect(channel.id)}
-                  avatarUrl={user?.avatarUrl} 
+                  avatarUrl={user?.avatarUrl}
                   status={user?.status}
                 />
               );

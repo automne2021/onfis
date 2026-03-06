@@ -18,13 +18,13 @@ interface ButtonProps {
   customStyle?: string
 }
 
-export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle='body-3-medium', type='button', bgColor, bgHoverColor, textColor, border=true, borderColor, loading=false, size='default', width, customStyle } : ButtonProps) {
-  return(
-    <button 
+export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle = 'body-3-medium', type = 'button', bgColor, bgHoverColor, textColor, border = true, borderColor, loading = false, size = 'default', width, customStyle }: ButtonProps) {
+  return (
+    <button
       key={id}
       type={type}
       onClick={onClick}
-      className={`rounded-lg flex items-center justify-center gap-2 transition cursor-pointer ${textStyle}
+      className={`rounded-lg flex items-center justify-center gap-2 transition cursor-pointer btn-hover ${textStyle}
       ${border ? 'border' : ''}
         ${size === 'default' && 'px-4 py-2'}
         ${size === 'square' && 'p-2'}

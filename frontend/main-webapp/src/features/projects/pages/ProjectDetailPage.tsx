@@ -270,7 +270,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex flex-col gap-3 w-full max-w-full">
       {/* Breadcrumb Bar with Search */}
-      <div className="bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-100">
+      <div className="bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300">
         <nav className="text-sm leading-5 text-neutral-900">
           <Link to="/projects" className="hover:text-primary transition-colors">
             Project
@@ -280,7 +280,7 @@ export default function ProjectDetailPage() {
         </nav>
 
         {/* Search Input */}
-        <div className="bg-white border border-neutral-200 rounded-[10px] flex items-center gap-2 px-2 h-8 w-full sm:w-[200px] lg:w-[240px]">
+        <div className="bg-white border border-neutral-200 rounded-[10px] flex items-center gap-2 px-2 h-8 w-full sm:w-[260px] lg:w-[380px]">
           <SearchIcon />
           <input
             type="text"
@@ -291,7 +291,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Headline Card */}
-      <div className="bg-white flex flex-col gap-4 p-3 rounded-[12px] shadow-sm border border-neutral-100">
+      <div className="bg-white flex flex-col gap-4 p-3 rounded-[12px] shadow-sm border border-neutral-300">
         {/* Title Row with Progress */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
           {/* Title + Star + Manage Tasks */}
@@ -418,7 +418,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Milestones Card */}
-      <div className="bg-white flex flex-col gap-3 p-3 rounded-[12px] shadow-sm border border-neutral-100">
+      <div className="bg-white flex flex-col gap-3 p-3 rounded-[12px] shadow-sm border border-neutral-300">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
@@ -442,7 +442,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Recent Tasks Card */}
-      <div className="bg-white flex flex-col gap-2 p-3 rounded-[12px] shadow-sm border border-neutral-100">
+      <div className="bg-white flex flex-col gap-2 p-3 rounded-[12px] shadow-sm border border-neutral-300">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
             Recent Tasks
@@ -457,7 +457,7 @@ export default function ProjectDetailPage() {
             </svg>
           </Link>
         </div>
-        <div className="flex flex-col divide-y divide-neutral-100">
+        <div className="flex flex-col divide-y divide-neutral-200">
           {mockRecentTasks.map((task) => (
             <RecentTaskItem key={task.id} task={task} />
           ))}
@@ -465,7 +465,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Description Card */}
-      <div className="bg-white flex flex-col gap-3 p-3 rounded-[12px] shadow-sm border border-neutral-100">
+      <div className="bg-white flex flex-col gap-3 p-3 rounded-[12px] shadow-sm border border-neutral-300">
         <h2 className="font-bold text-sm leading-5 text-neutral-900">
           Description
         </h2>

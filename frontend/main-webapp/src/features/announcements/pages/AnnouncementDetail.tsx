@@ -26,24 +26,24 @@ export function AnnouncementDetail() {
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeMenu, setActiveMenu] = useState(false)
-  
+
   const [isLiked, setIsLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [commentCount, setCommentCount] = useState(0)
   // Lưu lại ID và Tên người được reply. Nếu null nghĩa là đang viết comment bình thường.
-  const [replyingTo, setReplyingTo] = useState<{id: string | number, name: string} | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string | number, name: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
       setIsLoading(true)
-      
+
       setTimeout(() => {
         if (id) {
           const foundItem = MOCK_ANNOUNCEMENTS.find(
             (item) => item.id === Number(id)
           )
-          
+
           setDetail(foundItem || null)
 
           if (foundItem) {
@@ -66,10 +66,10 @@ export function AnnouncementDetail() {
         setIsLoading(false)
       }, 500)
     }
-    
+
     fetchDetail()
   }, [id])
-  
+
   // Functions
   const togglePersonalInformationCard = () => {
     setIsProfileOpen(prev => !prev);
@@ -86,11 +86,11 @@ export function AnnouncementDetail() {
   const handleClickReply = (commentId: string | number, authorName: string) => {
     setReplyingTo({ id: commentId, name: authorName });
   };
-  
+
   if (isLoading) {
     return <Loading />
   }
-  
+
   if (!detail) {
     return <div className="p-4 text-center text-neutral-500">No announcement available!</div>;
   }
@@ -108,14 +108,16 @@ export function AnnouncementDetail() {
     avatarUrl: userProfileImg
   };
 
-  return(
+  return (
     <>
-      <section className="w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] pt-[60px] flex justify-center bg-neutral-50 flex-col ">
-        {/* Navbar */}
-        <BreadCrumb title={detail.title} />
+      <section className="onfis-section">
+        {/* Toolbar (matching ProjectToolbar pattern) */}
+        <nav className="bg-white grid grid-cols-[1fr] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300">
+          <BreadCrumb title={detail.title} />
+        </nav>
 
         {/* Body */}
-        <div className="w-full pt-6 md:px-5 xl:px-8 2xl:px-16 flex flex-col justify-center bg-white border-b-2 border-neutral-200">
+        <div className="w-full pt-4 md:px-5 xl:px-8 2xl:px-16 flex flex-col justify-center bg-white border-b-2 border-neutral-200 mt-2 rounded-xl shadow-sm border border-neutral-300">
           {/* Header */}
           <p className="header-h2 text-neutral-900">{detail.title}</p>
           <div className="flex items-center justify-between py-6 border-b border-neutral-200">
@@ -124,22 +126,22 @@ export function AnnouncementDetail() {
             <div className="flex items-center gap-3">
               {/* User avatar */}
               <div className="relative">
-                <div 
+                <div
                   onClick={() => togglePersonalInformationCard()}
                   className="w-12 h-12 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                  <img 
+                  <img
                     src={avatarImg}
                     alt="User Avatar"
                     className="w-full h-full object-cover"
-                    />
+                  />
                 </div>
 
                 {/* RENDER PROFILE CARD KHI ĐƯỢC CLICK */}
                 {isProfileOpen && (
-                  <ProfileCard 
-                    user={profileCardData} 
-                    onClose={() => setIsProfileOpen(false)} 
+                  <ProfileCard
+                    user={profileCardData}
+                    onClose={() => setIsProfileOpen(false)}
                   />
                 )}
               </div>
@@ -155,21 +157,21 @@ export function AnnouncementDetail() {
             {/* Tags */}
             <div className="flex items-center gap-2">
               {detail.isPinned && (
-                <Tags 
+                <Tags
                   label="Pinned"
-                  icon={<PushPinOutlined fontSize="small"/>}
+                  icon={<PushPinOutlined fontSize="small" />}
                 />
               )}
               {detail.scope === 'company' && (
-                <Tags 
+                <Tags
                   label="Global"
-                  icon={<Public fontSize="small"/>}
+                  icon={<Public fontSize="small" />}
                 />
               )}
               {detail.scope === 'department' && detail.departments && detail.departments.length > 0 && (
                 <>
                   {detail.departments.slice(0, 2).map((dept, index) => (
-                    <Tags 
+                    <Tags
                       key={index}
                       label={dept}
                       bgColor="bg-cyan-100"
@@ -192,7 +194,7 @@ export function AnnouncementDetail() {
                         </div>
                       }
                       children={
-                        <ContentList 
+                        <ContentList
                           data={detail.departments.slice(2).map((dept: string) => ({
                             content: dept
                           }))}
@@ -237,8 +239,8 @@ export function AnnouncementDetail() {
               <div className="flex flex-wrap gap-3 my-5 pl-3">
                 {detail.attachments.map((file, index) => {
                   const type = getFileType(file.fileName)
-                  return(
-                    <a 
+                  return (
+                    <a
                       key={`${file.id}-${index}`}
                       href={file.url}
                       download={file.fileName}
@@ -255,7 +257,7 @@ export function AnnouncementDetail() {
           {/* Like & Comments */}
           <div className="flex items-center py-4 justify-start gap-4">
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 type="button"
                 onClick={handleLike}
                 className={`py-2 transition hover:text-primary 
@@ -283,7 +285,7 @@ export function AnnouncementDetail() {
               href="#comment-section"
               className="p-2 rounded-full text-neutral-500 transition hover:bg-neutral-200 flex items-center gap-2 body-3-regular"
             >
-              <CommentOutlined sx={{ fontSize: 20 }}/>
+              <CommentOutlined sx={{ fontSize: 20 }} />
               <span>
                 {commentCount === 0 ? "Comment" : commentCount}
               </span>
@@ -291,15 +293,15 @@ export function AnnouncementDetail() {
           </div>
         </div>
       </section>
-      
+
       {/* Comment section */}
-      <section 
+      <section
         id={`comment-section`}
-        className="w-full px-4 md:px-5 xl:px-8 2xl:px-[220px] flex justify-center bg-neutral-50 flex-col">
+        className="onfis-section">
         {/* Comment */}
         <div className="py-6 px-8">
           <p className="flex items-center gap-2 header-h5 text-neutral-900">
-            <span className="text-neutral-500"><ModeCommentOutlined fontSize="large"/></span>
+            <span className="text-neutral-500"><ModeCommentOutlined fontSize="large" /></span>
             Comments
           </p>
           <div className="flex flex-col gap-4 overflow-y-auto">
@@ -307,7 +309,7 @@ export function AnnouncementDetail() {
               <CommentItem
                 key={comment.id}
                 id={comment.id}
-                avatarUrl={comment.avatarUrl} 
+                avatarUrl={comment.avatarUrl}
                 userId={comment.userId}
                 name={comment.name}
                 date={comment.date}
@@ -327,7 +329,7 @@ export function AnnouncementDetail() {
           </div>
         </div>
         <div className="mt-4 pt-4 border-t border-neutral-200 sticky bottom-0 bg-neutral-50 pb-12 px-6">
-          <CommentInput 
+          <CommentInput
             onSubmit={(content) => {
               console.log("Đang gửi Comment mới tinh:", content);
               // Gọi API gửi bình luận chính...

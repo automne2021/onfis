@@ -6,7 +6,7 @@ html {
   scroll-behavior: smooth;
 }
 
-@layer base{
+@layer base {
   body {
     @apply font-sans text-neutral-900 bg-neutral-50;
   }
@@ -16,7 +16,7 @@ html {
 @layer components {
   /* --- HEADLINES --- */
   /* Format: Font-Weight Size / Line-Height */
-  
+
   .header-h1 {
     @apply font-bold text-[72px] leading-[76px];
   }
@@ -42,7 +42,7 @@ html {
   }
 
   /* --- BODY TEXT: REGULAR --- */
-  
+
   /* Body 1: Regular, 18/28 */
   .body-1-regular {
     @apply font-normal text-[18px] leading-[28px];
@@ -87,16 +87,21 @@ html {
 
   /* --- SECTION --- */
   .onfis-section {
-    @apply w-full px-4 md:px-5 xl:px-8 py-6 flex justify-center bg-neutral-50 flex-col;
+    @apply w-full px-4 md:px-5 xl:px-8 py-2 flex justify-center bg-neutral-50 flex-col;
   }
 
   .chat-section {
-    @apply flex w-full h-full bg-neutral-50 rounded-xl border border-gray-200 shadow-sm overflow-hidden relative;
+    @apply flex w-full h-full bg-neutral-50 rounded-xl border-2 border-gray-200 shadow-md overflow-hidden relative;
   }
 
   /* --- NAVBAR --- */
   .navbar-style {
-    @apply w-full px-10 py-3 mt-6 flex items-center justify-between bg-white rounded-[20px] shadow-md shadow-neutral-200;
+    @apply w-full px-10 py-3 mt-6 flex items-center justify-between bg-white rounded-[20px] shadow-lg shadow-neutral-200/60 border border-neutral-200;
+  }
+
+  /* --- SECTION CARD (white panels/cards that hold content) --- */
+  .section-card {
+    @apply bg-white rounded-xl border border-neutral-300 shadow-sm;
   }
 }
 
@@ -185,42 +190,86 @@ html {
   /* ---- Card hover: lift + shadow + border glow ---- */
   .card-hover {
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border: 1px solid #e2e8f0;
   }
 
   .card-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
-    border-color: #c7d2fe;
+    transform: translateY(-4px);
+    box-shadow:
+      0 12px 32px -6px rgba(99, 102, 241, 0.15),
+      0 4px 12px -2px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(99, 102, 241, 0.1);
+    border-color: #a5b4fc;
   }
 
   .card-hover:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+    border-color: #818cf8;
   }
 
   /* ---- Button hover: scale + glow ---- */
   .btn-hover {
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
 
   .btn-hover:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+      0 6px 20px -4px rgba(0, 20, 168, 0.2),
+      0 2px 8px -2px rgba(0, 0, 0, 0.08);
   }
 
   .btn-hover:active {
     transform: scale(0.97) translateY(0);
-    box-shadow: none;
+    box-shadow: 0 2px 6px -2px rgba(0, 0, 0, 0.1);
   }
 
-  /* ---- Row hover: subtle background ---- */
+  /* ---- Row hover: visible background + left accent ---- */
   .row-hover {
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
   .row-hover:hover {
-    background-color: #f8fafc;
-    box-shadow: inset 3px 0 0 0 #6366f1;
+    background-color: #f1f5f9;
+    box-shadow: inset 4px 0 0 0 #6366f1, 0 2px 8px -4px rgba(0, 0, 0, 0.06);
+  }
+
+  /* ---- Element hover: for interactive non-card elements (icon buttons, avatars, links) ---- */
+  .element-hover {
+    transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.15s ease;
+  }
+
+  .element-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px -3px rgba(99, 102, 241, 0.18), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+    border-color: #c7d2fe;
+  }
+
+  .element-hover:active {
+    transform: scale(0.96);
+    box-shadow: 0 1px 4px -1px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ---- Input focus: enhanced ring + border ---- */
+  .input-focus {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .input-focus:focus-within {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  }
+
+  /* ---- Tag hover: for badges, pills, status indicators ---- */
+  .tag-hover {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+
+  .tag-hover:hover {
+    transform: translateY(-1px) scale(1.03);
+    box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.12);
+    filter: brightness(1.05);
   }
 
   /* Custom Scrollbar */

@@ -1,6 +1,6 @@
 import userProfileImg from "../../../../assets/images/user-profile-img.png"
 
-import { Public, PushPinOutlined, ArrowForwardOutlined,ThumbUpOutlined, ThumbUp, CommentOutlined } from '@mui/icons-material';
+import { Public, PushPinOutlined, ArrowForwardOutlined, ThumbUpOutlined, ThumbUp, CommentOutlined } from '@mui/icons-material';
 
 import { Tags } from "../Tags/Tags";
 import Dropdown from "../../../../components/common/Dropdown/Dropdown";
@@ -42,27 +42,27 @@ interface AnnouncementCardProps {
   onToggleComment?: (announcementId: string | number) => void
 }
 
-export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment } : AnnouncementCardProps) {
+export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment }: AnnouncementCardProps) {
 
   const [activeMenu, setActiveMenu] = useState(false)
   const [isLiked, setIsLiked] = useState(initialIsLike)
   const [likeCount, setLikeCount] = useState(numberOfLike)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
-  const avatarImg = avatarUrl? avatarUrl : userProfileImg
+  const avatarImg = avatarUrl ? avatarUrl : userProfileImg
   const remainingCount = departments ? departments.length - 2 : 0
   const slug = generateSlug(title)
   const timeAgoString = date ? getTimeAgo(date) : "";
 
   const authorProfile = findUserById(authId)
-    const profileCardData: UserProfile = authorProfile || {
-      id: "unknown",
-      name: "N/A",
-      position: "N/A",
-      department: "Company",
-      email: "unknown@company.com",
-      avatarUrl: userProfileImg
-    };
+  const profileCardData: UserProfile = authorProfile || {
+    id: "unknown",
+    name: "N/A",
+    position: "N/A",
+    department: "Company",
+    email: "unknown@company.com",
+    avatarUrl: userProfileImg
+  };
 
   // Functions
   const togglePersonalInformationCard = () => {
@@ -83,30 +83,30 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
     }
   }
 
-  return(
-    <div 
-      className="bg-white py-5 px-6 rounded-xl border border-neutral-200 hover:border-primary hover:bg-neutral-50 transition"
+  return (
+    <div
+      className="bg-white py-4 px-5 rounded-xl border border-neutral-200 shadow-sm card-hover transition"
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {/* User avatar */}
           <div className="relative">
-            <div 
+            <div
               onClick={() => togglePersonalInformationCard()}
               className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
             >
-              <img 
+              <img
                 src={avatarImg}
                 alt="User Avatar"
                 className="w-full h-full object-cover"
-                />
+              />
             </div>
 
             {isProfileOpen && (
-              <ProfileCard 
-                user={profileCardData} 
-                onClose={() => setIsProfileOpen(false)} 
+              <ProfileCard
+                user={profileCardData}
+                onClose={() => setIsProfileOpen(false)}
               />
             )}
           </div>
@@ -122,21 +122,21 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
         {/* Tags */}
         <div className="flex items-center gap-2">
           {isPinned && (
-            <Tags 
+            <Tags
               label="Pinned"
-              icon={<PushPinOutlined fontSize="small"/>}
+              icon={<PushPinOutlined fontSize="small" />}
             />
           )}
           {scope === 'company' && (
-            <Tags 
+            <Tags
               label="Global"
-              icon={<Public fontSize="small"/>}
+              icon={<Public fontSize="small" />}
             />
           )}
           {scope === 'department' && departments && departments.length > 0 && (
             <>
               {departments.slice(0, 2).map((dept, index) => (
-                <Tags 
+                <Tags
                   key={index}
                   label={dept}
                   bgColor="bg-cyan-100"
@@ -159,7 +159,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
                     </div>
                   }
                   children={
-                    <ContentList 
+                    <ContentList
                       data={departments.slice(2).map((dept) => ({
                         content: dept
                       }))}
@@ -178,7 +178,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
       {/* Body */}
       <div className="flex flex-col gap-0">
         {/* Title */}
-        <p className="header-h5 text-neutral-900">{title}</p>
+        <p className="text-base font-bold text-neutral-900 leading-snug mt-1">{title}</p>
 
         {/* Content */}
         <p className="body-3-regular text-neutral-500 mb-3 line-clamp-2 overflow-hidden text-ellipsis">
@@ -188,11 +188,11 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
         {/* Attachments (Optional) */}
         {attachments && attachments.length > 0 && (
           <div className="flex flex-wrap mb-3 pl-1">
-            {attachments.slice(0,3).map((file, index) => {
+            {attachments.slice(0, 3).map((file, index) => {
               const type = getFileType(file.fileName)
               const overlapClass = index > 0 ? "-ml-4" : ""
-              return(
-                <a 
+              return (
+                <a
                   key={`${file.id}-${index}`}
                   href={file.url}
                   download={file.fileName}
@@ -212,18 +212,18 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-neutral-200 pt-3">
-        <Link 
-          to={`./${id}/${slug}`} 
+        <Link
+          to={`./${id}/${slug}`}
           className="text-primary underline-animation body-3-medium"
         >
-          Read more <ArrowForwardOutlined sx={{ fontSize: 14 }}/>
+          Read more <ArrowForwardOutlined sx={{ fontSize: 14 }} />
         </Link>
 
         <div className="flex items-center gap-4">
-          <button 
+          <button
             type="button"
             onClick={handleLike}
-            className={`p-2 rounded-full transition hover:bg-neutral-200 
+            className={`p-2 rounded-full transition hover:bg-neutral-200 element-hover
               ${isLiked ? "text-primary" : "text-neutral-500"}  
               flex items-center gap-2 body-4-regular
             `}
@@ -236,10 +236,10 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
 
           <button
             type="button"
-            onClick={() =>  onToggleComment && onToggleComment(id)}
-            className="p-2 rounded-full text-neutral-500 transition hover:bg-neutral-200 flex items-center gap-2 body-4-regular"
+            onClick={() => onToggleComment && onToggleComment(id)}
+            className="p-2 rounded-full text-neutral-500 transition hover:bg-neutral-200 flex items-center gap-2 body-4-regular element-hover"
           >
-            <CommentOutlined fontSize="small"/>
+            <CommentOutlined fontSize="small" />
             <span>
               {numberOfComments}
             </span>

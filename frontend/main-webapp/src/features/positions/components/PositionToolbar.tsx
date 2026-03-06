@@ -44,7 +44,7 @@ export default function PositionToolbar({
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
 
   return (
-    <div className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-100">
+    <div className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300">
       {/* Left: Breadcrumb */}
       <Link to="/positions" className="text-xs font-normal text-black hover:text-primary transition-colors">
         Position
@@ -52,7 +52,7 @@ export default function PositionToolbar({
 
       {/* Center: Search */}
       <div className="justify-self-center">
-        <div className="bg-white border border-neutral-200 rounded-[8px] flex items-center gap-1.5 px-2 py-1 min-w-[160px] lg:min-w-[200px]">
+        <div className="bg-white border border-neutral-200 rounded-[8px] flex items-center gap-1.5 px-2 py-1 min-w-[260px] lg:min-w-[380px]">
           <SearchIcon />
           <input
             type="text"

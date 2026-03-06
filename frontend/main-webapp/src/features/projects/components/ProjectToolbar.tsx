@@ -52,7 +52,7 @@ export default function ProjectToolbar({
   ];
 
   return (
-    <div className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-100 mx-3 mt-3">
+    <div className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300 mx-3 mt-3">
       {/* Left: Breadcrumb + New Project */}
       <div className="flex items-center gap-2">
         <h1 className="font-normal text-xs leading-4 text-black">Project</h1>
@@ -66,7 +66,7 @@ export default function ProjectToolbar({
       </div>
 
       {/* Center: Search */}
-      <div className="justify-self-center w-[160px] lg:w-[200px]">
+      <div className="justify-self-center w-[260px] lg:w-[380px]">
         <div className="bg-white border border-neutral-200 rounded-[8px] flex items-center gap-1.5 px-2 h-7">
           <SearchIcon />
           <input

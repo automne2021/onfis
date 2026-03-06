@@ -29,7 +29,7 @@ export function ChatInput({ label }: ChatInputProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  const handleEmojiClick = (emojiObject: {emoji: string}) => {
+  const handleEmojiClick = (emojiObject: { emoji: string }) => {
     setMessage((prev) => prev + emojiObject.emoji)
   }
 
@@ -43,7 +43,7 @@ export function ChatInput({ label }: ChatInputProps) {
       const newFilesArray = Array.from(files)
       setAttachedFiles((prev) => [...prev, ...newFilesArray]);
     }
-    
+
     // Reset input to choose that file again
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -55,44 +55,44 @@ export function ChatInput({ label }: ChatInputProps) {
   }
 
   const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault(); 
+    if (e) e.preventDefault();
 
-    if (!message.trim() && attachedFiles.length === 0) return; 
+    if (!message.trim() && attachedFiles.length === 0) return;
 
-    if (attachedFiles.length > 0) 
+    if (attachedFiles.length > 0)
       console.log("Attached files: ", attachedFiles.map(file => file.name))
     console.log("Đã gửi tin nhắn:", message);
 
     // Clear
-    setMessage(''); 
+    setMessage('');
     setAttachedFiles([]);
     setShowEmojiPicker(false)
   };
 
   return (
-    <form 
+    <form
       onSubmit={handleSubmit}
-      className="px-6 py-4 bg-white border-t border-transparent flex-shrink-0 relative"
+      className="px-3 py-1.5 bg-white border-t border-neutral-200 flex-shrink-0 relative"
     >
-      <input 
+      <input
         type="file"
         ref={fileInputRef}
         multiple
         onChange={handleFileChange}
-        className="hidden" 
+        className="hidden"
         accept="image/*, .pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .psd"
       />
 
       {/* Emoji */}
       {showEmojiPicker && (
-        <div 
-          ref={emojiPickerRef} 
+        <div
+          ref={emojiPickerRef}
           className="absolute bottom-[80px] right-6 z-50 shadow-xl rounded-xl"
         >
-          <EmojiPicker 
+          <EmojiPicker
             onEmojiClick={handleEmojiClick}
             autoFocusSearch={false}
-            theme={Theme.LIGHT} 
+            theme={Theme.LIGHT}
             width={320}
             height={400}
           />
@@ -104,9 +104,9 @@ export function ChatInput({ label }: ChatInputProps) {
         <AttachedFilesPreview attachedFiles={attachedFiles} onRemove={handleRemoveFile} />
       )}
 
-      <div className="w-full h-[52px] border border-neutral-200 focus-within:border-primary transition-colors rounded-xl px-4 flex items-center bg-white shadow-sm">
-        
-        <button 
+      <div className="w-full h-[34px] border border-neutral-200 focus-within:border-primary transition-colors rounded-lg px-3 flex items-center bg-white shadow-sm input-focus">
+
+        <button
           type="button"
           onClick={handleAttachmentClick}
           className="text-neutral-400 hover:text-primary transition-colors p-1 -ml-1 flex-shrink-0 outline-none"
@@ -114,15 +114,15 @@ export function ChatInput({ label }: ChatInputProps) {
           <PlusCircle size={20} strokeWidth={2} />
         </button>
 
-        <input 
+        <input
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={`Type a message to ${label ? `# ${label}` : '...'}`}
-          className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-3 body-2-regular"
+          className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-2 body-3-regular"
         />
 
-        <button 
+        <button
           type="button"
           onClick={() => setShowEmojiPicker(prev => !prev)}
           className="text-neutral-400 hover:text-amber-500 transition-colors p-1 flex-shrink-0 outline-none"
@@ -130,24 +130,23 @@ export function ChatInput({ label }: ChatInputProps) {
           <Smile size={20} strokeWidth={2} />
         </button>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={!message.trim()}
-          className={`p-1 ml-1 flex-shrink-0 transition-colors outline-none ${
-            message.trim() 
-              ? 'text-primary hover:text-blue-700 cursor-pointer' 
-              : 'text-neutral-300 cursor-not-allowed'
-          }`}
+          className={`p-1 ml-1 flex-shrink-0 transition-colors outline-none ${message.trim()
+            ? 'text-primary hover:text-blue-700 cursor-pointer'
+            : 'text-neutral-300 cursor-not-allowed'
+            }`}
         >
           <SendHorizontal size={20} strokeWidth={2} />
         </button>
 
       </div>
-      
-      <div className="text-center mt-2 body-4-regular text-neutral-400 select-none">
+
+      <div className="text-center mt-1 body-4-regular text-neutral-400 select-none">
         Tip: Press Enter to send, Shift + Enter for new line
       </div>
-      
+
     </form>
   );
 }

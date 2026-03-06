@@ -16,17 +16,17 @@ interface SearchBarProps {
   width?: string
 }
 
-export function SearchBar({ scope, onSearch, width='w-[220px] md:w-[400px] lg:w-[520px]' } : SearchBarProps) {
+export function SearchBar({ scope, onSearch, width = 'w-[220px] md:w-[400px] lg:w-[520px]' }: SearchBarProps) {
 
   // State Managements
   const [searchTerm, setSearchTerm] = useState("")
-  
+
   // useEffect
   useEffect(() => {
     const handleDynamicSearch = async (term: string, currentScope: string) => {
       // Logic gọi API hoặc lọc dữ liệu local
       console.log(`Searching for "${term}" in ${currentScope}`)
-      
+
       const results = await fetchResultsFromDB(term, currentScope)
       onSearch(results)
     }
@@ -38,11 +38,11 @@ export function SearchBar({ scope, onSearch, width='w-[220px] md:w-[400px] lg:w-
     return () => clearTimeout(delayDebounceFn)
   }, [searchTerm, scope, onSearch])
 
-  return(
+  return (
     <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white ${width}`}>
-      <Search className="text-neutral-500"/>
-      <input 
-        type="text" 
+      <Search className="text-neutral-500" />
+      <input
+        type="text"
         placeholder={`Search...`}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="outline-none w-full"

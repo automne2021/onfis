@@ -24,7 +24,7 @@ export default function AppLayout() {
               <Sidebar />
 
               {/* Main Content Area */}
-              <main className="flex-1 bg-white rounded-[12px] shadow-sm border border-neutral-100 p-4 overflow-auto">
+              <main className="flex-1 bg-white rounded-[12px] shadow-md border-2 border-neutral-200 p-4 overflow-auto">
                 <div key={location.pathname} className="animate-page-enter">
                   <Outlet />
                 </div>
