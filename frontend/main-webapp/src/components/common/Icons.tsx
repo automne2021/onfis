@@ -155,7 +155,7 @@ export const TreeViewIcon = ({ active }: { active: boolean }) => (
 );
 
 export const ListViewIcon = ({ active, size = 20 }: { active: boolean; size?: number }) => (
-    <Icon name="list" size={size} color={active ? "#0014A8" : "#62748E"} />
+    <Icon name="list" size={size} color={active ? "white" : "#62748E"} />
 );
 
 export const BoardViewIcon = ({ active }: { active: boolean }) => (

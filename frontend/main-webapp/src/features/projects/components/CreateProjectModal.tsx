@@ -3,6 +3,7 @@ import Modal from "../../../components/common/Modal";
 import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { ErrorIcon, ExpandMoreIcon, InfoIcon, FlagOutlineIcon as FlagIcon, DeleteIcon, AddCircleIcon } from "../../../components/common/Icons";
+import { Button } from "../../../components/common/Buttons/Button";
 
 interface Milestone {
   id: string;
@@ -121,18 +122,18 @@ export default function CreateProjectModal({
       maxWidth="xl"
       footer={
         <>
-          <button
+          <Button
+            title="Cancel"
             onClick={handleCancel}
-            className="px-3 py-1.5 text-sm font-bold text-neutral-500 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
+            style="sub"
+            textStyle='body-3-medium'
+          />
+          <Button
+            title="Create Project"
             onClick={handleSubmit}
-            className="px-4 py-1.5 text-sm font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-md shadow-blue-500/20 transition-all"
-          >
-            Create Project
-          </button>
+            style="primary"
+            textStyle='body-3-medium'
+          />
         </>
       }
     >
@@ -149,7 +150,7 @@ export default function CreateProjectModal({
               onChange={handleNameChange}
               placeholder="Enter project name"
               className={`
-                w-full px-3 py-2 rounded-lg border 
+                w-full px-3 py-2 rounded-lg border focus:outline-none
                 ${errors.name
                   ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   : "border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary"
@@ -189,6 +190,7 @@ export default function CreateProjectModal({
           <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
             Project Manager / Lead
           </label>
+          
           <div className="relative">
             <select
               value={formData.managerId}
@@ -222,11 +224,11 @@ export default function CreateProjectModal({
 
         {/* Description */}
         <RichTextEditor
-          value={formData.description}
+          // value={formData.description}
           onChange={(value: string) =>
             setFormData((prev) => ({ ...prev, description: value }))
           }
-          placeholder="Describe the project scope, key deliverables, and expected outcomes..."
+          // placeholder="Describe the project scope, key deliverables, and expected outcomes..."
         />
 
         {/* Milestones */}
@@ -268,7 +270,7 @@ export default function CreateProjectModal({
                       handleMilestoneChange(milestone.id, "name", e.target.value)
                     }
                     placeholder="e.g. Design Approval"
-                    className="w-full px-2 py-1.5 rounded-md border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-white text-neutral-900 text-sm"
+                    className="w-full px-2 py-1.5 rounded-md border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-white text-neutral-900 text-sm focus:outline-none"
                   />
                 </div>
                 <div className="col-span-4">
@@ -282,7 +284,7 @@ export default function CreateProjectModal({
                         e.target.value
                       )
                     }
-                    className="w-full px-2 py-1.5 rounded-md border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-white text-neutral-900 text-sm"
+                    className="w-full px-2 py-1.5 rounded-md border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-white text-neutral-900 text-sm focus:outline-none"
                   />
                 </div>
                 <div className="col-span-1 flex justify-center">

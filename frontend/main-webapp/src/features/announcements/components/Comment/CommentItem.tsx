@@ -104,14 +104,14 @@ export function CommentItem({
 
         {/* Name + Position + Content + Basic information */}
         <div className="flex flex-col items-start w-full">
-          <div className="w-full bg-white rounded-2xl rounded-tl-sm px-5 py-4 shadow-md">
-            <div className="flex items-center justify-between mb-1">
+          <div className="w-full bg-white rounded-2xl rounded-tl-sm px-5 py-3.5 shadow-md">
+            <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
                 <p className="body-3-medium text-neutral-900">{name}</p>
               </div>
-              <p className="body-3-regular text-neutral-500">{timeAgoString}</p>
+              <p className="body-4-regular text-neutral-500">{timeAgoString}</p>
             </div>
-            <p className="body-2-regular text-neutral-700 whitespace-pre-line">
+            <p className="body-3-regular text-neutral-700 whitespace-pre-line">
               {content}
             </p>
           </div>

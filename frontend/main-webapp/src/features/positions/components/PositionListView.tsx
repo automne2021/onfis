@@ -29,7 +29,7 @@ const CheckboxIcon = ({ checked }: { checked: boolean }) => (
 const CountBadge = ({ count }: { count: number }) => (
   <div className="relative w-5 h-5">
     <div className="absolute inset-0 rounded-full bg-neutral-200" />
-    <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-neutral-500">
+    <span className="absolute inset-0 flex items-center justify-center body-4-regular text-neutral-500">
       {count}
     </span>
   </div>
@@ -225,21 +225,21 @@ function EmployeeRow({
 
       {/* Work Phone */}
       <td className="px-2 py-1.5">
-        <span className="text-sm font-medium text-neutral-500">
+        <span className="body-3-regular text-neutral-500">
           {employee.workPhone || "—"}
         </span>
       </td>
 
       {/* Work Email */}
       <td className="px-2 py-1.5">
-        <span className="text-sm font-medium text-neutral-400">
+        <span className="body-3-regular text-neutral-500">
           {employee.workEmail || "—"}
         </span>
       </td>
 
       {/* Job Position */}
       <td className="px-2 py-1.5">
-        <span className="text-sm font-medium text-black">{employee.jobPosition}</span>
+        <span className="body-3-regular text-neutral-500">{employee.jobPosition}</span>
       </td>
 
       {/* Manager */}

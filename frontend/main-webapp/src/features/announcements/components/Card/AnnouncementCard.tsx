@@ -1,7 +1,5 @@
 import userProfileImg from "../../../../assets/images/user-profile-img.png"
-
 import { Public, PushPinOutlined, ArrowForwardOutlined, ThumbUpOutlined, ThumbUp, CommentOutlined } from '@mui/icons-material';
-
 import { Tags } from "../Tags/Tags";
 import Dropdown from "../../../../components/common/Dropdown/Dropdown";
 import { useState } from "react";
@@ -40,14 +38,15 @@ interface AnnouncementCardProps {
   numberOfComments?: number
   onToggleLike?: (announcementId: string | number, newStatus: boolean) => void
   onToggleComment?: (announcementId: string | number) => void
+  isProfileOpen?: boolean; 
+  onToggleProfile?: () => void;
 }
 
-export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment }: AnnouncementCardProps) {
+export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment, isProfileOpen = false, onToggleProfile }: AnnouncementCardProps) {
 
   const [activeMenu, setActiveMenu] = useState(false)
   const [isLiked, setIsLiked] = useState(initialIsLike)
   const [likeCount, setLikeCount] = useState(numberOfLike)
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
 
   const avatarImg = avatarUrl ? avatarUrl : userProfileImg
   const remainingCount = departments ? departments.length - 2 : 0
@@ -65,19 +64,13 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
   };
 
   // Functions
-  const togglePersonalInformationCard = () => {
-    setIsProfileOpen(prev => !prev);
-  }
-
   const toggleMenu = () => setActiveMenu(prev => !prev);
   const closeMenu = () => setActiveMenu(false);
 
   const handleLike = () => {
     const newStatus = !isLiked;
-
     setIsLiked(newStatus)
     setLikeCount(prev => newStatus ? prev + 1 : prev - 1);
-
     if (onToggleLike) {
       onToggleLike(id, newStatus)
     }
@@ -85,7 +78,9 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
 
   return (
     <div
-      className="bg-white py-4 px-5 rounded-xl border border-neutral-200 shadow-sm card-hover transition"
+      className={`bg-white py-4 px-5 rounded-xl border border-neutral-200 shadow-sm card-hover transition relative 
+        ${isProfileOpen ? "z-50" : "z-10"}
+      `}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -93,27 +88,28 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
           {/* User avatar */}
           <div className="relative">
             <div
-              onClick={() => togglePersonalInformationCard()}
-              className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={onToggleProfile}
+              className="relative z-10 w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
             >
               <img
                 src={avatarImg}
                 alt="User Avatar"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none select-none"
               />
             </div>
 
+            {/* Profile Card Render */}
             {isProfileOpen && (
               <ProfileCard
                 user={profileCardData}
-                onClose={() => setIsProfileOpen(false)}
+                onClose={() => onToggleProfile?.()}
               />
             )}
           </div>
           {/* Text */}
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-0.5">
             <p className="body-3-medium text-neutral-900">{authName}</p>
-            <p className="body-3-medium text-neutral-500">
+            <p className="body-4-regular text-neutral-500">
               {position}<span className="mx-1">•</span>{timeAgoString}
             </p>
           </div>
@@ -124,13 +120,13 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
           {isPinned && (
             <Tags
               label="Pinned"
-              icon={<PushPinOutlined fontSize="small" />}
+              icon={<PushPinOutlined sx={{ fontSize: 16 }} />}
             />
           )}
           {scope === 'company' && (
             <Tags
               label="Global"
-              icon={<Public fontSize="small" />}
+              icon={<Public sx={{ fontSize: 16 }} />}
             />
           )}
           {scope === 'department' && departments && departments.length > 0 && (
@@ -177,10 +173,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
 
       {/* Body */}
       <div className="flex flex-col gap-0">
-        {/* Title */}
-        <p className="text-base font-bold text-neutral-900 leading-snug mt-1">{title}</p>
-
-        {/* Content */}
+        <p className="header-h6 leading-relaxed text-neutral-900 mt-3">{title}</p>
         <p className="body-3-regular text-neutral-500 mb-3 line-clamp-2 overflow-hidden text-ellipsis">
           {content}
         </p>
@@ -207,11 +200,10 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
             })}
           </div>
         )}
-
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-neutral-200 pt-3">
+      <div className="flex items-center justify-between border-t border-neutral-200 pt-2">
         <Link
           to={`./${id}/${slug}`}
           className="text-primary underline-animation body-3-medium"
@@ -245,9 +237,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
             </span>
           </button>
         </div>
-
       </div>
-
     </div>
   )
 }

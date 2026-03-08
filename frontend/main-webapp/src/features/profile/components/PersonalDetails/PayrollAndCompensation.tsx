@@ -11,7 +11,7 @@ export function PayrollAndCompensation({ icon, userInfo }: OverviewProps) {
   ]
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Payroll & Compensation" />
 
       <div className="flex flex-wrap items-stretch justify-between gap-3">

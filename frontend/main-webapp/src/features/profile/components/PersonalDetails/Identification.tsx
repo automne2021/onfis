@@ -21,7 +21,7 @@ export function Identification({ icon, userInfo, role }: OverviewProps & { role?
   ]
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Identification" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

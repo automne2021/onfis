@@ -14,7 +14,7 @@ export function FamilyAndEmergency({ icon, userInfo }: OverviewProps) {
   ]
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Family & Emergency" />
 
       <div className="bg-neutral-50 px-4 py-3 rounded-lg flex flex-wrap items-center justify-between">

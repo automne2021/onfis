@@ -187,10 +187,10 @@ export default function ProjectTasksPage() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto gap-3 relative">
+    <div className="onfis-section">
       {/* Toolbar */}
       <TaskToolbar
-        projectName={projectName}
+        projectTitle={projectName}
         projectId={_projectId}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -231,8 +231,9 @@ export default function ProjectTasksPage() {
       </div>
 
       {/* Task Detail Modal */}
-      {selectedTask && (
+      {selectedTask && selectedTask && (
         <TaskDetailModal
+          key={selectedTask.id}
           task={selectedTask}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}

@@ -8,8 +8,8 @@ export function StatusBubble({ status="offline", size="medium" } : StatusBubbleP
     <>
       <span 
         className={`absolute -bottom-1 -right-1 border-2 border-white rounded-full
-          ${size === "large" && 'w-5 h-5'}
-          ${size === "medium" && 'w-4 h-4'}
+          ${size === "large" && 'w-4.5 h-4.5'}
+          ${size === "medium" && 'w-3.5 h-3.5'}
           ${size === "small" && 'w-3 h-3'}
           ${status === "online" && 'bg-green-500'}
           ${status === "busy" && 'bg-red-500'}

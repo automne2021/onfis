@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../../../types/chatTypes'; // Chỉnh lại đường dẫn cho đúng với project của bạn
-import { StatusBubble } from '../../StatusBubble';
+import { StatusBubble } from '../../../../../components/common/StatusBubble';
 import { FileAttachment } from './FileAttachments';
 import { MeetingCard } from './MeetingCard';
 

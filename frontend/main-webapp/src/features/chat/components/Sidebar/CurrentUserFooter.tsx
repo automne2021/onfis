@@ -5,7 +5,7 @@ import { CURRENT_USER } from '../../../../data/mockChatData';
 import { findUserById } from '../../../../data/mockUserData';
 import type { UserProfile } from '../../../../types/userType';
 import userProfileImg from "../../../../assets/images/user-profile-img.png"
-import { StatusBubble } from '../StatusBubble';
+import { StatusBubble } from '../../../../components/common/StatusBubble';
 
 interface CurrentUserFooterProps {
   name: string;

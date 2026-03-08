@@ -31,7 +31,7 @@ export default function StatCard({
       {/* Header: Icon + Badge */}
       <div className="flex items-start justify-between">
         {/* Icon Container */}
-        <div className="bg-secondary rounded-[10px] w-[40px] h-[36px] flex items-center justify-center">
+        <div className="bg-secondary rounded-md p-1.5 flex items-center justify-center">
           {icon}
         </div>
 

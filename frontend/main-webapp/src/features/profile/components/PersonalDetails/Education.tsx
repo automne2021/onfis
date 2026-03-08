@@ -15,7 +15,7 @@ export function Education({ icon, userInfo }: OverviewProps) {
   ]
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Education" />
 
       <div className="flex flex-wrap items-stretch justify-between gap-3">

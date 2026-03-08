@@ -139,7 +139,7 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
   ]
 
   return (
-    <form className="bg-white rounded-xl w-[420px] md:w-[520px] lg:w-[600px] shadow-xl border border-neutral-200">
+    <form className="bg-white rounded-xl w-[420px] md:w-[590px] lg:w-[732px] shadow-xl border border-neutral-200">
       {/* Header - Title */}
       <div className="border-b border-neutral-200 flex justify-between items-center px-4 py-2">
         <div className='flex items-center gap-1'>
@@ -227,7 +227,7 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
             maxLength={32}
             onChange={(e) => setTitle(e.target.value)}
             value={title}
-            className={`w-full body-2-regular text-neutral-900 border px-4 py-3 rounded-lg transition-all outline-none 
+            className={`w-full body-3-regular text-neutral-900 border px-4 py-3 rounded-lg transition-all outline-none 
             ${errors.title ? 'border-red-500' : (title.length > 0 ? 'border-neutral-200 bg-white' : 'border-neutral-200 bg-neutral-50')}
             focus:border-primary focus:bg-white`}
           />

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { SearchIcon, StarIcon, ArrowForwardIcon as ArrowRightIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
+import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
+import { ArrowRightAltOutlined } from '@mui/icons-material';
 
 // Types
 interface Milestone {
@@ -82,12 +83,12 @@ const RecentTaskItem = ({ task }: { task: RecentTask }) => {
   return (
     <div className="grid grid-cols-[8px_1fr_100px_28px_60px] items-center gap-3 py-2 px-1 hover:bg-neutral-50 rounded-lg transition-colors">
       <div className={`w-2 h-2 rounded-full ${priorityColors[task.priority]}`} />
-      <span className="font-medium text-sm text-neutral-900 truncate">{task.title}</span>
+      <span className="body-3-regular text-neutral-900 truncate">{task.title}</span>
       <div className="flex items-center gap-2">
         <div className="w-16 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
           <div className="h-full bg-status-on_track rounded-full" style={{ width: `${task.progress}%` }} />
         </div>
-        <span className="text-xs text-neutral-400 w-8 text-right">{task.progress}%</span>
+        <span className="body-4-regular w-8 text-right">{task.progress}%</span>
       </div>
       <div className="w-6 h-6 rounded-full bg-status-on_track flex items-center justify-center text-[10px] font-medium text-neutral-900">
         {task.assignee.charAt(0).toUpperCase()}
@@ -201,12 +202,12 @@ const MilestoneItem = ({ milestone }: { milestone: Milestone }) => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-0.5 min-w-[120px] lg:min-w-[140px]">
+    <div className="flex flex-col items-center gap-1 min-w-[120px] lg:min-w-[140px]">
       {iconMap[milestone.status]}
-      <h4 className="font-bold text-sm leading-5 text-neutral-900 text-center mt-0.5">
+      <h4 className="body-3-medium text-neutral-900 text-center mt-0.5">
         {milestone.title}
       </h4>
-      <p className="font-medium text-xs leading-4 text-neutral-400 text-center">
+      <p className="body-4-regular text-neutral-400 text-center">
         {milestone.date}
       </p>
       <MilestoneStatusBadge status={milestone.status} />
@@ -268,37 +269,38 @@ export default function ProjectDetailPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-full">
+    <div className="onfis-section">
       {/* Breadcrumb Bar with Search */}
-      <div className="bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300">
-        <nav className="text-sm leading-5 text-neutral-900">
+      <nav className="navbar-style">
+        <div className="flex items-center gap-1 body-3-regular">
           <Link to="/projects" className="hover:text-primary transition-colors">
             Project
           </Link>
           <span className="mx-1">/</span>
           <span className="text-primary font-normal">{project.title}</span>
-        </nav>
+        </div>
 
         {/* Search Input */}
-        <div className="bg-white border border-neutral-200 rounded-[10px] flex items-center gap-2 px-2 h-8 w-full sm:w-[260px] lg:w-[380px]">
+        <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white w-[260px] lg:w-[380px]`}>
           <SearchIcon />
           <input
             type="text"
-            placeholder="Search..."
-            className="flex-1 bg-transparent outline-none text-sm leading-5 text-neutral-900 placeholder:text-neutral-400"
+            placeholder={`Search...`}
+            className="outline-none w-full body-4-regular"
+            maxLength={250}
           />
         </div>
-      </div>
+      </nav>
 
       {/* Headline Card */}
-      <div className="bg-white flex flex-col gap-4 p-3 rounded-[12px] shadow-sm border border-neutral-300">
+      <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-2">
         {/* Title Row with Progress */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between">
           {/* Title + Star + Manage Tasks */}
           <div className="flex items-center gap-2 shrink-0">
-            <h1 className="font-bold text-lg leading-6 text-neutral-900">
+            <p className="header-h6 leading-snug text-neutral-900">
               {project.title}
-            </h1>
+            </p>
             <button type="button" className="shrink-0 hover:scale-110 transition-transform" aria-label="Toggle star">
               <StarIcon filled={project.isStarred} />
             </button>
@@ -312,12 +314,12 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Progress Section */}
-          <div className="flex flex-col gap-0.5 flex-1">
+          <div className="flex flex-col gap-0.5 flex-1 max-w-[600px]">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-xs leading-4 text-neutral-500">
-                {project.daysRemaining} days remaining until deadline
+              <span className="body-4-regular text-neutral-500">
+                {project.daysRemaining} days remaining
               </span>
-              <span className="font-medium text-sm leading-5 text-neutral-900">
+              <span className="body-4-regular text-neutral-900">
                 {project.progress}%
               </span>
             </div>
@@ -370,7 +372,7 @@ export default function ProjectDetailPage() {
             <span className="font-medium text-xs leading-4 text-neutral-900">Planned Date</span>
             <div className="flex items-center gap-3">
               <span className="text-xs leading-4 text-neutral-900">{project.plannedStartDate}</span>
-              <ArrowRightIcon />
+              <ArrowRightAltOutlined fontSize="small"/>
               <span className="text-xs leading-4 text-neutral-900">{project.plannedEndDate}</span>
             </div>
 
@@ -418,13 +420,13 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Milestones Card */}
-      <div className="bg-white flex flex-col gap-3 p-3 rounded-[12px] shadow-sm border border-neutral-300">
+      <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-3">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
             Project Milestones
           </h2>
-          <button type="button" className="font-bold text-xs leading-4 text-primary hover:underline">
+          <button type="button" className="body-4-regular text-primary hover:underline">
             View all
           </button>
         </div>
@@ -442,14 +444,14 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Recent Tasks Card */}
-      <div className="bg-white flex flex-col gap-2 p-3 rounded-[12px] shadow-sm border border-neutral-300">
+      <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-3">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
             Recent Tasks
           </h2>
           <Link
             to={`/projects/${projectId}/tasks`}
-            className="font-bold text-xs leading-4 text-primary hover:underline inline-flex items-center gap-1"
+            className="body-4-regular text-primary hover:underline inline-flex items-center gap-1"
           >
             View All Tasks
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -465,7 +467,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Description Card */}
-      <div className="bg-white flex flex-col gap-3 p-3 rounded-[12px] shadow-sm border border-neutral-300">
+      <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-3">
         <h2 className="font-bold text-sm leading-5 text-neutral-900">
           Description
         </h2>

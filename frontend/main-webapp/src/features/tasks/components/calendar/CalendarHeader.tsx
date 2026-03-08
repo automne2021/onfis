@@ -1,10 +1,5 @@
-import type { ReactElement } from "react";
 import type { ViewMode } from "../../types";
 import {
-  ListViewIcon,
-  BoardViewIcon,
-  TimelineViewIcon,
-  CalendarTabIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FilterLinesIcon,
@@ -23,27 +18,12 @@ interface CalendarHeaderProps {
   onSettings?: () => void;
 }
 
-type ViewTab = {
-  mode: ViewMode;
-  label: string;
-  icon: (active: boolean) => ReactElement;
-};
-
-const viewTabs: ViewTab[] = [
-  { mode: "list", label: "List", icon: (active) => <ListViewIcon active={active} /> },
-  { mode: "kanban", label: "Board", icon: (active) => <BoardViewIcon active={active} /> },
-  { mode: "timeline", label: "Timeline", icon: (active) => <TimelineViewIcon active={active} /> },
-  { mode: "calendar", label: "Calendar", icon: (active) => <CalendarTabIcon active={active} /> },
-];
-
 export default function CalendarHeader({
   currentMonth,
   currentYear,
-  viewMode,
   onPrevMonth,
   onNextMonth,
   onToday,
-  onViewModeChange,
   onFilter,
   onSettings,
 }: CalendarHeaderProps) {
@@ -53,26 +33,7 @@ export default function CalendarHeader({
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3">
-      {/* View Mode Tabs */}
-      <div className="flex items-center gap-1 bg-neutral-50 p-1 rounded-lg">
-        {viewTabs.map(({ mode, label, icon }) => (
-          <button
-            key={mode}
-            onClick={() => onViewModeChange(mode)}
-            className={`
-              flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
-              ${viewMode === mode
-                ? "bg-white text-primary shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
-              }
-            `}
-          >
-            {icon(viewMode === mode)}
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 pb-3 mt-2">
 
       {/* Month Navigation & Actions */}
       <div className="flex items-center gap-2">

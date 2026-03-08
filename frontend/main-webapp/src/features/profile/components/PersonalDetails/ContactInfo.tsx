@@ -35,7 +35,7 @@ export function ContactInformation({ icon, userInfo, role }: ContactProps) {
   const canViewPersonal = role === 'manager' || role === 'admin';
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Contact Information" />
 
       <div className="flex flex-col gap-10">

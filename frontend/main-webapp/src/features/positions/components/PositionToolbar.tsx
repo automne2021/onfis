@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useCallback, useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
-import { SearchIcon, TreeViewIcon, ListViewIcon } from "../../../components/common/Icons";
+import { TreeViewIcon, ListViewIcon } from "../../../components/common/Icons";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
+import { Dropdown } from "../../../components/common";
+import { SearchBar, type SearchResult } from "../../../components/common/SearchBar";
+import { ContentList, type ContentItem } from "../../../components/common/Dropdown/ContentList";
+import { ViewToggle } from "../../../components/common/ViewToggle";
 
 type ViewMode = "tree" | "list";
 
@@ -28,41 +32,70 @@ const FILTER_CATEGORIES: FilterCategory[] = [
 ];
 
 interface PositionToolbarProps {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   onFilter: () => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }
 
 export default function PositionToolbar({
-  searchQuery,
-  onSearchChange,
   viewMode,
   onViewModeChange,
 }: PositionToolbarProps) {
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+
+  const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
+      { mode: "tree", icon: (active) => <TreeViewIcon active={active} /> },
+      { mode: "list", icon: (active) => <ListViewIcon active={active} /> },
+    ];
+
+  const closeMenu = () => setActiveMenu(null)
+
+  const handleSearchResultClick = (item: SearchResult) => {
+    console.log("Navigate to: ", item.url)
+    // Can use router.push(item.url)
+    closeMenu()
+    setSearchResults([])
+  }
+
+  const searchContentItem: ContentItem[] = searchResults.slice(0,5).map(item => ({
+    content: item.title,
+    onClick: () => handleSearchResultClick(item)
+  }))
+
+  const handleSearchData = useCallback((results: SearchResult[]) => {
+    setSearchResults(results);
+  }, []);
 
   return (
-    <div className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300">
+    <div className="navbar-style">
       {/* Left: Breadcrumb */}
-      <Link to="/positions" className="text-xs font-normal text-black hover:text-primary transition-colors">
+      <Link to="/positions" className="body-3-regular text-neutral-900 hover:text-primary transition-colors">
         Position
       </Link>
 
       {/* Center: Search */}
-      <div className="justify-self-center">
-        <div className="bg-white border border-neutral-200 rounded-[8px] flex items-center gap-1.5 px-2 py-1 min-w-[260px] lg:min-w-[380px]">
-          <SearchIcon />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-neutral-900 text-xs placeholder:text-neutral-400"
+      <Dropdown
+        isOpen={activeMenu === 'search'}
+        trigger={
+          <div onClick={() => setActiveMenu('search')}>
+            <SearchBar 
+              scope="positions" 
+              onSearch={handleSearchData}
+            />
+          </div>
+        }
+        children={
+          <ContentList 
+            data={searchContentItem}
+            emptyLabel="No result available"
+            onItemClick={closeMenu}
           />
-        </div>
-      </div>
+        }
+        widthClass="w-full"
+        onClose={closeMenu}
+      />
 
       {/* Right: Filter + View Toggle */}
       <div className="flex items-center gap-2">
@@ -71,28 +104,12 @@ export default function PositionToolbar({
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
         />
-        <div className="flex items-center rounded-[6px] overflow-hidden">
-          <button
-            onClick={() => onViewModeChange("tree")}
-            className={`p-1.5 transition-colors ${viewMode === "tree"
-              ? "bg-primary"
-              : "bg-neutral-200 hover:bg-neutral-200/80"
-              }`}
-            aria-label="Tree View"
-          >
-            <TreeViewIcon active={viewMode === "tree"} />
-          </button>
-          <button
-            onClick={() => onViewModeChange("list")}
-            className={`p-1.5 transition-colors ${viewMode === "list"
-              ? "bg-primary"
-              : "bg-neutral-200 hover:bg-neutral-200/80"
-              }`}
-            aria-label="List View"
-          >
-            <ListViewIcon active={viewMode === "list"} />
-          </button>
-        </div>
+
+        <ViewToggle 
+          viewMode={viewMode}
+          viewModes={viewModes}
+          onViewModeChange={onViewModeChange}
+        />
       </div>
     </div>
   );

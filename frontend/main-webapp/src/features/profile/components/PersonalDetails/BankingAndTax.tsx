@@ -14,7 +14,7 @@ export function BankingAndTax({ icon, userInfo }: OverviewProps) {
   ]
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Banking & Tax" />
 
       <div className="flex flex-wrap items-center justify-between gap-3">

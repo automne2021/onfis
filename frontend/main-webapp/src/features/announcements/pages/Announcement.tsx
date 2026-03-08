@@ -23,6 +23,7 @@ export function Announcement() {
 
   // State Managements
   const [openAddForm, setOpenAddForm] = useState(false)
+  const [openProfileId, setOpenProfileId] = useState<string | number | null>(null);
 
   const [searchParams] = useSearchParams()
   const currentView = searchParams.get('view') || 'all'
@@ -60,6 +61,10 @@ export function Announcement() {
   const handleComment = (id: string | number) => {
     console.log(`Open comment for post ${id}`);
   }
+
+  const handleToggleProfile = (id: string | number) => {
+    setOpenProfileId((prevId) => (prevId === id ? null : id));
+  };
 
   const filteredAnnouncement = useMemo(() => {
     // Lọc dữ liệu theo Tab (View)
@@ -108,10 +113,10 @@ export function Announcement() {
         <Navbar />
         <div className="w-full md:px-6 lg:px-8">
           {/* Title text */}
-          <p className="text-lg font-bold text-neutral-900 mt-3 leading-tight">
+          <p className="header-h6 text-neutral-900 mt-5 mb-2 leading-none">
             Announcements & News
           </p>
-          <p className="body-3-regular text-neutral-500">
+          <p className="body-4-regular text-neutral-500">
             Stay updated with the latest company-wide and department-specific news, updates, and events.
           </p>
 
@@ -152,6 +157,8 @@ export function Announcement() {
                   numberOfComments={item.calculatedComments}
                   onToggleLike={handleLike}
                   onToggleComment={handleComment}
+                  isProfileOpen={openProfileId === item.id}
+                  onToggleProfile={() => handleToggleProfile(item.id)}
                 />
               ))) : (
               <div className='text-center py-6 text-neutral-500 body-3-medium'>

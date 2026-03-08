@@ -10,7 +10,7 @@ import { SearchBar, type SearchResult } from "../../../components/common/SearchB
 export function Navbar() {
 
   // States management
-  const [activeMenu, setActiveMenu] = useState<string | null>(null) // 'filter' | 'search' | null
+  const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
   // Data
@@ -43,7 +43,7 @@ export function Navbar() {
     setSearchResults([])
   }
 
-  const searchContentItem: ContentItem[] = searchResults.slice(0, 5).map(item => ({
+  const searchContentItem: ContentItem[] = searchResults.slice(0,5).map(item => ({
     content: item.title,
     onClick: () => handleSearchResultClick(item)
   }))
@@ -52,53 +52,51 @@ export function Navbar() {
     setSearchResults(results);
   }, []);
 
-  return (
-    <nav className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-300">
+  return(
+    <nav className="navbar-style">
       {/* Tên */}
-      <h1 className="font-normal text-xs leading-4 text-black">
-        Announcement
-      </h1>
+      <p className="body-3-regular text-neutral-900">
+        Annoucement
+      </p>
 
       {/* Search bar */}
-      <div className="justify-self-center w-[160px] lg:w-[200px]">
-        <Dropdown
-          isOpen={activeMenu === 'search'}
-          trigger={
-            <div onClick={() => setActiveMenu('search')}>
-              <SearchBar
-                scope="announcement"
-                onSearch={handleSearchData}
-              />
-            </div>
-          }
-          children={
-            <ContentList
-              data={searchContentItem}
-              emptyLabel="No result available"
-              onItemClick={closeMenu}
+      <Dropdown
+        isOpen={activeMenu === 'search'}
+        trigger={
+          <div onClick={() => setActiveMenu('search')}>
+            <SearchBar 
+              scope="announcement" 
+              onSearch={handleSearchData}
             />
-          }
-          widthClass="w-full"
-          onClose={closeMenu}
-        />
-      </div>
+          </div>
+        }
+        children={
+          <ContentList 
+            data={searchContentItem}
+            emptyLabel="No result available"
+            onItemClick={closeMenu}
+          />
+        }
+        widthClass="w-full"
+        onClose={closeMenu}
+      />
 
       {/* Filter */}
-      <Dropdown
+      <Dropdown 
         isOpen={activeMenu === 'filter'}
         trigger={
           <Button
             title="Filter"
-            iconLeft={<FilterList sx={{ fontSize: 16 }} />}
+            iconLeft={<FilterList sx={{ fontSize: 16 }}/>}
             onClick={() => toggleMenu('filter')}
             style='sub'
             textStyle="body-4-medium"
           />
         }
-        children={<ContentList data={filterContents} emptyLabel="" onItemClick={closeMenu} />}
+        children={<ContentList data={filterContents} emptyLabel="" onItemClick={closeMenu}/>}
         onClose={() => setActiveMenu(null)}
       />
-
+      
     </nav>
   );
 }

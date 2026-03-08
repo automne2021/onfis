@@ -146,7 +146,7 @@ export default function TaskColumn({ stage, onAddTask, onTaskClick, onDeleteStag
 
       {/* Task Cards — animated collapse */}
       {!isCollapsed && (
-        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1 animate-fadeIn">
+        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1 animate-fadeIn px-1 py-1 -mx-1">
           {stage.tasks.map((task) => (
             <TaskCard key={task.id} task={task} onClick={() => onTaskClick?.(task)} />
           ))}

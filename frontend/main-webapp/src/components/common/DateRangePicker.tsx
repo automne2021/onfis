@@ -176,7 +176,7 @@ export default function DateRangePicker({
               type="date"
               value={formatDate(startDate)}
               onChange={(e) => onStartDateChange(parseDate(e.target.value))}
-              className="w-full pl-10 pr-4 py-3 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 text-sm"
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 text-sm focus:outline-none"
             />
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none flex">
               <CalendarTodayIcon />

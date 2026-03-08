@@ -72,7 +72,7 @@ export function ChatInput({ label }: ChatInputProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="px-3 py-1.5 bg-white border-t border-neutral-200 flex-shrink-0 relative"
+      className="px-3 py-2 bg-white border-t border-neutral-200 flex-shrink-0 relative"
     >
       <input
         type="file"
@@ -119,7 +119,7 @@ export function ChatInput({ label }: ChatInputProps) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={`Type a message to ${label ? `# ${label}` : '...'}`}
-          className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-2 body-3-regular"
+          className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-2 py-2 body-3-regular"
         />
 
         <button

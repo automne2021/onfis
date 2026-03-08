@@ -1,45 +1,73 @@
-interface ButtonProps {
-  id?: string
-  title?: string
-  iconLeft?: React.ReactNode
-  iconRight?: React.ReactNode
-  onClick?: () => void
-  style: 'primary' | 'sub' | 'custom'
-  textStyle?: string
-  bgColor?: string
-  bgHoverColor?: string
-  textColor?: string
-  border?: boolean
-  borderColor?: string
-  type?: "button" | "submit" | "reset" | undefined
-  loading?: boolean
-  size?: "default" | "square"
-  width?: string
-  customStyle?: string
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'style'> {
+  id?: string;
+  title?: string;
+  iconLeft?: ReactNode;
+  iconRight?: ReactNode;
+  style: 'primary' | 'sub' | 'custom'; 
+  textStyle?: string;
+  bgColor?: string;
+  bgHoverColor?: string;
+  textColor?: string;
+  border?: boolean;
+  borderColor?: string;
+  loading?: boolean;
+  size?: "default" | "square";
+  width?: string;
+  customStyle?: string;
 }
 
-export function Button({ id, title, iconLeft, iconRight, onClick, style, textStyle = 'body-3-medium', type = 'button', bgColor, bgHoverColor, textColor, border = true, borderColor, loading = false, size = 'default', width, customStyle }: ButtonProps) {
+export function Button({ 
+  id, 
+  title, 
+  iconLeft, 
+  iconRight, 
+  style, 
+  textStyle = 'body-4-medium', 
+  type = 'button', 
+  bgColor, 
+  bgHoverColor, 
+  textColor, 
+  border = true, 
+  borderColor, 
+  loading = false, 
+  size = 'default', 
+  width, 
+  customStyle,
+  children, 
+  className,
+  disabled,
+  ...rest 
+}: ButtonProps) {
+  
   return (
     <button
-      key={id}
+      id={id}
       type={type}
-      onClick={onClick}
-      className={`rounded-lg flex items-center justify-center gap-2 transition cursor-pointer btn-hover ${textStyle}
-      ${border ? 'border' : ''}
-        ${size === 'default' && 'px-4 py-2'}
-        ${size === 'square' && 'p-2'}
-        ${style === 'primary' && 'border-primary bg-secondary text-primary hover:bg-secondary-hover'} 
-        ${style === 'sub' && 'border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-200'}
-        ${style === 'custom' && `${borderColor} ${bgColor} ${textColor} hover:${bgHoverColor}`}
-        ${loading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}
-        ${width}
-        ${customStyle}
+      disabled={disabled || loading} 
+      {...rest} 
+      className={`rounded-lg flex items-center justify-center gap-2 transition ${textStyle}
+        ${border ? 'border' : ''}
+        ${size === 'default' ? 'px-2.5 py-1.5' : ''}
+        ${size === 'square' ? 'p-2' : ''}
+        ${style === 'primary' ? 'border-primary bg-secondary text-primary hover:bg-secondary-hover' : ''} 
+        ${style === 'sub' ? 'border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-200' : ''}
+        ${style === 'custom' ? `${borderColor || ''} ${bgColor || ''} ${textColor || ''} ${bgHoverColor ? `hover:${bgHoverColor}` : ''}` : ''}
+        ${(disabled || loading) ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}
+        ${width || ''}
+        ${customStyle || ''}
+        ${className || ''} 
       `}
     >
       {iconLeft && iconLeft}
+      
       {loading ? (
-        <span className="animate-dots">{title}</span>
-      ) : title}
+        <span className="animate-dots">{children || title}</span>
+      ) : (
+        children || title
+      )}
+      
       {iconRight && iconRight}
     </button>
   )

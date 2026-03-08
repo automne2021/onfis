@@ -19,7 +19,7 @@ export function EmploymentContract({ icon, userInfo }: OverviewProps) {
   const fileColor = FILE_COLORS[fileExt] || FILE_COLORS.default;
 
   return (
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
+    <div className="profile-section">
       <TitleHeader icon={icon} title="Employment Contract" />
 
       <div className="flex flex-col gap-5 justify-center mt-2">

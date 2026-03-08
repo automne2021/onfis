@@ -40,12 +40,12 @@ export function SearchBar({ scope, onSearch, width = 'w-[220px] md:w-[400px] lg:
 
   return (
     <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white ${width}`}>
-      <Search className="text-neutral-500" />
+      <Search className="text-neutral-500" sx={{ fontSize: 16 }} />
       <input
         type="text"
         placeholder={`Search...`}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="outline-none w-full"
+        className="outline-none w-full body-4-regular"
         maxLength={250}
       />
     </div>

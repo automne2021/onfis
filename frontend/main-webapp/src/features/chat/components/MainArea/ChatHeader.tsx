@@ -1,5 +1,5 @@
 import { Hash, Users, Pin, Search, Phone, MoreVertical, Video } from 'lucide-react';
-import { StatusBubble } from '../StatusBubble';
+import { StatusBubble } from '../../../../components/common/StatusBubble';
 import { useEffect, useState } from 'react';
 import { Button } from '../../../../components/common/Buttons/Button';
 
