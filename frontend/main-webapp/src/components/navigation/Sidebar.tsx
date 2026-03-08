@@ -75,7 +75,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`bg-white flex flex-col items-center gap-1 py-3 rounded-xl shadow-sm border border-neutral-100 sticky top-0 self-start h-[calc(100vh-theme(spacing.16))]
+      className={`bg-white flex flex-col items-center gap-1 py-3 rounded-xl shadow-md border-2 border-neutral-200 sticky top-0 self-start h-[calc(100vh-60px-16px)]
                    transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
                    ${isCollapsed ? "w-[56px] px-2" : "w-[80px] px-1.5"}`}
     >

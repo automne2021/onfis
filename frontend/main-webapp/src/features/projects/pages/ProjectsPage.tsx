@@ -148,7 +148,7 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-2 h-full -m-3">
+    <div className="onfis-section">
       {/* Toolbar */}
       <ProjectToolbar
         onNewProject={handleNewProject}

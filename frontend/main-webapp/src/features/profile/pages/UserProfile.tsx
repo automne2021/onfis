@@ -14,7 +14,7 @@ import { Documents } from "./UserProfile/Documents"
 const tabItems = [
   { id: 'overview', label: "Overview", isDisplay: true },
   { id: 'personal-details', label: "Personal Details", isDisplay: true },
-  { id: 'documents', label: "Documents", isDisplay: true},
+  { id: 'documents', label: "Documents", isDisplay: true },
 ]
 
 export function UserProfile() {
@@ -30,7 +30,7 @@ export function UserProfile() {
   useEffect(() => {
     const fetchDetail = async () => {
       setIsLoading(true)
-      
+
       setTimeout(() => {
         if (id) {
           const user = MOCK_USERS.find(
@@ -44,48 +44,48 @@ export function UserProfile() {
     fetchDetail()
   }, [id])
 
-  
+
   if (isLoading) return <Loading />
   if (!info) return <div className="p-10 text-center text-neutral-500">User not found!</div>
 
   const avatarImg = info.avatarUrl ? info.avatarUrl : userProfileImg
 
-  return(
+  return (
     <section className="onfis-section">
       {/* Basic information */}
-      <div className="bg-white px-10 pt-12 pb-6 rounded-t-lg flex items-center justify-between border-b border-neutral-200">
+      <div className="bg-white px-6 pt-4 pb-3 rounded-t-lg flex items-center justify-between border-b border-neutral-200 shadow-sm">
         {/* Left hand side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {/* Avatar */}
-          <div 
-            className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center"
+          <div
+            className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center border-2 border-neutral-200"
           >
-            <img 
+            <img
               src={avatarImg}
               alt="User Avatar"
               className="w-full h-full object-cover"
-              />
+            />
           </div>
           {/* Basic info */}
-          <div className="flex flex-col gap-3">
-            <p className="header-h5 text-neutral-900 leading-none">{info.name}</p>
-            <div className="flex items-center gap-4 text-neutral-500 body-2-regular">
-              <div className="flex items-center gap-2">
-                <BadgeOutlined />
+          <div className="flex flex-col gap-1">
+            <p className="text-base font-bold text-neutral-900 leading-snug">{info.name}</p>
+            <div className="flex items-center gap-3 text-neutral-500 body-3-regular">
+              <div className="flex items-center gap-1.5">
+                <BadgeOutlined sx={{ fontSize: 18 }} />
                 {info.position}
               </div>
 
-              <span className="mx-2 text-neutral-300">•</span>
+              <span className="text-neutral-300">•</span>
 
-              <div className="flex items-center gap-2">
-                <BusinessOutlined />
+              <div className="flex items-center gap-1.5">
+                <BusinessOutlined sx={{ fontSize: 18 }} />
                 {info.department}
               </div>
 
-              <span className="mx-2 text-neutral-300">•</span>
+              <span className="text-neutral-300">•</span>
 
-              <div className="flex items-center gap-2">
-                <PlaceOutlined />
+              <div className="flex items-center gap-1.5">
+                <PlaceOutlined sx={{ fontSize: 18 }} />
                 {info.location}
               </div>
             </div>
@@ -99,7 +99,7 @@ export function UserProfile() {
       </div>
 
       {/* Navigation */}
-      <div className="bg-white pt-2 px-2">
+      <div className="bg-white pt-1.5 px-2">
         <TabGroup tabItems={tabItems} defaultTab="overview" />
       </div>
 
@@ -118,7 +118,7 @@ export function UserProfile() {
       </div>
 
 
-      
+
     </section>
   )
 }

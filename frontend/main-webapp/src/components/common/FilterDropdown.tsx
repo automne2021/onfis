@@ -89,7 +89,7 @@ export default function FilterDropdown({
             {/* Trigger Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-xs font-medium transition-colors border ${activeCount > 0
+                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-[6px] body-4-medium transition-colors border ${activeCount > 0
                     ? "bg-primary/10 border-primary/30 text-primary"
                     : "bg-neutral-50 border-neutral-200 text-neutral-500 hover:bg-neutral-100"
                     }`}

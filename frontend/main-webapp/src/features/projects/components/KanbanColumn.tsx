@@ -97,7 +97,7 @@ export default function KanbanColumn({ title, projects, onProjectClick }: Kanban
       </div>
 
       {/* Project Cards */}
-      <div className="flex flex-col gap-3 overflow-y-auto flex-1 pr-1">
+      <div className="flex flex-col gap-3 overflow-y-auto flex-1 px-1 py-1 -mx-1">
         {sortedProjects.map((project) => (
           <ProjectCard key={project.id} project={project} onClick={() => onProjectClick?.(project)} />
         ))}

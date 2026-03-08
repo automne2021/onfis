@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBubble } from '../StatusBubble';
+import { StatusBubble } from '../../../../components/common/StatusBubble';
 
 interface ChatItemProps {
   name: string;

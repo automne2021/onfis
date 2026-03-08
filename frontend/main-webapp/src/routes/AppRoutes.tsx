@@ -48,6 +48,7 @@ export const router = createBrowserRouter(
 
       {/* App Routes (with sidebar/header) */}
       <Route path="/" element={<AppLayout />}>
+        <Route index element={<DashboardPage />} />
         <Route path="dashboard" element={<DashboardPage />} />
 
         <Route path="announcements">

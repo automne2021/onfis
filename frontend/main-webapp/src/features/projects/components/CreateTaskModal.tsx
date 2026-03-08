@@ -446,12 +446,9 @@ export default function CreateTaskModal({
 
         {/* Description */}
         <RichTextEditor
-          value={formData.description}
           onChange={(value: string) =>
             setFormData((prev) => ({ ...prev, description: value }))
           }
-          placeholder="Describe the task details, requirements, and acceptance criteria..."
-          height="h-40"
         />
 
         {/* Subtasks */}

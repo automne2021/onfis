@@ -1,22 +1,22 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
-import { 
+import {
   WorkspacePremium,
   DomainOutlined,
   CalendarMonthOutlined
 } from '@mui/icons-material';
 import { TitleHeader } from "../TitleHeader";
 
-export function Education({ icon, userInfo } : OverviewProps) {
+export function Education({ icon, userInfo }: OverviewProps) {
 
   const educationInfo = [
-    {label: 'Highest Degree', icon: <WorkspacePremium />, content: userInfo.education?.degree, subcontent: userInfo.education?.major},
-    {label: 'Institution', icon: <DomainOutlined />, content: userInfo.education?.institution},
-    {label: 'Graduation year', icon: <CalendarMonthOutlined />, content: userInfo.education?.graduationYear},
+    { label: 'Highest Degree', icon: <WorkspacePremium />, content: userInfo.education?.degree, subcontent: userInfo.education?.major },
+    { label: 'Institution', icon: <DomainOutlined />, content: userInfo.education?.institution },
+    { label: 'Graduation year', icon: <CalendarMonthOutlined />, content: userInfo.education?.graduationYear },
   ]
 
-  return(
-    <div className="bg-white rounded-lg py-10 px-6 flex flex-col gap-6 relative">
-      <TitleHeader icon={icon} title="Education" /> 
+  return (
+    <div className="profile-section">
+      <TitleHeader icon={icon} title="Education" />
 
       <div className="flex flex-wrap items-stretch justify-between gap-3">
         {educationInfo.map((item, index) => (

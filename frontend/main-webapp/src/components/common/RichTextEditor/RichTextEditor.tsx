@@ -332,7 +332,7 @@ export function RichTextEditor({ limit = 5000, onChange, initialContent = '' } :
         </div>
       </div>
 
-      <EditorContent editor={editor} className='flex-1'/>
+      <EditorContent editor={editor} className='flex-1 body-3-regular'/>
       {/* Count number of characters */}
       <div className={`px-3 py-2 text-xs text-neutral-500 flex justify-end items-center border-t transition
         ${isActive ? 'bg-white' : 'bg-neutral-50'}

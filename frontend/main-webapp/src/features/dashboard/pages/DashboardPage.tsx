@@ -148,7 +148,7 @@ export default function DashboardPage() {
   const userName = "Nhan";
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-3 w-full bg-white rounded-[12px] shadow-md border-2 border-neutral-200 p-4 ">
       {/* Greeting */}
       <h1 className="font-bold text-lg leading-[22px] text-neutral-900">
         Good morning, {userName}

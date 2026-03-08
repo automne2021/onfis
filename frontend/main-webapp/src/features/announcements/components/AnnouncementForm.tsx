@@ -1,4 +1,4 @@
-import { Close, Groups, Business, KeyboardArrowDown,KeyboardArrowUp, PushPinOutlined, PushPin } from '@mui/icons-material';
+import { Close, Groups, Business, KeyboardArrowDown, KeyboardArrowUp, PushPinOutlined, PushPin } from '@mui/icons-material';
 import { Button } from '../../../components/common/Buttons/Button';
 import { useCallback, useState } from 'react';
 import { OptionCard } from './Card/OptionCard';
@@ -23,7 +23,7 @@ interface AnnouncementFormProps {
   onClose: () => void
 }
 
-export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
+export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
 
   // State Managements
   const [isPinned, setIsPinned] = useState(false)
@@ -72,24 +72,24 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
     // Check basic validation before publishing
     if (status === 'published') {
       const newErrors: { title?: string; content?: string } = {};
-      
+
       if (!title.trim()) {
         newErrors.title = "Subject is required when publishing.";
       }
-      
+
       if (!messageContent || messageContent.replace(/<[^>]*>/g, '').trim().length === 0) {
-        newErrors.content =   "Message content is required when publishing.";
+        newErrors.content = "Message content is required when publishing.";
       }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
-        return; 
+        return;
       }
     }
 
     setIsSubmitting(true);
 
-    const formData = new FormData() 
+    const formData = new FormData()
     formData.append('title', title)
     formData.append('content', messageContent || '')
     formData.append('scope', selectedOption)
@@ -103,12 +103,12 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
 
     try {
       console.log(`Action: ${status}`, Object.fromEntries(formData));
-      
+
       // Gọi API thực tế ở đây
       // const response = await api.post('/announcements', formData);
-      
+
       alert(status === 'published' ? "Announcement published!" : "Draft saved successfully!");
-      onClose(); 
+      onClose();
     } catch (error) {
       console.error("Failed to process announcement", error);
     } finally {
@@ -117,58 +117,58 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
   }
 
   // Derived data
-  const departmentListItems: ContentItem[] = DEPARTMENT_NAMES.map((name) => ({ content: name, onClick: () => handleSelectedDepartment(name)}))
+  const departmentListItems: ContentItem[] = DEPARTMENT_NAMES.map((name) => ({ content: name, onClick: () => handleSelectedDepartment(name) }))
 
   // Data
   const optionItems = [
     {
-      id: 'department', 
-      title: 'My Departments', 
-      description: 'Visible to Departments', 
-      icon: <Groups />, 
-      permission: true, 
-      content: <ContentList data={departmentListItems} emptyLabel='No department available' onItemClick={() => toggleMenu}/>
+      id: 'department',
+      title: 'My Departments',
+      description: 'Visible to Departments',
+      icon: <Groups />,
+      permission: true,
+      content: <ContentList data={departmentListItems} emptyLabel='No department available' onItemClick={() => toggleMenu} />
     },
     {
-      id: 'company', 
-      title: 'Whole Company', 
-      description: 'Require Admin Approval', 
-      icon: <Business />, 
+      id: 'company',
+      title: 'Whole Company',
+      description: 'Require Admin Approval',
+      icon: <Business />,
       permission: false
     },
   ]
 
-  return(
-    <form className="bg-white rounded-2xl w-[480px] md:w-[620px] lg:w-[760px]">
+  return (
+    <form className="bg-white rounded-xl w-[420px] md:w-[590px] lg:w-[732px] shadow-xl border border-neutral-200">
       {/* Header - Title */}
-      <div className="border-b border-neutral-200 flex justify-between items-center px-6 ">
+      <div className="border-b border-neutral-200 flex justify-between items-center px-4 py-2">
         <div className='flex items-center gap-1'>
-          <p className="header-h6 text-neutral-900">New Announcement</p>
+          <p className="text-base font-bold text-neutral-900 leading-snug">New Announcement</p>
           <button
             type='button'
             onClick={() => setIsPinned(prev => !prev)}
             className='p-2 rounded-full hover:bg-neutral-200 transition'
           >
-            {isPinned 
-              ? <PushPin className='text-primary' fontSize='small'/> 
-              : <PushPinOutlined className='text-neutral-500' fontSize='small'/>
+            {isPinned
+              ? <PushPin className='text-primary' fontSize='small' />
+              : <PushPinOutlined className='text-neutral-500' fontSize='small' />
             }
           </button>
         </div>
-        <button 
+        <button
           type='button'
           onClick={onClose}
           className='p-2 rounded-full hover:bg-neutral-100 transition'
         >
-          <Close className='text-neutral-500'/>
+          <Close className='text-neutral-500' />
         </button>
       </div>
 
       {/* Body */}
-      <div className='py-6 flex flex-col gap-6 min-h-[520px] max-h-[760px] overflow-y-auto'>
+      <div className='py-3 flex flex-col gap-3 min-h-[280px] max-h-[400px] overflow-y-auto custom-scrollbar'>
 
         {/* Audience Scope */}
-        <div className='flex flex-col gap-4 px-6 '>
+        <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
             Audience Scope
           </p>
@@ -193,7 +193,7 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
                   key={"department"}
                   isOpen={activeMenu === "department"}
                   trigger={
-                    <Button 
+                    <Button
                       title='Your Departments'
                       iconRight={activeMenu === "department" ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
                       onClick={() => toggleMenu("department")}
@@ -206,7 +206,7 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
               </div>
               <div className='flex flex-wrap items-center gap-2 w-fit max-w-full max-h-[88px] overflow-y-auto'>
                 {selectedDepartments.map((item) => (
-                  <OptionTag label={item} onDelete={() => handleDeleteSelectedDepartment(item)}/>
+                  <OptionTag label={item} onDelete={() => handleDeleteSelectedDepartment(item)} />
                 ))}
               </div>
             </>
@@ -214,46 +214,46 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
         </div>
 
         {/* Subject */}
-        <div className='flex flex-col gap-4 px-6 '>
+        <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
             Subject <span className='text-red-500'>*</span>
           </p>
           {/* Input */}
-          <input 
+          <input
             name='subject'
-            type="text" 
+            type="text"
             placeholder='Enter announcement title...'
             minLength={1}
             maxLength={32}
             onChange={(e) => setTitle(e.target.value)}
             value={title}
-            className={`w-full body-2-regular text-neutral-900 border px-4 py-3 rounded-lg transition-all outline-none 
+            className={`w-full body-3-regular text-neutral-900 border px-4 py-3 rounded-lg transition-all outline-none 
             ${errors.title ? 'border-red-500' : (title.length > 0 ? 'border-neutral-200 bg-white' : 'border-neutral-200 bg-neutral-50')}
             focus:border-primary focus:bg-white`}
           />
-          
+
           {errors.title && (
             <span className="body-4-regular text-red-500 ml-1">*{errors.title}</span>
           )}
         </div>
 
         {/* Message Content */}
-        <div className='flex flex-col gap-4 px-6 '>
+        <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
             Message Content <span className='text-red-500'>*</span>
           </p>
 
-          <RichTextEditor 
+          <RichTextEditor
             onChange={handleContentChange}
           />
-          
+
           {errors.content && (
             <span className="body-4-regular text-red-500 ml-1">*{errors.content}</span>
           )}
         </div>
 
         {/* Attachments */}
-        <div className='flex flex-col gap-4 px-6 '>
+        <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
             Attachments
           </p>
@@ -266,13 +266,13 @@ export function AnnouncementForm({ onClose } : AnnouncementFormProps) {
       </div>
 
       {/* Footer - Save + Publish buttons */}
-      <div className='py-2 border-t border-neutral-200 flex items-center justify-end gap-3 px-6'>
+      <div className='py-2 border-t border-neutral-200 flex items-center justify-end gap-2 px-4'>
         <Button
           title='Save as Draft'
           onClick={() => submitAnnouncement('draft')}
           style='sub'
         />
-        <Button 
+        <Button
           title='Publish Now'
           onClick={() => submitAnnouncement('published')}
           style='primary'

@@ -14,7 +14,7 @@ export function ChatGroup({ title, children }: ChatGroupProps) {
       {/* Tiêu đề nhóm */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1 py-2 px-4 mb-2 body-2-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:bg-neutral-50 transition-colors group select-none"
+        className="flex items-center gap-1 py-2 px-4 mb-2 body-3-medium text-neutral-500 uppercase tracking-wider cursor-pointer hover:bg-neutral-50 transition-colors group select-none"
       >
         {/* Icon xoay mượt mà thay vì đổi icon giật cục */}
         <KeyboardArrowDown 
