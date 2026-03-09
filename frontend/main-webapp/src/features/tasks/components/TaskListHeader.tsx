@@ -2,7 +2,7 @@ import { Checkbox } from "../../../components/common/Icons";
 
 export default function TaskListHeader() {
   return (
-    <div className="bg-secondary grid grid-cols-[24px_2fr_1fr_1fr_1fr_1.5fr] gap-3 items-center px-4 py-2 w-full">
+    <div className="bg-neutral-50 border-b border-neutral-200 grid grid-cols-[32px_2fr_1fr_1fr_1fr_1.5fr] gap-3 items-center px-3 py-2 w-full sticky top-0 z-10 text-xs font-medium text-neutral-500">
       {/* Checkbox */}
       <div className="flex-shrink-0">
         <Checkbox checked={false} />

@@ -19,7 +19,7 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
 
   return (
     <div className="flex flex-col h-full w-full justify-between bg-white">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 overflow-y-auto min-h-0 flex-1">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 ">
           <p className="header-h6 leading-none text-neutral-900">Messages</p>

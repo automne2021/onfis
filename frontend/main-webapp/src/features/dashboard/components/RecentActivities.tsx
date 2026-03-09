@@ -17,14 +17,21 @@ export default function RecentActivities({
 }: RecentActivitiesProps) {
   return (
     <div className="bg-white rounded-[16px] shadow-sm border border-neutral-100 p-3 lg:p-4 flex flex-col relative min-h-[200px]">
-      {/* Timeline line */}
-      <div className="absolute left-[22px] lg:left-[26px] top-[30px] bottom-[60px] w-0.5 bg-neutral-200" />
+      {/* Timeline line — centered on the dots (dot is w-3 = 12px, padding-left 12px, center = 12+6 = 18px) */}
+      <div
+        className="absolute w-0.5 bg-neutral-200"
+        style={{
+          left: '18px',
+          top: '24px',
+          bottom: '60px',
+        }}
+      />
 
       {/* Activity Items */}
       <div className="flex flex-col gap-4 relative z-10">
         {activities.map((activity) => (
           <div key={activity.id} className="flex items-start gap-2.5">
-            {/* Timeline dot */}
+            {/* Timeline dot — centered at left edge via margin */}
             <div className="w-3 h-3 rounded-full bg-primary flex-shrink-0 mt-0.5" />
 
             {/* Content */}

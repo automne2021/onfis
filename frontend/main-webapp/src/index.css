@@ -210,19 +210,25 @@ html {
 
   /* Stage appear animation (smoother than slideIn) */
   @keyframes stageAppear {
-    from {
+    0% {
       opacity: 0;
-      transform: translateX(40px) scale(0.95);
+      transform: translateX(60px) scale(0.92);
     }
 
-    to {
+    60% {
+      opacity: 1;
+      transform: translateX(-4px) scale(1.01);
+    }
+
+    100% {
       opacity: 1;
       transform: translateX(0) scale(1);
     }
   }
 
   .animate-stageAppear {
-    animation: stageAppear 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: stageAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    will-change: transform, opacity;
   }
 
   /* ---- Card hover: lift + shadow + border glow ---- */

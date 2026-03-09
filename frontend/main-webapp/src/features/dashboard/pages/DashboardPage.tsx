@@ -204,8 +204,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Charts Row — 2 columns for larger, clearer charts */}
+      <div className="grid grid-cols-2 gap-3">
         <PieChart
           data={taskStatusData}
           title="Task Status Overview"
@@ -215,6 +215,8 @@ export default function DashboardPage() {
           title="Tasks Completed This Week"
           color="#0014A8"
         />
+      </div>
+      <div className="grid grid-cols-1 gap-3">
         <BarChart
           data={teamWorkloadData}
           title="Team Workload"
