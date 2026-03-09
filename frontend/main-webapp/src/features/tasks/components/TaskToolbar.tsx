@@ -8,9 +8,9 @@ import {
   ListIcon,
   TimelineIcon,
   CalendarViewIcon,
+  EyeIcon,
 } from "../../../components/common/Icons";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
-import { Add } from '@mui/icons-material';
 import { Button } from "../../../components/common/Buttons/Button";
 import { ViewToggle } from "../../../components/common/ViewToggle";
 
@@ -62,7 +62,7 @@ export default function TaskToolbar({
   projectId,
   searchQuery,
   onSearchChange,
-  onNewTask,
+  // onNewTask,
   viewMode,
   onViewModeChange,
 }: TaskToolbarProps) {
@@ -77,8 +77,8 @@ export default function TaskToolbar({
 
   return (
     <nav className="navbar-style">
-      {/* Left: Breadcrumb + New Project */}
-      <div className="flex items-center gap-1 body-3-regular">
+      {/* Left: Breadcrumb */}
+      <div className="flex items-center gap-1 body-3-regular flex-shrink-0">
         <Link to="/projects" className="hover:text-primary transition-colors">
           Project
         </Link>
@@ -92,7 +92,7 @@ export default function TaskToolbar({
       </div>
 
       {/* Center: Search */}
-      <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white w-[260px] lg:w-[380px]`}>
+      <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white w-[260px] lg:w-[380px] flex-shrink-0`}>
         <SearchIcon />
         <input
           type="text"
@@ -104,22 +104,30 @@ export default function TaskToolbar({
         />
       </div>
 
-      {/* Right: Filter + View Toggle */}
-      <div className="flex items-center gap-2">
-        <Button
+      {/* Right: View Project Detail + Filter + View Toggle */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>
+          <Button
+            title="View Project Detail"
+            iconLeft={<EyeIcon />}
+            style="sub"
+            textStyle='body-4-medium'
+          />
+        </Link>
+        {/* <Button
           title="New Task"
           iconLeft={<Add fontSize="small" />}
           onClick={onNewTask}
           style="primary"
           textStyle='body-4-medium'
-        />
+        /> */}
         <FilterDropdown
           categories={FILTER_CATEGORIES}
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
         />
 
-        <ViewToggle 
+        <ViewToggle
           viewMode={viewMode}
           viewModes={viewModes}
           onViewModeChange={onViewModeChange}
@@ -128,4 +136,3 @@ export default function TaskToolbar({
     </nav>
   );
 }
-

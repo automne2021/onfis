@@ -158,20 +158,22 @@ export default function ProjectsPage() {
         onViewModeChange={setViewMode}
       />
 
-      {/* Kanban Board */}
+      {/* Content with view switch animation */}
       <div className="flex-1 overflow-hidden px-3 pb-3">
-        {viewMode === "kanban" && (
-          <KanbanBoard projectsByStatus={projectsByStatus} onProjectClick={handleProjectClick} />
-        )}
-        {viewMode === "list" && (
-          <ProjectListView projects={filteredProjects} onProjectClick={handleProjectClick} />
-        )}
-        {viewMode === "timeline" && (
-          <ProjectTimelineView projects={filteredProjects} onProjectClick={handleProjectClick} />
-        )}
-        {viewMode === "calendar" && (
-          <ProjectCalendarView projects={filteredProjects} onProjectClick={handleProjectClick} />
-        )}
+        <div key={viewMode} className="animate-viewSwitch h-full">
+          {viewMode === "kanban" && (
+            <KanbanBoard projectsByStatus={projectsByStatus} onProjectClick={handleProjectClick} />
+          )}
+          {viewMode === "list" && (
+            <ProjectListView projects={filteredProjects} onProjectClick={handleProjectClick} />
+          )}
+          {viewMode === "timeline" && (
+            <ProjectTimelineView projects={filteredProjects} onProjectClick={handleProjectClick} />
+          )}
+          {viewMode === "calendar" && (
+            <ProjectCalendarView projects={filteredProjects} onProjectClick={handleProjectClick} />
+          )}
+        </div>
       </div>
 
       {/* Create Project Modal */}

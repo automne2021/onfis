@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Project, Tag } from "../types";
-import { FlagIcon, CalendarIcon, MoreHorizIcon, EyeIcon, TasksViewIcon as TasksIcon } from "../../../components/common/Icons";
+import { FlagIcon, CalendarIcon, EyeIcon, TasksViewIcon as TasksIcon } from "../../../components/common/Icons";
 
 // Tag component
 const TagBadge = ({ tag }: { tag: Tag }) => {
@@ -77,29 +76,36 @@ interface ProjectCardProps {
   onClick?: () => void;
 }
 
-export default function ProjectCard({ project, onClick }: ProjectCardProps) {
+export default function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    if (isMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMenuOpen]);
 
   return (
-    <div
-      className="bg-white rounded-[12px] shadow-sm border border-neutral-100 px-3 py-3 flex flex-col gap-3 overflow-hidden min-w-0 cursor-pointer card-hover"
-      onClick={onClick}
-    >
-      {/* Header: Tags + Priority + Menu */}
+    <div className="group relative bg-white rounded-[12px] shadow-sm border border-neutral-100 px-3 py-3 flex flex-col gap-3 overflow-hidden min-w-0 cursor-pointer card-hover">
+      {/* Hover Overlay */}
+      <div className="absolute inset-0 z-20 bg-primary/85 rounded-[12px] flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/projects/${project.id}`);
+          }}
+          className="w-[140px] flex items-center justify-center gap-2 px-4 py-2 bg-white text-primary rounded-lg font-medium text-sm hover:bg-neutral-50 transition-colors shadow-md"
+        >
+          <EyeIcon />
+          View Detail
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/projects/${project.id}/tasks`);
+          }}
+          className="w-[140px] flex items-center justify-center gap-2 px-4 py-2 bg-white/20 text-white border border-white/40 rounded-lg font-medium text-sm hover:bg-white/30 transition-colors"
+        >
+          <TasksIcon />
+          View Task
+        </button>
+      </div>
+
+      {/* Header: Tags + Priority */}
       <div className="flex items-start justify-between">
         <div className="flex flex-wrap gap-1">
           {project.tags.map((tag, index) => (
@@ -108,45 +114,6 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
         </div>
         <div className="flex items-center gap-1">
           <FlagIcon priority={project.priority} />
-          {/* Context Menu */}
-          <div ref={menuRef} className="relative">
-            <button
-              className="p-1 hover:bg-neutral-100 rounded transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              aria-label="More options"
-            >
-              <MoreHorizIcon />
-            </button>
-            {isMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 z-30 min-w-[160px] animate-dropdown">
-                <button
-                  className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(false);
-                    navigate(`/projects/${project.id}`);
-                  }}
-                >
-                  <EyeIcon />
-                  View Details
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMenuOpen(false);
-                    navigate(`/projects/${project.id}/tasks`);
-                  }}
-                >
-                  <TasksIcon />
-                  View Tasks
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 

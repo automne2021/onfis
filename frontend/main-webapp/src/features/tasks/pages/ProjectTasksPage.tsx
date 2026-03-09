@@ -199,35 +199,37 @@ export default function ProjectTasksPage() {
         onViewModeChange={setViewMode}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with view switch animation */}
       <div className="flex-1 overflow-hidden">
-        {viewMode === "kanban" && (
-          <TaskKanbanBoard
-            stages={stages}
-            onAddStage={handleAddStage}
-            onAddTask={handleAddTask}
-            onTaskClick={handleTaskClick}
-          />
-        )}
+        <div key={viewMode} className="animate-viewSwitch h-full">
+          {viewMode === "kanban" && (
+            <TaskKanbanBoard
+              stages={stages}
+              onAddStage={handleAddStage}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskClick}
+            />
+          )}
 
-        {viewMode === "list" && (
-          <TaskListView
-            stages={stages}
-            onAddTask={handleAddTask}
-            onTaskClick={handleTaskClick}
-          />
-        )}
+          {viewMode === "list" && (
+            <TaskListView
+              stages={stages}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskClick}
+            />
+          )}
 
-        {viewMode === "timeline" && (
-          <GanttView />
-        )}
+          {viewMode === "timeline" && (
+            <GanttView />
+          )}
 
-        {viewMode === "calendar" && (
-          <TaskCalendarView
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-        )}
+          {viewMode === "calendar" && (
+            <TaskCalendarView
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+          )}
+        </div>
       </div>
 
       {/* Task Detail Modal */}

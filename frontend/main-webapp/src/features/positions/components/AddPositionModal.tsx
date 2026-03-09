@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { CloseIcon, SearchIcon } from "../../../components/common/Icons";
 
@@ -48,6 +48,33 @@ export default function AddPositionModal({
     assignedUser: "",
   });
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, onClose]);
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -56,16 +83,16 @@ export default function AddPositionModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Modal Container - Laptop-First: max-width 460px */}
-      <div className="relative w-full max-w-[460px] mx-4 bg-white rounded-xl shadow-xl overflow-hidden">
+      <div className="relative w-full max-w-[460px] mx-4 bg-white rounded-xl shadow-xl overflow-hidden border border-neutral-200 z-10 animate-slideUp">
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-[50px] border-b border-neutral-200">
           <h2 className="text-base font-bold leading-5 text-neutral-900">

@@ -1,6 +1,7 @@
 import StatCard from "../components/StatCard";
 import ProjectTable from "../components/ProjectTable";
 import RecentActivities from "../components/RecentActivities";
+import { PieChart, BarChart, LineChart } from "../components/Charts";
 import { FolderIcon, TaskIcon, CalendarClockIcon as CalendarIcon } from "../../../components/common/Icons";
 
 // Mock data - replace with real data from API
@@ -143,6 +144,32 @@ const mockActivities = [
   },
 ];
 
+// Chart data
+const taskStatusData = [
+  { label: "Completed", value: 12, color: "#00A63E" },
+  { label: "In Progress", value: 8, color: "#0B68F7" },
+  { label: "On Hold", value: 3, color: "#FF6900" },
+  { label: "To Do", value: 5, color: "#90A1B9" },
+];
+
+const weeklyTasksData = [
+  { label: "Mon", value: 5 },
+  { label: "Tue", value: 8 },
+  { label: "Wed", value: 3 },
+  { label: "Thu", value: 12 },
+  { label: "Fri", value: 7 },
+  { label: "Sat", value: 2 },
+  { label: "Sun", value: 4 },
+];
+
+const teamWorkloadData = [
+  { label: "Sarah", value: 8, color: "#0B68F7" },
+  { label: "Bob", value: 5, color: "#00A63E" },
+  { label: "David", value: 12, color: "#FF6900" },
+  { label: "Alice", value: 6, color: "#8B5CF6" },
+  { label: "Eve", value: 3, color: "#EC4899" },
+];
+
 export default function DashboardPage() {
   // TODO: Replace with actual user name from auth context
   const userName = "Nhan";
@@ -174,6 +201,23 @@ export default function DashboardPage() {
           value="Design"
           subtitle="Due Tomorrow, 5:00 PM"
           badge={{ text: "Urgent", variant: "error" }}
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-3 gap-3">
+        <PieChart
+          data={taskStatusData}
+          title="Task Status Overview"
+        />
+        <LineChart
+          data={weeklyTasksData}
+          title="Tasks Completed This Week"
+          color="#0014A8"
+        />
+        <BarChart
+          data={teamWorkloadData}
+          title="Team Workload"
         />
       </div>
 

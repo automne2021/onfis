@@ -26,7 +26,7 @@ export default function TaskRow({
 }: TaskRowProps) {
   return (
     <div
-      className={`flex items-center gap-3 lg:gap-6 xl:gap-8 px-3 py-2 w-full cursor-pointer hover:bg-neutral-50 transition-colors ${isLastInStage ? "border-b border-neutral-200" : "border-t border-neutral-200"
+      className={`grid grid-cols-[24px_2fr_1fr_1fr_1fr_1.5fr] gap-3 items-center px-4 py-2 w-full cursor-pointer hover:bg-neutral-50 transition-colors ${isLastInStage ? "border-b border-neutral-200" : "border-t border-neutral-200"
         }`}
       onClick={onClick}
     >
@@ -43,7 +43,7 @@ export default function TaskRow({
       </button>
 
       {/* Title Column */}
-      <div className="w-[120px] lg:w-[140px] flex-shrink-0 flex items-center gap-2 px-2 py-1.5">
+      <div className="flex items-center gap-2 min-w-0">
         <StatusDot status={task.progress >= 100 ? "done" : "on_track"} />
         <span className="font-bold text-sm leading-5 text-neutral-900 truncate">
           {task.title}
@@ -52,28 +52,28 @@ export default function TaskRow({
       </div>
 
       {/* Assignees Column */}
-      <div className="w-[80px] lg:w-[90px] flex-shrink-0">
+      <div className="min-w-0">
         <AssigneesGroup assignees={task.assignees} maxVisible={3} />
       </div>
 
       {/* Tags Column */}
-      <div className="w-[70px] lg:w-[80px] flex-shrink-0 flex items-center gap-1 flex-wrap">
+      <div className="flex items-center gap-1 flex-wrap min-w-0">
         {task.tags?.map((tag) => (
           <TagBadge key={tag.id} type={tag.type} label={tag.label} />
         ))}
       </div>
 
       {/* Due Date Column */}
-      <div className="w-[70px] lg:w-[80px] flex-shrink-0">
+      <div className="min-w-0">
         <span className="font-medium text-xs leading-4 text-neutral-500">
           {task.dueDate}
         </span>
       </div>
 
       {/* Progress Column */}
-      <div className="flex-1 min-w-[80px] flex items-center gap-3 lg:gap-5 pr-1.5">
+      <div className="flex items-center gap-3 min-w-0">
         <ProgressBar progress={task.progress} />
-        <span className="font-medium text-xs leading-4 text-neutral-500 w-8">
+        <span className="font-medium text-xs leading-4 text-neutral-500 w-8 flex-shrink-0">
           {task.progress}%
         </span>
       </div>
