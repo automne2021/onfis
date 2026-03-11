@@ -17,22 +17,27 @@ export default function RecentActivities({
 }: RecentActivitiesProps) {
   return (
     <div className="bg-white rounded-[16px] shadow-sm border border-neutral-100 p-3 lg:p-4 flex flex-col relative min-h-[200px]">
-      {/* Timeline line — centered on the dots (dot is w-3 = 12px, padding-left 12px, center = 12+6 = 18px) */}
-      <div
-        className="absolute w-0.5 bg-neutral-200"
-        style={{
-          left: '18px',
-          top: '24px',
-          bottom: '60px',
-        }}
-      />
-
       {/* Activity Items */}
-      <div className="flex flex-col gap-4 relative z-10">
-        {activities.map((activity) => (
+      <div className="flex flex-col gap-4 relative">
+        {activities.map((activity, index) => (
           <div key={activity.id} className="flex items-start gap-2.5">
-            {/* Timeline dot — centered at left edge via margin */}
-            <div className="w-3 h-3 rounded-full bg-primary flex-shrink-0 mt-0.5" />
+            {/* Timeline column: dot + line */}
+            <div className="relative flex flex-col items-center flex-shrink-0" style={{ width: '12px' }}>
+              {/* Dot — perfectly centred */}
+              <div className="w-3 h-3 rounded-full bg-primary flex-shrink-0 mt-0.5 z-10" />
+              {/* Vertical line extending down — only show if not the last item */}
+              {index < activities.length - 1 && (
+                <div
+                  className="absolute w-0.5 bg-neutral-200"
+                  style={{
+                    top: '14px',
+                    bottom: '-16px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                  }}
+                />
+              )}
+            </div>
 
             {/* Content */}
             <div className="flex flex-col gap-1">

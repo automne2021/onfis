@@ -19,7 +19,7 @@ export default function TagBadge({ type, label }: TagBadgeProps) {
 
   return (
     <div
-      className={`inline-flex items-center justify-center px-2.5 py-1.5 rounded-[20px] ${bg}`}
+      className={`inline-flex items-center justify-center px-2 py-0.5 rounded-[20px] ${bg}`}
     >
       <span className={`font-medium text-sm leading-[18px] ${text} whitespace-nowrap`}>
         {label}

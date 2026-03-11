@@ -120,12 +120,17 @@ interface BarChartProps {
     data: BarItem[];
     title: string;
     maxValue?: number;
+    itemsPerPage?: number;
 }
 
-export function BarChart({ data, title, maxValue }: BarChartProps) {
+export function BarChart({ data, title, maxValue, itemsPerPage = 5 }: BarChartProps) {
     const max = maxValue || Math.max(...data.map((d) => d.value), 1);
     const [hoveredBar, setHoveredBar] = useState<string | null>(null);
     const [tooltipInfo, setTooltipInfo] = useState<{ x: number; y: number; content: string; visible: boolean }>({ x: 0, y: 0, content: '', visible: false });
+    const [currentPage, setCurrentPage] = useState(0);
+
+    const totalPages = Math.ceil(data.length / itemsPerPage);
+    const paginatedData = data.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
     const handleBarHover = (item: BarItem, e: React.MouseEvent) => {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -143,12 +148,35 @@ export function BarChart({ data, title, maxValue }: BarChartProps) {
 
     return (
         <div className="bg-white rounded-[12px] shadow-sm border border-neutral-100 p-4 flex flex-col gap-3 bar-chart-container relative">
-            <h3 className="font-bold text-sm leading-5 text-neutral-900">{title}</h3>
+            <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm leading-5 text-neutral-900">{title}</h3>
+                {totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                            disabled={currentPage === 0}
+                            className="w-6 h-6 flex items-center justify-center rounded-md border border-neutral-200 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs"
+                        >
+                            ‹
+                        </button>
+                        <span className="text-xs text-neutral-400 min-w-[40px] text-center">
+                            {currentPage + 1}/{totalPages}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                            disabled={currentPage === totalPages - 1}
+                            className="w-6 h-6 flex items-center justify-center rounded-md border border-neutral-200 text-neutral-500 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-xs"
+                        >
+                            ›
+                        </button>
+                    </div>
+                )}
+            </div>
 
             <ChartTooltip {...tooltipInfo} />
 
             <div className="flex flex-col gap-2.5">
-                {data.map((item) => {
+                {paginatedData.map((item) => {
                     const pct = ((item.value / max) * 100).toFixed(0);
                     const isHovered = hoveredBar === item.label;
                     return (

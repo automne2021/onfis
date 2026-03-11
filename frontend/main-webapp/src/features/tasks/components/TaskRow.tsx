@@ -26,7 +26,7 @@ export default function TaskRow({
 }: TaskRowProps) {
   return (
     <div
-      className={`grid grid-cols-[32px_2fr_1fr_1fr_1fr_1.5fr] gap-3 items-center px-3 py-2 w-full cursor-pointer hover:bg-neutral-50 transition-colors ${isLastInStage ? "border-b border-neutral-200" : "border-t border-neutral-200"
+      className={`grid grid-cols-[24px_2fr_1fr_1fr_1fr_1.5fr] gap-2 items-center px-3 py-1.5 w-full cursor-pointer hover:bg-neutral-50 transition-colors ${isLastInStage ? "border-b border-neutral-200" : "border-t border-neutral-200"
         }`}
       onClick={onClick}
     >

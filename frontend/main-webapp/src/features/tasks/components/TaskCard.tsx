@@ -1,5 +1,6 @@
 import type { Task } from "../types";
 import { FlagIcon, CalendarIcon } from "../../../components/common/Icons";
+import Icon from "../../../components/common/Icon";
 import { STATUS_CONFIG } from "../workflowUtils";
 
 // Effort badge component
@@ -18,7 +19,7 @@ const EffortBadge = ({ estimated, actual }: { estimated?: number; actual?: numbe
         }`}
       title={isOverBudget ? `Over budget: ${act}h logged vs ${est}h estimated` : `Effort: ${act}h / ${est}h`}
     >
-      {isOverBudget && <span className="text-red-500">⚠</span>}
+      {isOverBudget && <Icon name="warning" size={14} color="#DC2626" />}
       <span>{act}h / {est}h</span>
     </div>
   );
@@ -84,7 +85,7 @@ const BlockedIndicator = ({ blockedBy }: { blockedBy?: string[] }) => {
       className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200"
       title={`Blocked by: ${blockedBy.join(", ")}`}
     >
-      🔒 Blocked
+      <Icon name="block" size={14} color="#DC2626" /> Blocked
     </div>
   );
 };
