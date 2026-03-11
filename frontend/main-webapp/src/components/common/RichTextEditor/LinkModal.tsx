@@ -21,7 +21,7 @@ const CustomInput = ({ value, onChange, placeholder, autoFocus = false }: Custom
     <div className="flex flex-col gap-1.5">
       <input
         type="text"
-        className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-primary transition-all"
+        className="w-full px-3 py-2 body-4-regular border border-neutral-300 rounded-lg focus:outline-none focus:border-primary transition-all"
         placeholder={placeholder}
         value={value}
         // Sửa logic onChange để trả về string trực tiếp cho gọn

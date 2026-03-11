@@ -9,10 +9,10 @@ interface ChatWindowProps {
 
 export function ChatWindow({ activeChannelId }: ChatWindowProps) {
   const currentChannel = MOCK_CHANNELS.find(c => c.id === activeChannelId);
-  
+
   let avatarUrl = undefined;
   let userStatus: "online" | "busy" | "offline" = "offline";
-  
+
   if (currentChannel?.type === 'direct') {
     const userKey = currentChannel.id.replace('dm-', '');
     const targetUser = MOCK_USERS[userKey];
@@ -24,12 +24,12 @@ export function ChatWindow({ activeChannelId }: ChatWindowProps) {
 
   const currentMessages = MOCK_MESSAGES.filter(m => m.channelId === activeChannelId);
 
-  return(
+  return (
     <div className="flex flex-col h-full w-full bg-white relative">
-      
+
       {/* HEADER */}
       {currentChannel ? (
-        <ChatHeader 
+        <ChatHeader
           name={currentChannel.name}
           type={currentChannel.type}
           memberCount={currentChannel.membersCount}
@@ -38,7 +38,7 @@ export function ChatWindow({ activeChannelId }: ChatWindowProps) {
           status={userStatus} // Đã sửa thành status={userStatus}
         />
       ) : (
-        <div className="h-[76px] border-b border-neutral-200 flex items-center px-6 text-neutral-500">
+        <div className="h-[48px] border-b border-neutral-200 flex items-center px-4 text-neutral-500 text-sm">
           Start a chat now!
         </div>
       )}

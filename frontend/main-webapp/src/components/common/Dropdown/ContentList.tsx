@@ -11,7 +11,7 @@ interface ContentListProps {
 
 export function ContentList({ data, emptyLabel, onItemClick }: ContentListProps) {
   if (!data || data.length === 0) {
-    return <div className="p-4 text-sm text-neutral-500 italic">{emptyLabel}</div>;
+    return <div className="px-4 py-2 body-4-regular text-neutral-500 italic">{emptyLabel}</div>;
   }
 
   return (
@@ -23,7 +23,7 @@ export function ContentList({ data, emptyLabel, onItemClick }: ContentListProps)
             item.onClick?.()  // Chạy logic riêng của item này
             onItemClick?.()   // Chạy logic chung (Đóng Menu) 
           }}
-          className="px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-200 cursor-pointer transition-colors border-b border-neutral-50 last:border-none"
+          className="px-4 py-2 body-4-regular text-neutral-700 hover:bg-neutral-200 cursor-pointer transition-colors border-b border-neutral-50 last:border-none"
         >
           {item.content}
         </li>

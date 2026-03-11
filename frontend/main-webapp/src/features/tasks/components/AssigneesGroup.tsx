@@ -35,7 +35,7 @@ export default function AssigneesGroup({
       {visibleAssignees.map((assignee) => (
         <div
           key={assignee.id}
-          className={`w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-white text-sm font-medium overflow-hidden ${
+          className={`w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-white text-sm font-medium overflow-hidden ${
             assignee.avatar ? "" : getAvatarColor(assignee.name)
           }`}
           title={assignee.name}
@@ -53,7 +53,7 @@ export default function AssigneesGroup({
       ))}
       {remainingCount > 0 && (
         <div
-          className="w-10 h-10 rounded-full border-2 border-white bg-neutral-200 flex items-center justify-center text-neutral-500 text-sm font-medium"
+          className="w-7 h-7 rounded-full border-2 border-white bg-neutral-200 flex items-center justify-center text-neutral-500 text-sm font-medium"
           title={`+${remainingCount} more`}
         >
           +{remainingCount}

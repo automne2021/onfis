@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Stage, Task } from "../types";
 import TaskColumn from "./TaskColumn";
 import { AddIcon, SwitchLeftIcon } from "../../../components/common/Icons";
@@ -12,11 +12,33 @@ interface TaskKanbanBoardProps {
 
 export default function TaskKanbanBoard({ stages, onAddStage, onAddTask, onTaskClick }: TaskKanbanBoardProps) {
   const [localStages, setLocalStages] = useState<Stage[]>(stages);
+  const [newStageId, setNewStageId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync from parent when stages change
   if (stages !== localStages && stages.length !== localStages.length) {
     setLocalStages(stages);
   }
+
+  // Detect newly added stage and scroll to it
+  useEffect(() => {
+    if (newStageId && containerRef.current) {
+      // Smooth scroll to the right to reveal the new stage
+      containerRef.current.scrollTo({
+        left: containerRef.current.scrollWidth,
+        behavior: "smooth",
+      });
+      // Clear after animation
+      const timer = setTimeout(() => setNewStageId(null), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [newStageId]);
+
+  const handleAddStage = () => {
+    onAddStage?.();
+    // Mark the next stage ID as new for animation
+    setNewStageId(`stage-${localStages.length + 1}`);
+  };
 
   const handleDeleteStage = (stageId: string) => {
     setLocalStages((prev) => prev.filter((s) => s.id !== stageId));
@@ -44,25 +66,29 @@ export default function TaskKanbanBoard({ stages, onAddStage, onAddTask, onTaskC
   const displayStages = localStages.length > 0 ? localStages : stages;
 
   return (
-    <div className="flex gap-2 h-full overflow-x-auto pb-3">
+    <div ref={containerRef} className="flex gap-2 h-full overflow-x-auto pb-3">
       {/* Stage Columns */}
       {displayStages.map((stage) => (
-        <TaskColumn
+        <div
           key={stage.id}
-          stage={stage}
-          onAddTask={() => onAddTask?.(stage.id)}
-          onTaskClick={onTaskClick}
-          onDeleteStage={() => handleDeleteStage(stage.id)}
-          onClearTasks={() => handleClearTasks(stage.id)}
-          onRenameStage={() => handleRenameStage(stage.id)}
-        />
+          className={stage.id === newStageId ? "animate-stageAppear" : ""}
+        >
+          <TaskColumn
+            stage={stage}
+            onAddTask={() => onAddTask?.(stage.id)}
+            onTaskClick={onTaskClick}
+            onDeleteStage={() => handleDeleteStage(stage.id)}
+            onClearTasks={() => handleClearTasks(stage.id)}
+            onRenameStage={() => handleRenameStage(stage.id)}
+          />
+        </div>
       ))}
 
       {/* Add Stage Button */}
-      <div className="flex flex-col items-center p-2 min-w-[240px] lg:min-w-[280px] flex-shrink-0 animate-slideIn">
+      <div className="flex flex-col items-center p-2 min-w-[240px] lg:min-w-[280px] flex-shrink-0">
         <button
-          onClick={onAddStage}
-          className="w-full bg-white border border-neutral-200 rounded-[12px] flex items-center justify-center gap-2 px-3 py-2 text-neutral-400 hover:bg-neutral-50 hover:border-neutral-300 transition-all duration-200"
+          onClick={handleAddStage}
+          className="w-full bg-white border border-neutral-200 rounded-[12px] flex items-center justify-center gap-2 px-3 py-2 text-neutral-400 hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-600 transition-all duration-200"
         >
           <AddIcon />
           <span className="font-medium text-sm leading-5">Stage</span>

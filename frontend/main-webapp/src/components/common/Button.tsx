@@ -6,7 +6,8 @@ type ButtonSize = "sm" | "md" | "lg";
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  icon?: ReactNode;
+  iconLeft?: ReactNode;  
+  iconRight?: ReactNode;
   isLoading?: boolean;
   fullWidth?: boolean;
 }
@@ -37,7 +38,8 @@ const sizeStyles: Record<ButtonSize, string> = {
 export default function Button({
   variant = "primary",
   size = "md",
-  icon,
+  iconLeft,
+  iconRight,
   isLoading = false,
   fullWidth = false,
   children,
@@ -83,8 +85,9 @@ export default function Button({
         </svg>
       ) : (
         <>
-          {icon && <span className="flex-shrink-0">{icon}</span>}
+          {iconLeft && <span className="flex-shrink-0">{iconLeft}</span>}
           {children}
+          {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
         </>
       )}
     </button>

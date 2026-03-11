@@ -85,7 +85,7 @@ export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
 
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="font-medium text-base text-neutral-900 mb-2">Sub-tasks</h3>
+      <h3 className="body-3-medium text-neutral-900 mb-2">Sub-tasks</h3>
 
       <div className="flex flex-col">
         {subTasks.map((subTask) => (

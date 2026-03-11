@@ -9,18 +9,12 @@ import StatusSelector from "./StatusSelector";
 import AssigneeSelector from "./AssigneeSelector";
 import {
   CloseIcon,
-  BoldIcon,
-  ItalicIcon,
-  StrikethroughIcon,
-  BulletListIcon,
-  NumberListIcon,
-  LinkIcon,
-  ImageIcon,
   CalendarSmallIcon,
 } from "../../../../components/common/Icons";
 import Button from "../../../../components/common/Button";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/useToast";
+import { RichTextEditor } from "../../../../components/common";
 
 // Mock assignee options - would come from API in real app
 const mockAssignees: Assignee[] = [
@@ -96,35 +90,6 @@ const ProgressBar = ({ progress, onChange, disabled }: { progress: number; onCha
     </div>
   );
 };
-
-// Description editor toolbar
-const EditorToolbar = ({ disabled }: { disabled?: boolean }) => (
-  <div className={`flex items-center gap-1 py-2 px-3 border-b border-neutral-200 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <BoldIcon />
-    </button>
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <ItalicIcon />
-    </button>
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <StrikethroughIcon />
-    </button>
-    <div className="w-px h-5 bg-neutral-200 mx-1" />
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <BulletListIcon />
-    </button>
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <NumberListIcon />
-    </button>
-    <div className="w-px h-5 bg-neutral-200 mx-1" />
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <LinkIcon />
-    </button>
-    <button className="p-1.5 hover:bg-neutral-100 rounded transition-colors">
-      <ImageIcon />
-    </button>
-  </div>
-);
 
 // Effort tracking fields
 const EffortFields = ({
@@ -248,12 +213,6 @@ export default function TaskDetailModal({
   const isInReview = task.status === "IN_REVIEW";
   const isLockedForAssignee = isInReview && isAssignee && !isReporter;
 
-  // Reset task when modal opens with new data
-  useEffect(() => {
-    setTask(initialTask);
-    setShowRejectionPrompt(false);
-  }, [initialTask]);
-
   // Handle escape key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -359,21 +318,14 @@ export default function TaskDetailModal({
               <div className="flex-1 flex flex-col gap-6 min-w-0">
                 {/* Description Section */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-neutral-900">
+                  <label className="body-3-medium text-neutral-900">
                     Description
                   </label>
-                  <div className={`border border-neutral-200 rounded-xl overflow-hidden ${isLockedForAssignee ? "opacity-60" : ""}`}>
-                    <EditorToolbar disabled={isLockedForAssignee} />
-                    <textarea
-                      value={task.description}
-                      disabled={isLockedForAssignee}
-                      onChange={(e) =>
-                        setTask({ ...task, description: e.target.value })
-                      }
-                      className="w-full min-h-[100px] p-4 text-sm text-neutral-900 placeholder:text-neutral-400 resize-none outline-none disabled:cursor-not-allowed disabled:bg-neutral-50"
-                      placeholder="Add a description..."
-                    />
-                  </div>
+                  <RichTextEditor
+                    onChange={(content) =>
+                      setTask({ ...task, description: content })
+                    }
+                  />
                 </div>
 
                 {/* Sub-tasks Section */}

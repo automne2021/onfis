@@ -155,7 +155,7 @@ export const TreeViewIcon = ({ active }: { active: boolean }) => (
 );
 
 export const ListViewIcon = ({ active, size = 20 }: { active: boolean; size?: number }) => (
-    <Icon name="list" size={size} color={active ? "#0014A8" : "#62748E"} />
+    <Icon name="list" size={size} color={active ? "white" : "#62748E"} />
 );
 
 export const BoardViewIcon = ({ active }: { active: boolean }) => (
@@ -215,7 +215,7 @@ export const FlagIconSmall = ({ priority }: { priority: "urgent" | "high" | "med
         medium: "#FFD230",
         low: "#99A1AF",
     };
-    return <Icon name="flag" size={30} color={colors[priority]} filled />;
+    return <Icon name="flag" size={18} color={colors[priority]} filled />;
 };
 
 export const FlagIconColored = ({ color, size = 14 }: { color: string; size?: number }) => (
@@ -265,15 +265,15 @@ export const ImageIcon = () => (
 /** Task list checkbox (25×25, CSS-based) */
 export const Checkbox = ({ checked }: { checked: boolean }) => (
     <div
-        className={`w-[25px] h-[25px] rounded-[6px] border border-neutral-200 bg-white ${checked ? "bg-primary border-primary" : ""
+        className={`w-[20px] h-[20px] rounded-[5px] border border-neutral-200 bg-white ${checked ? "bg-primary border-primary" : ""
             }`}
     />
 );
 
 /** Task list checked checkbox with checkmark */
 export const CheckboxChecked = () => (
-    <div className="w-[25px] h-[25px] rounded-[6px] bg-primary flex items-center justify-center">
-        <Icon name="check" size={20} color="white" />
+    <div className="w-[20px] h-[20px] rounded-[5px] bg-primary flex items-center justify-center">
+        <Icon name="check" size={16} color="white" />
     </div>
 );
 
@@ -314,7 +314,7 @@ export const StatusDot = ({
         on_hold: "bg-status-on_hold",
         done: "bg-status-done",
     };
-    return <div className={`w-5 h-5 rounded-full ${colors[status]}`} />;
+    return <div className={`w-3.5 h-3.5 rounded-full ${colors[status]}`} />;
 };
 
 /** Quantity badge circle */

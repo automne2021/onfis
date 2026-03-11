@@ -9,7 +9,8 @@ import {
   type Employee,
   type UnassignedEmployee,
 } from "../components";
-import { AddIcon } from "../../../components/common/Icons";
+import { Add } from '@mui/icons-material';
+import { Button } from "../../../components/common/Buttons/Button";
 
 // Mock unassigned employees (new hires waiting to be placed)
 const initialUnassignedEmployees: UnassignedEmployee[] = [
@@ -209,7 +210,7 @@ function countPositions(tree: Position): { total: number; vacant: number } {
 }
 
 export default function PositionTreePage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"tree" | "list">("tree");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -276,12 +277,12 @@ export default function PositionTreePage() {
   const { total: totalPositions, vacant: vacantPositions } = countPositions(positionTree);
 
   return (
-    <div className="relative w-full max-w-full mx-auto">
+    <div className="relative w-full mx-auto">
       {/* Toolbar */}
       <div className="mb-2">
         <PositionToolbar
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          // searchQuery={searchQuery}
+          // onSearchChange={setSearchQuery}
           onFilter={handleFilter}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -306,13 +307,13 @@ export default function PositionTreePage() {
             </div>
 
             {/* Add Position Button */}
-            <button
+            <Button
+              title="Add Position"
+              iconLeft={<Add fontSize="small" />}
               onClick={handleAddPosition}
-              className="bg-secondary border border-primary rounded-[8px] flex items-center gap-1.5 px-2.5 py-1 hover:bg-secondary/80 transition-colors"
-            >
-              <AddIcon />
-              <span className="text-primary font-medium text-xs">Add Position</span>
-            </button>
+              style="primary"
+              textStyle='body-4-medium'
+            />
           </div>
 
           {/* Tree View */}
@@ -336,15 +337,13 @@ export default function PositionTreePage() {
               Vacant:{" "}
               <span className="text-status-off_track">{vacantPositions}</span>
             </span>
-            <button
+            <Button
+              title="Add Position"
+              iconLeft={<Add fontSize="small" />}
               onClick={handleAddPosition}
-              className="bg-secondary border border-primary rounded-[8px] flex items-center gap-2 px-3 py-1.5 hover:bg-secondary/80 transition-colors ml-auto"
-            >
-              <AddIcon />
-              <span className="text-primary font-medium text-sm whitespace-nowrap">
-                Add Position
-              </span>
-            </button>
+              style="primary"
+              textStyle='body-4-medium'
+            />
           </div>
 
           <PositionListView

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { Navbar } from "../components/Navbar";
 import { Button } from '../../../components/common/Buttons/Button';
@@ -15,20 +16,41 @@ const tabItems = [
   { id: 'all', label: "All News", isDisplay: true },
   { id: 'department', label: "My Department", isDisplay: true },
   { id: 'company', label: "Company Wide", isDisplay: true },
-  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small'/>, isDisplay: true },
+  { id: 'pinned', label: "Pinned", icon: <PushPin fontSize='small' />, isDisplay: true },
 ]
 
 export function Announcement() {
 
   // State Managements
   const [openAddForm, setOpenAddForm] = useState(false)
+  const [openProfileId, setOpenProfileId] = useState<string | number | null>(null);
 
   const [searchParams] = useSearchParams()
   const currentView = searchParams.get('view') || 'all'
 
+  // Escape key + body scroll lock (matching Modal.tsx pattern)
+  useEffect(() => {
+    if (openAddForm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [openAddForm]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenAddForm(false);
+    };
+    if (openAddForm) {
+      document.addEventListener('keydown', handleEscape);
+    }
+    return () => { document.removeEventListener('keydown', handleEscape); };
+  }, [openAddForm]);
+
   // Functions
   const handleToggleAddForm = () => {
-    setOpenAddForm((prev) => !prev); 
+    setOpenAddForm((prev) => !prev);
   };
 
   const handleLike = (id: string | number, status: boolean) => {
@@ -39,6 +61,10 @@ export function Announcement() {
   const handleComment = (id: string | number) => {
     console.log(`Open comment for post ${id}`);
   }
+
+  const handleToggleProfile = (id: string | number) => {
+    setOpenProfileId((prevId) => (prevId === id ? null : id));
+  };
 
   const filteredAnnouncement = useMemo(() => {
     // Lọc dữ liệu theo Tab (View)
@@ -59,8 +85,8 @@ export function Announcement() {
     // Duyệt qua mảng đã lọc để tính toán số Like và Comment
     return filtered.map((item) => {
       // Tính tổng số Like
-      const calculatedLikes = Array.isArray(item.likes) 
-        ? item.likes.length 
+      const calculatedLikes = Array.isArray(item.likes)
+        ? item.likes.length
         : 0;
 
       // Tính tổng số Comment + Replies
@@ -81,35 +107,35 @@ export function Announcement() {
     });
   }, [currentView])
 
-  return(
+  return (
     <>
       <section className="onfis-section">
         <Navbar />
-        <div className="w-full md:px-12 lg:px-24">
+        <div className="w-full md:px-6 lg:px-8">
           {/* Title text */}
-          <p className="header-h4 text-neutral-900 mt-[24px]">
+          <p className="header-h6 text-neutral-900 mt-5 mb-2 leading-none">
             Announcements & News
           </p>
-          <p className="body-2-medium text-neutral-500">
+          <p className="body-4-regular text-neutral-500">
             Stay updated with the latest company-wide and department-specific news, updates, and events.
           </p>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center justify-between border-b border-neutral-300 px-4 py-2 mt-[24px]">
+          <div className="flex items-center justify-between border-b border-neutral-300 px-3 py-1.5 mt-3">
             {/* Tab group*/}
             <TabGroup tabItems={tabItems} defaultTab='all' />
 
             {/* Add button */}
-            <Button 
+            <Button
               title='Post Announcement'
-              iconLeft={<Add />}
+              iconLeft={<Add sx={{ fontSize: 18 }} />}
               onClick={handleToggleAddForm}
               style='primary'
             />
           </div>
 
           {/* Body */}
-          <div className='flex flex-col gap-4 mt-6'>
+          <div className='flex flex-col gap-3 mt-3'>
             {filteredAnnouncement.length > 0 ? (
               filteredAnnouncement.map((item) => (
                 <AnnouncementCard
@@ -131,9 +157,11 @@ export function Announcement() {
                   numberOfComments={item.calculatedComments}
                   onToggleLike={handleLike}
                   onToggleComment={handleComment}
+                  isProfileOpen={openProfileId === item.id}
+                  onToggleProfile={() => handleToggleProfile(item.id)}
                 />
-            ))) : (
-              <div className='text-center py-10 text-neutral-500 body-2-medium'>
+              ))) : (
+              <div className='text-center py-6 text-neutral-500 body-3-medium'>
                 No announcements found in this view
               </div>
             )}
@@ -141,16 +169,21 @@ export function Announcement() {
         </div>
       </section>
 
-      {/* Add form */}
-      {openAddForm && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/20 backdrop-blur-sm'>
-          {/* Click ở ngoài để đóng form */}
-          <div className='absolute inset-0' onClick={handleToggleAddForm}/>
+      {/* Add form — portal-based modal with matching transitions */}
+      {openAddForm && createPortal(
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
+          {/* Backdrop — animate-fadeIn matching Modal.tsx */}
+          <div
+            className='absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn'
+            onClick={handleToggleAddForm}
+          />
 
-          <div className='relative z-10'>
-            <AnnouncementForm onClose={handleToggleAddForm}/>
+          {/* Panel — animate-slideUp matching Modal.tsx */}
+          <div className='relative z-10 animate-slideUp'>
+            <AnnouncementForm onClose={handleToggleAddForm} />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -55,7 +55,7 @@ export function Navbar() {
   return(
     <nav className="navbar-style">
       {/* Tên */}
-      <p className="text-body-1-regular text-neutral-900">
+      <p className="body-3-regular text-neutral-900">
         Annoucement
       </p>
 
@@ -87,10 +87,10 @@ export function Navbar() {
         trigger={
           <Button
             title="Filter"
-            iconLeft={<FilterList />}
+            iconLeft={<FilterList sx={{ fontSize: 16 }}/>}
             onClick={() => toggleMenu('filter')}
             style='sub'
-            textStyle="body-2-medium"
+            textStyle="body-4-medium"
           />
         }
         children={<ContentList data={filterContents} emptyLabel="" onItemClick={closeMenu}/>}

@@ -21,7 +21,7 @@ export default {
 
         secondary: {
           DEFAULT: "#E9ECFF",
-          hover: "#2189a3",
+          hover: "#D2D7FF",
         },
         muted: "#89939E",
 

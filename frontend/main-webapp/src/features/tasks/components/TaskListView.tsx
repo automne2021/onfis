@@ -64,12 +64,12 @@ export default function TaskListView({ stages, onAddTask, onTaskClick }: TaskLis
   };
 
   return (
-    <div className="bg-white rounded-[12px] overflow-hidden w-full">
+    <div className="bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden h-full flex flex-col w-full">
       {/* Table Header */}
       <TaskListHeader />
 
       {/* Stage Rows */}
-      <div className="flex flex-col">
+      <div className="flex-1 overflow-y-auto flex flex-col">
         {stages.map((stage) => (
           <div key={stage.id}>
             {/* Stage Header Row */}

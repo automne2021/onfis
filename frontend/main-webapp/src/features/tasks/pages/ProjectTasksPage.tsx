@@ -187,10 +187,10 @@ export default function ProjectTasksPage() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto gap-3 relative">
+    <div className="onfis-section">
       {/* Toolbar */}
       <TaskToolbar
-        projectName={projectName}
+        projectTitle={projectName}
         projectId={_projectId}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -199,40 +199,43 @@ export default function ProjectTasksPage() {
         onViewModeChange={setViewMode}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with view switch animation */}
       <div className="flex-1 overflow-hidden">
-        {viewMode === "kanban" && (
-          <TaskKanbanBoard
-            stages={stages}
-            onAddStage={handleAddStage}
-            onAddTask={handleAddTask}
-            onTaskClick={handleTaskClick}
-          />
-        )}
+        <div key={viewMode} className="animate-viewSwitch h-full">
+          {viewMode === "kanban" && (
+            <TaskKanbanBoard
+              stages={stages}
+              onAddStage={handleAddStage}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskClick}
+            />
+          )}
 
-        {viewMode === "list" && (
-          <TaskListView
-            stages={stages}
-            onAddTask={handleAddTask}
-            onTaskClick={handleTaskClick}
-          />
-        )}
+          {viewMode === "list" && (
+            <TaskListView
+              stages={stages}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskClick}
+            />
+          )}
 
-        {viewMode === "timeline" && (
-          <GanttView />
-        )}
+          {viewMode === "timeline" && (
+            <GanttView />
+          )}
 
-        {viewMode === "calendar" && (
-          <TaskCalendarView
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-        )}
+          {viewMode === "calendar" && (
+            <TaskCalendarView
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+            />
+          )}
+        </div>
       </div>
 
       {/* Task Detail Modal */}
-      {selectedTask && (
+      {selectedTask && selectedTask && (
         <TaskDetailModal
+          key={selectedTask.id}
           task={selectedTask}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}

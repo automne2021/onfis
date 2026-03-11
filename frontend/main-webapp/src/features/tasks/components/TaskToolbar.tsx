@@ -8,9 +8,11 @@ import {
   ListIcon,
   TimelineIcon,
   CalendarViewIcon,
+  EyeIcon,
 } from "../../../components/common/Icons";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
-import { AddIcon } from "../../../components/common/Icons";
+import { Button } from "../../../components/common/Buttons/Button";
+import { ViewToggle } from "../../../components/common/ViewToggle";
 
 const FILTER_CATEGORIES: FilterCategory[] = [
   {
@@ -46,7 +48,7 @@ const FILTER_CATEGORIES: FilterCategory[] = [
 ];
 
 interface TaskToolbarProps {
-  projectName: string;
+  projectTitle: string;
   projectId?: string;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -56,11 +58,11 @@ interface TaskToolbarProps {
 }
 
 export default function TaskToolbar({
-  projectName,
+  projectTitle,
   projectId,
   searchQuery,
   onSearchChange,
-  onNewTask,
+  // onNewTask,
   viewMode,
   onViewModeChange,
 }: TaskToolbarProps) {
@@ -74,71 +76,63 @@ export default function TaskToolbar({
   ];
 
   return (
-    <div className="bg-white grid grid-cols-[auto_1fr_auto] items-center gap-2 px-3 py-1.5 rounded-[12px] shadow-sm border border-neutral-100">
-      {/* Left: Breadcrumb + New Task */}
-      <div className="flex items-center gap-2">
-        <nav className="flex items-center h-7">
-          <span className="font-normal text-xs leading-4 text-black">
-            <Link to="/projects" className="hover:text-primary transition-colors">
-              Project
-            </Link>
-            {" / "}
-            <Link
-              to={projectId ? `/projects/${projectId}` : "/projects"}
-              className="text-primary hover:text-primary/80 transition-colors"
-            >
-              {projectName}
-            </Link>
-          </span>
-        </nav>
-        {onNewTask && (
-          <button
-            onClick={onNewTask}
-            className="bg-secondary border border-primary flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] text-primary font-medium text-xs leading-4 hover:bg-secondary/80 btn-hover"
-          >
-            <AddIcon />
-            <span>New Task</span>
-          </button>
-        )}
+    <nav className="navbar-style">
+      {/* Left: Breadcrumb */}
+      <div className="flex items-center gap-1 body-3-regular flex-shrink-0">
+        <Link to="/projects" className="hover:text-primary transition-colors">
+          Project
+        </Link>
+        <span className="mx-1">/</span>
+        <Link
+          to={projectId ? `/projects/${projectId}` : "/projects"}
+          className="text-primary hover:text-primary/80 transition-colors"
+        >
+          {projectTitle}
+        </Link>
       </div>
 
       {/* Center: Search */}
-      <div className="justify-self-center w-[160px] lg:w-[200px]">
-        <div className="bg-white border border-neutral-200 rounded-[8px] flex items-center gap-1.5 px-2 h-7">
-          <SearchIcon />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-neutral-900 text-xs font-normal placeholder:text-neutral-400"
-          />
-        </div>
+      <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white w-[260px] lg:w-[380px] flex-shrink-0`}>
+        <SearchIcon />
+        <input
+          type="text"
+          placeholder={`Search...`}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="outline-none w-full body-4-regular"
+          maxLength={250}
+        />
       </div>
 
-      {/* Right: Filter + View Toggle */}
-      <div className="flex items-center gap-2">
+      {/* Right: View Project Detail + Filter + View Toggle */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>
+          <Button
+            title="View Project Detail"
+            iconLeft={<EyeIcon />}
+            style="sub"
+            textStyle='body-4-medium'
+          />
+        </Link>
+        {/* <Button
+          title="New Task"
+          iconLeft={<Add fontSize="small" />}
+          onClick={onNewTask}
+          style="primary"
+          textStyle='body-4-medium'
+        /> */}
         <FilterDropdown
           categories={FILTER_CATEGORIES}
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
         />
-        <div className="flex items-center rounded-[6px] overflow-hidden">
-          {viewModes.map(({ mode, icon }) => (
-            <button
-              key={mode}
-              onClick={() => onViewModeChange(mode)}
-              className={`p-1.5 transition-colors ${viewMode === mode
-                ? "bg-primary"
-                : "bg-neutral-200 hover:bg-neutral-300"
-                }`}
-              aria-label={`${mode} view`}
-            >
-              {icon(viewMode === mode)}
-            </button>
-          ))}
-        </div>
+
+        <ViewToggle
+          viewMode={viewMode}
+          viewModes={viewModes}
+          onViewModeChange={onViewModeChange}
+        />
       </div>
-    </div>
+    </nav>
   );
 }

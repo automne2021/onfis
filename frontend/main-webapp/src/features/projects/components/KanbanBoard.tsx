@@ -15,7 +15,7 @@ const columns = [
 
 export default function KanbanBoard({ projectsByStatus, onProjectClick }: KanbanBoardProps) {
   return (
-    <div className="flex gap-3 h-full overflow-x-auto pb-2">
+    <div className="flex gap-3 h-full overflow-x-auto py-2">
       {columns.map((column) => (
         <KanbanColumn
           key={column.key}

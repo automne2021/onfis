@@ -16,22 +16,22 @@ interface HeaderProps {
   notificationContents?: ContentItem[] | null
 }
 
-export function Header({ companyName, messageContents, notificationContents }: HeaderProps){
+export function Header({ companyName, messageContents, notificationContents }: HeaderProps) {
 
   // MOCK DATA
   const currentUser = findUserById(105)
 
   const navigate = useNavigate()
-  
+
   // States management
-  const [activeMenu, setActiveMenu] = useState<string|null>(null)
+  const [activeMenu, setActiveMenu] = useState<string | null>(null)
 
   // Functions
   const toggleMenu = (menuId: string) => {
     setActiveMenu(activeMenu === menuId ? null : menuId)
   }
 
-  const closeMenu = () => setActiveMenu(null); 
+  const closeMenu = () => setActiveMenu(null);
 
   // Data 
   const avatarImg = currentUser?.avatarUrl ? currentUser.avatarUrl : userProfileImg
@@ -39,14 +39,14 @@ export function Header({ companyName, messageContents, notificationContents }: H
     {
       id: 'chat',
       icon: <Chat />,
-      content: <ContentList data={messageContents} emptyLabel='No messages available' onItemClick={closeMenu}/>
-    }, 
+      content: <ContentList data={messageContents} emptyLabel='No messages available' onItemClick={closeMenu} />
+    },
     {
       id: 'noti',
       icon: <Notifications />,
-      content: <ContentList data={notificationContents} emptyLabel='No notifications available' onItemClick={closeMenu}/>
+      content: <ContentList data={notificationContents} emptyLabel='No notifications available' onItemClick={closeMenu} />
     }
-  ] 
+  ]
   const profileContents: ContentItem[] = [
     {
       content: "User Profile",
@@ -55,62 +55,62 @@ export function Header({ companyName, messageContents, notificationContents }: H
         console.log("User profile")
         navigate(`/profile/${currentUser?.id || 105}`)
       }
-    }, 
+    },
     {
       content: "Settings",
       onClick: () => console.log("Settings")
-    }, 
+    },
     {
       content: "Log out",
       onClick: () => console.log("Log out")
-    }, 
+    },
   ]
 
-  return(
-    <header className="flex items-center justify-between w-full px-3 py-2 transition-all duration-300 ease-in-out bg-white shadow-[0px_4px_4px_0px_#e2e8f0]">
+  return (
+    <header className="flex items-center justify-between w-full px-3 py-1.5 transition-all duration-300 ease-in-out bg-white shadow-md border-b border-neutral-200">
       {/* Left side - Logo */}
-      <div className="flex items-center gap-4">
-        <img src={logo} alt="Logo" className="text-primary"/>
-        <p className={`text-primary header-h6`}>{companyName}</p>
+      <div className="flex items-center gap-3">
+        <img src={logo} alt="Logo" className="text-primary h-7" />
+        <p className="text-primary text-sm font-bold leading-tight">{companyName}</p>
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-3 text-neutral-500">
-        
+      <div className="flex items-center gap-2 text-neutral-500">
+
         {/* Icons */}
         {iconButtons.map((item) => (
           <Dropdown
             key={item.id}
             isOpen={activeMenu === item.id}
             trigger={
-              <IconButton 
-                icon={item.icon} 
+              <IconButton
+                icon={item.icon}
                 onClick={() => toggleMenu(item.id)}
               />
             }
             children={item.content}
             onClose={() => setActiveMenu(null)}
           />
-        )) }
+        ))}
 
         {/* Avatar */}
-        <Dropdown 
+        <Dropdown
           isOpen={activeMenu === 'profile'}
           trigger={
-            <div 
+            <div
               onClick={() => toggleMenu('profile')}
-              className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
+              className="w-8 h-8 rounded-full overflow-hidden border-2 border-neutral-200 cursor-pointer element-hover"
             >
-              <img 
+              <img
                 src={avatarImg}
                 alt="User Avatar"
                 className="w-full h-full object-cover"
-                />
+              />
             </div>
           }
           children={
-            <ContentList 
-              data={profileContents} 
+            <ContentList
+              data={profileContents}
               emptyLabel=''
               onItemClick={closeMenu}
             />

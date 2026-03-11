@@ -5,7 +5,11 @@ import { SearchBar, type SearchResult } from "../../../../components/common/Sear
 import { Button } from "../../../../components/common/Buttons/Button";
 import { UploadFileOutlined } from '@mui/icons-material';
 
-export function NavBar() {
+interface NavBarProps {
+  onUploadClick?: () => void;
+}
+
+export function NavBar({ onUploadClick }: NavBarProps) {
 
   // States management
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // Dành riêng cho dropdown/search
@@ -41,8 +45,6 @@ export function NavBar() {
   const handleSearchData = useCallback((results: SearchResult[]) => {
     setSearchResults(results);
   }, []);
-
-  const handleUploadDocument = () => {}
 
   return(
     <div className="my-3 flex items-center justify-between">
@@ -95,7 +97,7 @@ export function NavBar() {
         id="upload"
         title="Upload New Document"
         iconLeft={<UploadFileOutlined />}
-        onClick={() => handleUploadDocument()}
+        onClick={() => onUploadClick?.()}
         style='primary'
         type="button"
       />

@@ -14,15 +14,15 @@ export function ChatPage() {
   const toggleMenu = () => setIsMobileMenuOpen(prev => !prev)
 
   const handleChannelSelect = (id: string) => {
-    setActiveChannelId(id); 
-    setIsMobileMenuOpen(false); 
+    setActiveChannelId(id);
+    setIsMobileMenuOpen(false);
   };
 
   return (
     <section className="chat-section">
 
       {isMobileMenuOpen && (
-        <div 
+        <div
           onClick={() => setIsMobileMenuOpen(false)}
           className="md:hidden absolute inset-0 bg-black/20 z-20"
         />
@@ -35,16 +35,16 @@ export function ChatPage() {
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}
       >
-        <ChatSidebar 
+        <ChatSidebar
           activeChannelId={activeChannelId}
           onChannelSelect={handleChannelSelect}
-          icons={{'edit': <SquarePen size={18}/>, 'hash': <Hash />}}
+          icons={{ 'edit': <SquarePen size={18} />, 'hash': <Hash /> }}
         />
       </div>
 
       {/* MAIN CHAT */}
       <div className="flex-1 flex flex-col min-w-0 bg-white relative z-10">
-        
+
         {/* Header (Only display on mobile) to open Menu */}
         <div className="md:hidden flex items-center px-4 h-[60px] flex-shrink-0">
           <button
@@ -55,7 +55,7 @@ export function ChatPage() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-hidden min-h-0">
           <ChatWindow activeChannelId={activeChannelId} />
         </div>
 

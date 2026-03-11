@@ -12,9 +12,9 @@ export function AttachmentTags({ type, fileName } : AttachmentTagsProps) {
   const theme = FILE_COLORS[type] || FILE_COLORS.default;
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border border-neutral-300 bg-white cursor-pointer transition hover:border-primary hover:scale-105">
+    <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-300 bg-white cursor-pointer transition hover:border-primary hover:scale-105 body-3-regular text-neutral-900">
       <div 
-        className={`flex items-center justify-center w-10 h-10 rounded-lg 
+        className={`flex items-center justify-center w-8 h-8 rounded-lg 
           ${theme.bg} ${theme.text} 
         `}
         title={fileName} // Hiển thị tên file khi hover
@@ -22,7 +22,7 @@ export function AttachmentTags({ type, fileName } : AttachmentTagsProps) {
         <img 
           src={iconSrc} 
           alt={type} 
-          className="w-6 h-6 object-contain" 
+          className="w-4 h-4 object-contain" 
         />
       </div>
       {fileName}
@@ -30,7 +30,7 @@ export function AttachmentTags({ type, fileName } : AttachmentTagsProps) {
         type="button"
         className="p-2 rounded-full text-neutral-500 transition hover:bg-neutral-200"
       >
-        <FileDownloadOutlined />
+        <FileDownloadOutlined fontSize="small" />
       </button>
     </div>
   );
