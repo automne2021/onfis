@@ -20,9 +20,12 @@ import { UserProfile } from '../features/profile/pages/UserProfile';
 
 // Projects (new from frontend-projects)
 import { ProjectsPage, ProjectDetailPage } from '../features/projects';
+import ProjectMembersPage from '../features/projects/pages/ProjectMembersPage';
 
 // Tasks (new from frontend-projects)
 import { ProjectTasksPage } from '../features/tasks';
+import MyTasksPage from '../features/tasks/pages/MyTasksPage';
+import ReviewQueuePage from '../features/tasks/pages/ReviewQueuePage';
 
 // Positions (new from frontend-projects)
 import { PositionTreePage } from '../features/positions';
@@ -66,10 +69,15 @@ export const router = createBrowserRouter(
 
         <Route path="positions" element={<PositionTreePage />} />
 
+        <Route path="my-tasks" element={<MyTasksPage />} />
+
         <Route path="projects">
           <Route index element={<ProjectsPage />} />
+          <Route path="reviews" element={<ReviewQueuePage />} />
           <Route path=":projectId" element={<ProjectDetailPage />} />
           <Route path=":projectId/tasks" element={<ProjectTasksPage />} />
+          <Route path=":projectId/members" element={<ProjectMembersPage />} />
+          <Route path=":projectId/reviews" element={<ReviewQueuePage />} />
         </Route>
 
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />

@@ -9,6 +9,7 @@ import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
 import { findUserById } from '../../data/mockUserData';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface HeaderProps {
   companyName: string
@@ -20,6 +21,7 @@ export function Header({ companyName, messageContents, notificationContents }: H
 
   // MOCK DATA
   const currentUser = findUserById(105)
+  const { currentUser: authUser, toggleRole } = useAuth();
 
   const navigate = useNavigate()
 
@@ -76,6 +78,22 @@ export function Header({ companyName, messageContents, notificationContents }: H
 
       {/* Right side */}
       <div className="flex items-center gap-2 text-neutral-500">
+
+        {/* Role toggle — dev/demo only */}
+        {import.meta.env.DEV && (
+          <button
+            type="button"
+            onClick={toggleRole}
+            title={`Currently: ${authUser.role}. Click to switch.`}
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full border transition-colors cursor-pointer select-none ${
+              authUser.role === "MANAGER"
+                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+            }`}
+          >
+            {authUser.role === "MANAGER" ? "Manager" : "Employee"}
+          </button>
+        )}
 
         {/* Icons */}
         {iconButtons.map((item) => (

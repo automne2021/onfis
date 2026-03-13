@@ -1,5 +1,6 @@
 export { default as ProjectsPage } from "./pages/ProjectsPage";
 export { default as ProjectDetailPage } from "./pages/ProjectDetailPage";
+export { default as ProjectMembersPage } from "./pages/ProjectMembersPage";
 export { default as ProjectToolbar } from "./components/ProjectToolbar";
 export { default as KanbanBoard } from "./components/KanbanBoard";
 export { default as KanbanColumn } from "./components/KanbanColumn";

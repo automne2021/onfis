@@ -14,7 +14,10 @@ import {
 import Button from "../../../../components/common/Button";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/useToast";
+import { useRole } from "../../../../hooks/useRole";
 import { RichTextEditor } from "../../../../components/common";
+import ReviewPanel from "../ReviewPanel";
+import type { ReviewComment } from "../../types";
 
 // Mock assignee options - would come from API in real app
 const mockAssignees: Assignee[] = [
@@ -204,14 +207,21 @@ export default function TaskDetailModal({
 }: TaskDetailModalProps) {
   const [task, setTask] = useState<TaskDetail>(initialTask);
   const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
+  const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
   const { currentUser } = useAuth();
   const { showToast } = useToast();
+  const { isManager, isEmployee } = useRole();
 
   // Determine role-based permissions
   const isAssignee = task.assignees.some((a) => a.id === currentUser.id);
   const isReporter = task.reporterId === currentUser.id;
   const isInReview = task.status === "IN_REVIEW";
-  const isLockedForAssignee = isInReview && isAssignee && !isReporter;
+  const canReview = isInReview && (isReporter || isManager);
+  const isLockedForAssignee = isInReview && isAssignee && !isReporter && !isManager;
+
+  // Get last rejection feedback
+  const lastRejection = [...task.comments].reverse().find((c) => c.content.startsWith("[REJECTION]"));
+  const lastRejectionReason = lastRejection?.content.replace("[REJECTION] ", "") ?? null;
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -236,17 +246,37 @@ export default function TaskDetailModal({
   }, [task, onSave, onClose]);
 
   const handleApprove = useCallback(() => {
-    const updated = { ...task, status: "DONE" as const };
+    const newReview: ReviewComment = {
+      id: `rc-${Date.now()}`,
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      authorAvatar: currentUser.avatar,
+      action: "approved",
+      content: "",
+      createdAt: "Just now",
+    };
+    const updated = { ...task, status: "DONE" as const, reviews: [...taskReviews, newReview] };
+    setTaskReviews((prev) => [...prev, newReview]);
     onSave(updated);
     showToast("Task approved and marked as DONE.", "success");
     onClose();
-  }, [task, onSave, onClose, showToast]);
+  }, [task, taskReviews, currentUser, onSave, onClose, showToast]);
 
   const handleReject = useCallback(
     (reason: string) => {
+      const newReview: ReviewComment = {
+        id: `rc-${Date.now()}`,
+        authorId: currentUser.id,
+        authorName: currentUser.name,
+        authorAvatar: currentUser.avatar,
+        action: "changes_requested",
+        content: reason,
+        createdAt: "Just now",
+      };
       const updated = {
         ...task,
-        status: "TODO" as const,
+        status: "IN_PROGRESS" as const,
+        reviews: [...taskReviews, newReview],
         comments: [
           ...task.comments,
           {
@@ -257,11 +287,12 @@ export default function TaskDetailModal({
           },
         ],
       };
+      setTaskReviews((prev) => [...prev, newReview]);
       onSave(updated);
-      showToast("Task rejected and returned to TODO.", "warning");
+      showToast("Changes requested — task returned to In Progress.", "warning");
       onClose();
     },
-    [task, currentUser, onSave, onClose, showToast]
+    [task, taskReviews, currentUser, onSave, onClose, showToast]
   );
 
   // Resolve reporter name from mock assignees
@@ -309,6 +340,17 @@ export default function TaskDetailModal({
             </div>
           )}
 
+          {/* Rejection Feedback Banner */}
+          {isEmployee && !!lastRejectionReason && task.status !== "IN_REVIEW" && (
+            <div className="px-6 lg:px-8 py-3 bg-amber-50 border-b border-amber-200 flex items-start gap-3">
+              <span className="material-symbols-rounded text-amber-600 mt-0.5" style={{ fontSize: 18 }}>undo</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Changes requested by reviewer</p>
+                <p className="text-sm text-amber-700 mt-0.5">{lastRejectionReason}</p>
+              </div>
+            </div>
+          )}
+
           {/* Scrollable Content Area */}
           <div className="flex-1 overflow-y-auto p-6 lg:p-8">
 
@@ -334,8 +376,28 @@ export default function TaskDetailModal({
                   onChange={(subTasks) => setTask({ ...task, subTasks })}
                 />
 
+                {/* Employee: Submit for Review */}
+                {isEmployee && isAssignee && task.status === "IN_PROGRESS" && (
+                  <div className="flex flex-col gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <p className="text-sm font-medium text-blue-800">
+                      Ready to submit? Your manager will review and approve this task.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTask({ ...task, status: "IN_REVIEW" as const });
+                        showToast("Task submitted for review.", "info");
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors w-fit"
+                    >
+                      <span className="material-symbols-rounded" style={{ fontSize: 16 }}>upload</span>
+                      Submit for Review
+                    </button>
+                  </div>
+                )}
+
                 {/* Reviewer Approve/Reject Controls */}
-                {isInReview && isReporter && (
+                {canReview && (
                   <div className="flex flex-col gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <p className="text-sm font-medium text-blue-800">
                       This task is awaiting your review.
@@ -346,7 +408,7 @@ export default function TaskDetailModal({
                           ✓ Approve → DONE
                         </Button>
                         <Button variant="ghost" onClick={() => setShowRejectionPrompt(true)}>
-                          ✕ Reject → TODO
+                          ✕ Request Changes
                         </Button>
                       </div>
                     )}
@@ -356,6 +418,16 @@ export default function TaskDetailModal({
                       onCancel={() => setShowRejectionPrompt(false)}
                     />
                   </div>
+                )}
+
+                {/* Review History */}
+                {(taskReviews.length > 0 || isInReview) && (
+                  <ReviewPanel
+                    reviews={taskReviews}
+                    taskStatus={task.status}
+                    onApprove={canReview ? handleApprove : undefined}
+                    onRequestChanges={canReview ? handleReject : undefined}
+                  />
                 )}
 
                 {/* Activity & Comments */}

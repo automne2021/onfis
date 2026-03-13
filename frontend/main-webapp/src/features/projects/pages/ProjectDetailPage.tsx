@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
 import { ArrowRightAltOutlined } from '@mui/icons-material';
+import { useRole } from "../../../hooks/useRole";
 
 // Types
 interface Milestone {
@@ -253,6 +254,8 @@ const mockProject: ProjectDetail = {
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const location = useLocation();
+  const { isManager } = useRole();
   const [status, setStatus] = useState<ProjectStatus>(mockProject.status);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
@@ -260,6 +263,17 @@ export default function ProjectDetailPage() {
   // For now, using mock data
   console.log("Loading project:", projectId);
   const project = mockProject;
+
+  const id = projectId ?? "1";
+
+  const tabs = [
+    { to: `/projects/${id}`, label: "Overview", icon: "dashboard" },
+    { to: `/projects/${id}/tasks`, label: "Tasks", icon: "task_alt" },
+    { to: `/projects/${id}/members`, label: "Team", icon: "group" },
+    ...(isManager ? [{ to: `/projects/${id}/reviews`, label: "Reviews", icon: "rate_review" }] : []),
+  ];
+
+  const isTabActive = (path: string) => location.pathname === path;
 
   const statusOptions: { value: ProjectStatus; label: string }[] = [
     { value: "planning", label: "Planning" },
@@ -291,6 +305,24 @@ export default function ProjectDetailPage() {
           />
         </div>
       </nav>
+
+      {/* Project Tab Navigation */}
+      <div className="flex items-center gap-0.5 mt-2 border-b border-neutral-200 bg-white px-2 rounded-t-lg shadow-sm">
+        {tabs.map((tab) => (
+          <Link
+            key={tab.to}
+            to={tab.to}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              isTabActive(tab.to)
+                ? "text-primary border-primary"
+                : "text-neutral-500 border-transparent hover:text-neutral-800 hover:border-neutral-300"
+            }`}
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{tab.icon}</span>
+            {tab.label}
+          </Link>
+        ))}
+      </div>
 
       {/* Headline Card */}
       <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-2">

@@ -10,6 +10,7 @@ import { AnnouncementForm } from '../components/AnnouncementForm';
 import { MOCK_ANNOUNCEMENTS } from '../../../data/mockAnnouncement';
 import { AnnouncementCard } from '../components/Card/AnnouncementCard';
 import { useSearchParams } from 'react-router-dom';
+import { useRole } from '../../../hooks/useRole';
 
 
 const tabItems = [
@@ -24,6 +25,7 @@ export function Announcement() {
   // State Managements
   const [openAddForm, setOpenAddForm] = useState(false)
   const [openProfileId, setOpenProfileId] = useState<string | number | null>(null);
+  const { isManager } = useRole();
 
   const [searchParams] = useSearchParams()
   const currentView = searchParams.get('view') || 'all'
@@ -125,13 +127,15 @@ export function Announcement() {
             {/* Tab group*/}
             <TabGroup tabItems={tabItems} defaultTab='all' />
 
-            {/* Add button */}
-            <Button
-              title='Post Announcement'
-              iconLeft={<Add sx={{ fontSize: 18 }} />}
-              onClick={handleToggleAddForm}
-              style='primary'
-            />
+            {/* Add button — manager only */}
+            {isManager && (
+              <Button
+                title='Post Announcement'
+                iconLeft={<Add sx={{ fontSize: 18 }} />}
+                onClick={handleToggleAddForm}
+                style='primary'
+              />
+            )}
           </div>
 
           {/* Body */}

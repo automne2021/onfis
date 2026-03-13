@@ -11,6 +11,7 @@ import {
 } from "../components";
 import { Add } from '@mui/icons-material';
 import { Button } from "../../../components/common/Buttons/Button";
+import { useRole } from "../../../hooks/useRole";
 
 // Mock unassigned employees (new hires waiting to be placed)
 const initialUnassignedEmployees: UnassignedEmployee[] = [
@@ -216,6 +217,7 @@ export default function PositionTreePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [positionTree, setPositionTree] = useState<Position>(initialPositionTree);
   const [unassignedEmployees, setUnassignedEmployees] = useState<UnassignedEmployee[]>(initialUnassignedEmployees);
+  const { isManager } = useRole();
 
   const handleFilter = () => {
     console.log("Filter clicked");
@@ -307,13 +309,15 @@ export default function PositionTreePage() {
             </div>
 
             {/* Add Position Button */}
-            <Button
-              title="Add Position"
-              iconLeft={<Add fontSize="small" />}
-              onClick={handleAddPosition}
-              style="primary"
-              textStyle='body-4-medium'
-            />
+            {isManager && (
+              <Button
+                title="Add Position"
+                iconLeft={<Add fontSize="small" />}
+                onClick={handleAddPosition}
+                style="primary"
+                textStyle='body-4-medium'
+              />
+            )}
           </div>
 
           {/* Tree View */}
@@ -321,7 +325,7 @@ export default function PositionTreePage() {
             positions={positionTree}
             onPositionClick={handlePositionClick}
             onPositionMove={handlePositionMove}
-            unassignedEmployees={unassignedEmployees}
+            unassignedEmployees={isManager ? unassignedEmployees : []}
             onEmployeeAssign={handleEmployeeAssign}
           />
         </div>
@@ -337,13 +341,15 @@ export default function PositionTreePage() {
               Vacant:{" "}
               <span className="text-status-off_track">{vacantPositions}</span>
             </span>
-            <Button
-              title="Add Position"
-              iconLeft={<Add fontSize="small" />}
-              onClick={handleAddPosition}
-              style="primary"
-              textStyle='body-4-medium'
-            />
+            {isManager && (
+              <Button
+                title="Add Position"
+                iconLeft={<Add fontSize="small" />}
+                onClick={handleAddPosition}
+                style="primary"
+                textStyle='body-4-medium'
+              />
+            )}
           </div>
 
           <PositionListView

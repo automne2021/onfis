@@ -3,6 +3,7 @@ import ProjectTable from "../components/ProjectTable";
 import RecentActivities from "../components/RecentActivities";
 import { PieChart, BarChart, LineChart } from "../components/Charts";
 import { FolderIcon, TaskIcon, CalendarClockIcon as CalendarIcon } from "../../../components/common/Icons";
+import { useRole } from "../../../hooks/useRole";
 
 // Mock data - replace with real data from API
 const mockProjects = [
@@ -173,6 +174,7 @@ const teamWorkloadData = [
 export default function DashboardPage() {
   // TODO: Replace with actual user name from auth context
   const userName = "Nhan";
+  const { isManager } = useRole();
 
   return (
     <div className="flex flex-col gap-3 w-full bg-white rounded-[12px] shadow-md border-2 border-neutral-200 p-4 ">
@@ -181,14 +183,16 @@ export default function DashboardPage() {
         Good morning, {userName}
       </h1>
 
-      {/* Stats Cards Row - Always 3 columns */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard
-          icon={<FolderIcon />}
-          label="Total Projects"
-          value="4 Active"
-          subtitle="/ 12 Total"
-        />
+      {/* Stats Cards Row */}
+      <div className={`grid gap-3 ${isManager ? "grid-cols-3" : "grid-cols-2"}`}>
+        {isManager && (
+          <StatCard
+            icon={<FolderIcon />}
+            label="Total Projects"
+            value="4 Active"
+            subtitle="/ 12 Total"
+          />
+        )}
         <StatCard
           icon={<TaskIcon />}
           label="Pending Tasks"
@@ -204,24 +208,28 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Charts Row — 2 columns for larger, clearer charts */}
-      <div className="grid grid-cols-2 gap-3">
-        <PieChart
-          data={taskStatusData}
-          title="Task Status Overview"
-        />
-        <LineChart
-          data={weeklyTasksData}
-          title="Tasks Completed This Week"
-          color="#0014A8"
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-3">
-        <BarChart
-          data={teamWorkloadData}
-          title="Team Workload"
-        />
-      </div>
+      {/* Charts Row — manager only */}
+      {isManager && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <PieChart
+              data={taskStatusData}
+              title="Task Status Overview"
+            />
+            <LineChart
+              data={weeklyTasksData}
+              title="Tasks Completed This Week"
+              color="#0014A8"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            <BarChart
+              data={teamWorkloadData}
+              title="Team Workload"
+            />
+          </div>
+        </>
+      )}
 
       {/* Main Content: Projects Table (70%) + Activities (30%) */}
       <div className="flex gap-3 w-full">
