@@ -7,6 +7,8 @@ import { ProjectListView } from "../components/list";
 import { ProjectTimelineView } from "../components/timeline";
 import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
+import { useRole } from "../../../hooks/useRole";
+import { useAuth } from "../../../contexts/AuthContext";
 
 // Mock data - replace with real API data
 const mockProjects: Project[] = [
@@ -121,9 +123,15 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { isManager } = useRole();
+  const { currentUser } = useAuth();
 
   // Filter projects by search query
-  const filteredProjects = projects.filter(
+  const baseProjects = isManager
+    ? projects
+    : projects.filter((p) => p.assignees.some((a) => a.id === currentUser.id));
+
+  const filteredProjects = baseProjects.filter(
     (project) =>
       project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -151,7 +159,7 @@ export default function ProjectsPage() {
     <div className="onfis-section">
       {/* Toolbar */}
       <ProjectToolbar
-        onNewProject={handleNewProject}
+        onNewProject={isManager ? handleNewProject : undefined}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         viewMode={viewMode}

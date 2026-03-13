@@ -33,3 +33,14 @@ export interface ProjectsByStatus {
   on_hold: Project[];
   completed: Project[];
 }
+
+export type ProjectRole = "Lead" | "Developer" | "Designer" | "QA" | "Analyst";
+
+export interface ProjectMember {
+  id: string;
+  name: string;
+  avatar?: string;
+  projectRole: ProjectRole;
+  joinedAt: string;
+  taskCount: number;
+}

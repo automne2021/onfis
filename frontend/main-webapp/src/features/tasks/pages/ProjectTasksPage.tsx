@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { TaskToolbar, TaskKanbanBoard, TaskListView, GanttView, TaskCalendarView, TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
+import { useRole } from "../../../hooks/useRole";
 
 import CreateTaskModal from "../../projects/components/CreateTaskModal";
 import type { Stage, ViewMode, Task } from "../types";
@@ -98,6 +99,7 @@ const mockStages: Stage[] = [
 
 export default function ProjectTasksPage() {
   const { projectId: _projectId } = useParams<{ projectId: string }>();
+  const { isManager } = useRole();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [stages, setStages] = useState<Stage[]>(mockStages);
@@ -205,7 +207,7 @@ export default function ProjectTasksPage() {
           {viewMode === "kanban" && (
             <TaskKanbanBoard
               stages={stages}
-              onAddStage={handleAddStage}
+              onAddStage={isManager ? handleAddStage : undefined}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
             />

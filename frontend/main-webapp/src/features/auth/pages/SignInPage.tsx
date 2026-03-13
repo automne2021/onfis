@@ -33,7 +33,7 @@ export default function SignInPage() {
         boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
       }}
     >
-      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5 p-8 pb-6">
+      <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5 p-8 pb-5">
         {/* Logo */}
         <img src={logo} alt="Logo" className="h-9" />
 

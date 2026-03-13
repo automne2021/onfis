@@ -32,7 +32,7 @@ const FILTER_CATEGORIES: FilterCategory[] = [
 ];
 
 interface ProjectToolbarProps {
-  onNewProject: () => void;
+  onNewProject?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   viewMode: ViewMode;
@@ -75,13 +75,15 @@ export default function ProjectToolbar({
 
       {/* Right: Filter + View Toggle */}
       <div className="flex items-center gap-2">
-        <Button
-          title="New Project"
-          iconLeft={<Add fontSize="small" />}
-          onClick={onNewProject}
-          style="primary"
-          textStyle='body-4-medium'
-        />
+        {onNewProject && (
+          <Button
+            title="New Project"
+            iconLeft={<Add fontSize="small" />}
+            onClick={onNewProject}
+            style="primary"
+            textStyle='body-4-medium'
+          />
+        )}
         <FilterDropdown
           categories={FILTER_CATEGORIES}
           activeFilters={activeFilters}

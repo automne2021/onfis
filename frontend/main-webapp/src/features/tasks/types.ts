@@ -39,3 +39,15 @@ export interface Stage {
 }
 
 export type ViewMode = "kanban" | "list" | "timeline" | "calendar";
+
+export type ReviewAction = "approved" | "changes_requested" | "comment";
+
+export interface ReviewComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  action: ReviewAction;
+  content: string;
+  createdAt: string;
+}

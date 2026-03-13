@@ -1,7 +1,18 @@
-import { NavLink } from "react-router-dom";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useSidebar } from "../../contexts/SidebarContext";
+import { useRole } from "../../hooks/useRole";
 import Icon from "../common/Icon";
 import { CollapseIcon } from "../common/Icons";
+
+interface SubItem {
+  to: string;
+  label: string;
+  icon: string;
+  managerOnly?: boolean;
+  employeeOnly?: boolean;
+}
 
 interface NavItemProps {
   to: string;
@@ -9,6 +20,17 @@ interface NavItemProps {
   label: string;
   isCollapsed: boolean;
 }
+
+interface NavItemWithFlyoutProps extends NavItemProps {
+  subItems: SubItem[];
+}
+
+const PROJECT_SUB_ITEMS: SubItem[] = [
+  { to: "/projects", label: "All Projects", icon: "view_kanban" },
+  { to: "/my-tasks", label: "My Tasks", icon: "task_alt" },
+  { to: "/projects/reviews", label: "Review Queue", icon: "rate_review", managerOnly: true },
+  { to: "/projects/reviews", label: "My Reviews", icon: "send", employeeOnly: true },
+];
 
 const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
   <NavLink
@@ -24,43 +46,165 @@ const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
   >
     {({ isActive }) => (
       <>
-        {/* Active indicator bar */}
         <div
           className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300 ease-out
-            ${isActive ? "h-5 bg-primary opacity-100" : "h-0 bg-transparent opacity-0"}
-          `}
+            ${isActive ? "h-5 bg-primary opacity-100" : "h-0 bg-transparent opacity-0"}`}
         />
-
         <Icon
           name={icon}
           size={20}
           color={isActive ? "#0014A8" : "#62748E"}
           className="transition-transform duration-200 group-hover:scale-110"
         />
-
-        {/* Label below icon */}
         {!isCollapsed && (
-          <span
-            className={`text-[10px] leading-tight font-medium text-center mt-1 transition-colors
-              ${isActive ? "text-primary font-semibold" : ""}`}
-          >
+          <span className={`text-[10px] leading-tight font-medium text-center mt-1 transition-colors ${isActive ? "text-primary font-semibold" : ""}`}>
             {label}
           </span>
-        )}
-
-        {/* Tooltip for collapsed state */}
-        {isCollapsed && (
-          <div className="absolute left-full ml-2 px-2 py-1 bg-neutral-800 text-white text-xs rounded-md
-                          opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200
-                          whitespace-nowrap z-50 shadow-lg">
-            {label}
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-neutral-800 rotate-45 rounded-sm" />
-          </div>
         )}
       </>
     )}
   </NavLink>
 );
+
+// Flyout panel rendered in a portal so it isn't clipped by the sidebar's overflow
+const FlyoutPanel = ({
+  items,
+  position,
+  onMouseEnter,
+  onMouseLeave,
+}: {
+  items: SubItem[];
+  position: { top: number; left: number };
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) =>
+  createPortal(
+    <div
+      className="fixed z-[200] bg-white rounded-xl shadow-xl border border-neutral-200 py-2 w-52 animate-fadeIn"
+      style={{ top: `${position.top}px`, left: `${position.left}px` }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <p className="px-3 pt-1 pb-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-widest">
+        Projects
+      </p>
+      {items.map((item) => (
+        <NavLink
+          key={`${item.to}-${item.label}`}
+          to={item.to}
+          className={({ isActive }) =>
+            `flex items-center gap-2.5 mx-1 px-3 py-2 text-sm rounded-lg transition-colors
+             ${isActive
+              ? "bg-primary/8 text-primary font-medium"
+              : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900"
+            }`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <Icon name={item.icon} size={16} color={isActive ? "#0014A8" : "#62748E"} />
+              {item.label}
+            </>
+          )}
+        </NavLink>
+      ))}
+    </div>,
+    document.body
+  );
+
+const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWithFlyoutProps) => {
+  const itemRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { isManager, isEmployee } = useRole();
+  const { pathname } = useLocation();
+
+  const visibleItems = subItems.filter(
+    (item) => (!item.managerOnly || isManager) && (!item.employeeOnly || isEmployee)
+  );
+
+  const showPanel = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    if (itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect();
+      setPanelPos({ top: rect.top, left: rect.right + 8 });
+    }
+    setIsVisible(true);
+  }, []);
+
+  const scheduleHide = useCallback(() => {
+    hideTimer.current = setTimeout(() => setIsVisible(false), 150);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    []
+  );
+
+  const isActive =
+    pathname.startsWith("/projects") ||
+    pathname.startsWith("/my-tasks") ||
+    pathname === "/projects";
+
+  return (
+    <div
+      ref={itemRef}
+      className="relative w-full"
+      onMouseEnter={showPanel}
+      onMouseLeave={scheduleHide}
+    >
+      <NavLink
+        to={to}
+        className={`group relative flex flex-col items-center justify-center rounded-lg transition-all duration-200 ease-out
+          ${isCollapsed ? "w-10 h-10" : "w-full py-2 px-1"}
+          ${isActive
+            ? "bg-primary/8 text-primary shadow-sm"
+            : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-800"
+          }`}
+      >
+        <div
+          className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all duration-300 ease-out
+            ${isActive ? "h-5 bg-primary opacity-100" : "h-0 bg-transparent opacity-0"}`}
+        />
+        <Icon
+          name={icon}
+          size={20}
+          color={isActive ? "#0014A8" : "#62748E"}
+          className="transition-transform duration-200 group-hover:scale-110"
+        />
+        {!isCollapsed && (
+          <span className={`text-[10px] leading-tight font-medium text-center mt-1 transition-colors ${isActive ? "text-primary font-semibold" : ""}`}>
+            {label}
+          </span>
+        )}
+        {/* Tiny chevron hint when expanded */}
+        {!isCollapsed && (
+          <svg
+            width="8" height="8" viewBox="0 0 8 8" fill="none"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-30"
+          >
+            <path d="M3 2L5 4L3 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </NavLink>
+
+      {isVisible && visibleItems.length > 0 && (
+        <FlyoutPanel
+          items={visibleItems}
+          position={panelPos}
+          onMouseEnter={showPanel}
+          onMouseLeave={scheduleHide}
+        />
+      )}
+    </div>
+  );
+};
 
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
@@ -70,13 +214,12 @@ export default function Sidebar() {
     { to: "/announcements", icon: "campaign", label: "Announce" },
     { to: "/discuss", icon: "forum", label: "Discuss" },
     { to: "/positions", icon: "account_tree", label: "Position" },
-    { to: "/projects", icon: "view_kanban", label: "Project" },
   ];
 
   return (
     <aside
       className={`bg-white flex flex-col items-center gap-1 py-3 rounded-xl shadow-md border-2 border-neutral-200 sticky top-0 self-start h-[calc(100vh-60px-16px)]
-                   transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
+                   transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-visible
                    ${isCollapsed ? "w-[56px] px-2" : "w-[80px] px-1.5"}`}
     >
       {/* Collapse Toggle Button */}
@@ -99,6 +242,15 @@ export default function Sidebar() {
         {navItems.map((item) => (
           <NavItem key={item.to} {...item} isCollapsed={isCollapsed} />
         ))}
+
+        {/* Projects item with flyout sub-menu */}
+        <NavItemWithFlyout
+          to="/projects"
+          icon="view_kanban"
+          label="Project"
+          isCollapsed={isCollapsed}
+          subItems={PROJECT_SUB_ITEMS}
+        />
       </nav>
 
       {/* Spacer pushes Settings to bottom */}
