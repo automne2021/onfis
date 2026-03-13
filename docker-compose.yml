@@ -1,31 +1,9 @@
-version: '3.8'
-
 services:
-  # PostgreSQL Database (Supabase compatible)
-  postgres:
-    image: supabase/postgres:15.1.0.117
-    container_name: onfis-postgres
-    environment:
-      POSTGRES_DB: onfis_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - onfis-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # API Gateway
   api-gateway:
     build:
-      context: ./backend/api-gateway
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: api-gateway/Dockerfile
     container_name: onfis-api-gateway
     ports:
       - "8080:8080"
@@ -33,135 +11,96 @@ services:
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # User Service
   user-service:
     build:
-      context: ./backend/services/user-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: services/user-service/Dockerfile
     container_name: onfis-user-service
     ports:
       - "8081:8081"
+    env_file:
+      - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: onfis_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres123
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # Project Service
   project-service:
     build:
-      context: ./backend/services/project-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: services/project-service/Dockerfile
     container_name: onfis-project-service
     ports:
       - "8082:8082"
+    env_file:
+      - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: onfis_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres123
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # Position Service
   position-service:
     build:
-      context: ./backend/services/position-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: services/position-service/Dockerfile
     container_name: onfis-position-service
     ports:
       - "8083:8083"
+    env_file:
+      - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: onfis_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres123
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # Admin Service
   admin-service:
     build:
-      context: ./backend/services/admin-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: services/admin-service/Dockerfile
     container_name: onfis-admin-service
     ports:
       - "8084:8084"
+    env_file:
+      - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: onfis_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres123
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # Chat Service
   chat-service:
     build:
-      context: ./backend/services/chat-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: services/chat-service/Dockerfile
     container_name: onfis-chat-service
     ports:
       - "8085:8085"
+    env_file:
+      - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: onfis_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres123
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # Announcement Service
   announcement-service:
     build:
-      context: ./backend/services/announcement-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: services/announcement-service/Dockerfile
     container_name: onfis-announcement-service
     ports:
       - "8086:8086"
+    env_file:
+      - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: onfis_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres123
       SPRING_PROFILES_ACTIVE: docker
     networks:
       - onfis-network
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   # Nginx Reverse Proxy
   nginx:
@@ -180,5 +119,4 @@ networks:
   onfis-network:
     driver: bridge
 
-volumes:
-  postgres_data:
+volumes: {}
