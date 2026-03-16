@@ -8,7 +8,7 @@ import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
 import { findUserById } from '../../data/mockUserData';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface HeaderProps {
@@ -22,6 +22,7 @@ export function Header({ companyName, messageContents, notificationContents }: H
   // MOCK DATA
   const currentUser = findUserById(105)
   const { currentUser: authUser, toggleRole } = useAuth();
+  const { tenant } = useParams<{ tenant: string }>();
 
   const navigate = useNavigate()
 
@@ -55,7 +56,9 @@ export function Header({ companyName, messageContents, notificationContents }: H
       onClick: () => {
         closeMenu()
         console.log("User profile")
-        navigate(`/profile/${currentUser?.id || 105}`)
+        if (tenant) {
+          navigate(`/${tenant}/profile/${currentUser?.id || 105}`)
+        }
       }
     },
     {

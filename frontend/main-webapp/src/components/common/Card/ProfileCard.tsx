@@ -5,7 +5,7 @@ import {
   LocationOnOutlined,
   CloseOutlined
 } from '@mui/icons-material';
-import { Link } from "react-router-dom"; 
+import { Link, useParams } from "react-router-dom"; 
 // Thêm các hook cần thiết từ React
 import { useRef, useLayoutEffect, useState } from "react"; 
 
@@ -19,6 +19,8 @@ interface ProfileCardProps {
 
 export function ProfileCard({ user, onClose }: ProfileCardProps) {
   const avatarImg = user.avatarUrl || userProfileImg;
+  const { tenant } = useParams<{ tenant: string }>();
+  const profilePath = tenant ? `/${tenant}/profile/${user.id}` : `/profile/${user.id}`;
   
   // 1. Khởi tạo các State và Ref để tự động tính toán vị trí
   const cardRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
         
         {/* Avatar đè lên viền */}
         <div className="relative -mt-8 flex justify-center">
-          <Link to={`/profile/${user.id}`} onClick={onClose}>
+          <Link to={profilePath} onClick={onClose}>
             <img 
               src={avatarImg} 
               alt={user.name} 
@@ -82,7 +84,7 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
         <div className="px-5 pb-5 pt-2 text-center flex flex-col items-center">
           
           <Link 
-            to={`/profile/${user.id}`} 
+            to={profilePath} 
             onClick={onClose}
             className="body-1-medium text-neutral-900 hover:text-blue-600 hover:underline transition"
           >
@@ -118,7 +120,7 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
           </div>
 
           <Link 
-            to={`/profile/${user.id}`}
+            to={profilePath}
             onClick={onClose}
             className="mt-5 w-full block text-center py-2.5 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 body-3-medium rounded-lg transition border border-neutral-200"
           >

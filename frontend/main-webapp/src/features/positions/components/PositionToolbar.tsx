@@ -1,5 +1,6 @@
 import { useCallback, useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 import { TreeViewIcon, ListViewIcon } from "../../../components/common/Icons";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 import { Dropdown } from "../../../components/common";
@@ -41,6 +42,7 @@ export default function PositionToolbar({
   viewMode,
   onViewModeChange,
 }: PositionToolbarProps) {
+  const { withTenant } = useTenantPath();
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -71,7 +73,7 @@ export default function PositionToolbar({
   return (
     <div className="navbar-style">
       {/* Left: Breadcrumb */}
-      <Link to="/positions" className="body-3-regular text-neutral-900 hover:text-primary transition-colors">
+      <Link to={withTenant("/positions")} className="body-3-regular text-neutral-900 hover:text-primary transition-colors">
         Position
       </Link>
 

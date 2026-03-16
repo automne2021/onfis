@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useRole } from "../../../hooks/useRole";
 import type { ProjectMember, ProjectRole } from "../types";
 
@@ -310,6 +311,7 @@ function MemberCard({ member, isManager, onRoleChange, onRemove }: MemberCardPro
 // ── Page component ─────────────────────────────────────────────────────────────
 export default function ProjectMembersPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { withTenant } = useTenantPath();
   const { isManager } = useRole();
   const [members, setMembers] = useState<ProjectMember[]>(MOCK_MEMBERS);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -342,9 +344,9 @@ export default function ProjectMembersPage() {
       {/* Breadcrumb */}
       <nav className="navbar-style">
         <div className="flex items-center gap-1 text-sm text-neutral-500">
-          <Link to="/projects" className="hover:text-primary transition-colors">Projects</Link>
+          <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">Projects</Link>
           <span>/</span>
-          <Link to={`/projects/${projectId}`} className="hover:text-primary transition-colors">Overview</Link>
+          <Link to={withTenant(`/projects/${projectId ?? ""}`)} className="hover:text-primary transition-colors">Overview</Link>
           <span>/</span>
           <span className="text-primary font-medium">Team</span>
         </div>

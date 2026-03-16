@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 import type { ReactElement } from "react";
 import type { ViewMode } from "../types";
 import {
@@ -66,6 +67,7 @@ export default function TaskToolbar({
   viewMode,
   onViewModeChange,
 }: TaskToolbarProps) {
+  const { withTenant } = useTenantPath();
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
 
   const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
@@ -79,12 +81,12 @@ export default function TaskToolbar({
     <nav className="navbar-style">
       {/* Left: Breadcrumb */}
       <div className="flex items-center gap-1 body-3-regular flex-shrink-0">
-        <Link to="/projects" className="hover:text-primary transition-colors">
+        <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">
           Project
         </Link>
         <span className="mx-1">/</span>
         <Link
-          to={projectId ? `/projects/${projectId}` : "/projects"}
+          to={projectId ? withTenant(`/projects/${projectId}`) : withTenant("/projects")}
           className="text-primary hover:text-primary/80 transition-colors"
         >
           {projectTitle}
@@ -106,7 +108,7 @@ export default function TaskToolbar({
 
       {/* Right: View Project Detail + Filter + View Toggle */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Link to={projectId ? `/projects/${projectId}` : "/projects"}>
+        <Link to={projectId ? withTenant(`/projects/${projectId}`) : withTenant("/projects")}>
           <Button
             title="View Project Detail"
             iconLeft={<EyeIcon />}
