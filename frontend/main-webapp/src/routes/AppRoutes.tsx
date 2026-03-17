@@ -1,4 +1,4 @@
-import { createBrowserRouter, createRoutesFromElements, Route } from 'react-router-dom';
+import { createBrowserRouter, createRoutesFromElements, Route, Navigate } from 'react-router-dom';
 import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
 
@@ -43,44 +43,46 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      {/* Auth Routes (no sidebar/header) */}
-      <Route path="/auth" element={<AuthLayout />}>
-        <Route path="login" element={<SignInPage />} />
-        <Route path="register" element={<PlaceholderPage title="Register" />} />
-      </Route>
-
-      {/* App Routes (with sidebar/header) */}
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="dashboard" element={<DashboardPage />} />
-
-        <Route path="announcements">
-          <Route index element={<Announcement />} />
-          <Route path=":id/:slug" element={<AnnouncementDetail />} />
+      <Route path="/:tenant">
+        {/* Auth Routes (no sidebar/header) */}
+        <Route path="auth" element={<AuthLayout />}>
+          <Route path="login" element={<SignInPage />} />
+          <Route path="register" element={<PlaceholderPage title="Register" />} />
         </Route>
 
-        <Route path="discuss">
-          <Route index element={<ChatPage />} />
+        {/* App Routes (with sidebar/header) */}
+        <Route path="" element={<AppLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+
+          <Route path="announcements">
+            <Route index element={<Announcement />} />
+            <Route path=":id/:slug" element={<AnnouncementDetail />} />
+          </Route>
+
+          <Route path="discuss">
+            <Route index element={<ChatPage />} />
+          </Route>
+
+          <Route path="profile">
+            <Route path=":id" element={<UserProfile />} />
+          </Route>
+
+          <Route path="positions" element={<PositionTreePage />} />
+
+          <Route path="my-tasks" element={<MyTasksPage />} />
+
+          <Route path="projects">
+            <Route index element={<ProjectsPage />} />
+            <Route path="reviews" element={<ReviewQueuePage />} />
+            <Route path=":projectId" element={<ProjectDetailPage />} />
+            <Route path=":projectId/tasks" element={<ProjectTasksPage />} />
+            <Route path=":projectId/members" element={<ProjectMembersPage />} />
+            <Route path=":projectId/reviews" element={<ReviewQueuePage />} />
+          </Route>
+
+          <Route path="settings" element={<PlaceholderPage title="Settings" />} />
         </Route>
-
-        <Route path="profile">
-          <Route path=":id" element={<UserProfile />} />
-        </Route>
-
-        <Route path="positions" element={<PositionTreePage />} />
-
-        <Route path="my-tasks" element={<MyTasksPage />} />
-
-        <Route path="projects">
-          <Route index element={<ProjectsPage />} />
-          <Route path="reviews" element={<ReviewQueuePage />} />
-          <Route path=":projectId" element={<ProjectDetailPage />} />
-          <Route path=":projectId/tasks" element={<ProjectTasksPage />} />
-          <Route path=":projectId/members" element={<ProjectMembersPage />} />
-          <Route path=":projectId/reviews" element={<ReviewQueuePage />} />
-        </Route>
-
-        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
       </Route>
     </>
   )

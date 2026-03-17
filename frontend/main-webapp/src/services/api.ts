@@ -1,10 +1,11 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, AxiosError } from 'axios';
+import { getAccessToken } from './auth';
+import { getTenantFromPath } from '../utils/tenant';
 
-
-const BASE_URL: string = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const ROOT_URL: string = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '');
 
 const api: AxiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: ROOT_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,13 +15,18 @@ const api: AxiosInstance = axios.create({
 
 // Request Interceptor
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
+  async (config: InternalAxiosRequestConfig) => {
+    const token = await getAccessToken();
+    const tenant = getTenantFromPath();
+
+    if (tenant) {
+      config.baseURL = `${ROOT_URL}/${tenant}/api`;
+    }
 
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error: AxiosError) => {

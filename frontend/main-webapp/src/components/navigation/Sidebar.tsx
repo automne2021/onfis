@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { NavLink, useLocation } from "react-router-dom";
 import { useSidebar } from "../../contexts/SidebarContext";
 import { useRole } from "../../hooks/useRole";
+import { useTenantPath } from "../../hooks/useTenantPath";
 import Icon from "../common/Icon";
 import { CollapseIcon } from "../common/Icons";
 
@@ -24,13 +25,6 @@ interface NavItemProps {
 interface NavItemWithFlyoutProps extends NavItemProps {
   subItems: SubItem[];
 }
-
-const PROJECT_SUB_ITEMS: SubItem[] = [
-  { to: "/projects", label: "All Projects", icon: "view_kanban" },
-  { to: "/my-tasks", label: "My Tasks", icon: "task_alt" },
-  { to: "/projects/reviews", label: "Review Queue", icon: "rate_review", managerOnly: true },
-  { to: "/projects/reviews", label: "My Reviews", icon: "send", employeeOnly: true },
-];
 
 const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
   <NavLink
@@ -148,9 +142,8 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
   );
 
   const isActive =
-    pathname.startsWith("/projects") ||
-    pathname.startsWith("/my-tasks") ||
-    pathname === "/projects";
+    pathname.includes("/projects") ||
+    pathname.includes("/my-tasks");
 
   return (
     <div
@@ -208,12 +201,20 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
 
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const { withTenant } = useTenantPath();
+
+  const projectSubItems: SubItem[] = [
+    { to: withTenant("/projects"), label: "All Projects", icon: "view_kanban" },
+    { to: withTenant("/my-tasks"), label: "My Tasks", icon: "task_alt" },
+    { to: withTenant("/projects/reviews"), label: "Review Queue", icon: "rate_review", managerOnly: true },
+    { to: withTenant("/projects/reviews"), label: "My Reviews", icon: "send", employeeOnly: true },
+  ];
 
   const navItems: Omit<NavItemProps, "isCollapsed">[] = [
-    { to: "/dashboard", icon: "dashboard", label: "Dashboard" },
-    { to: "/announcements", icon: "campaign", label: "Announce" },
-    { to: "/discuss", icon: "forum", label: "Discuss" },
-    { to: "/positions", icon: "account_tree", label: "Position" },
+    { to: withTenant("/dashboard"), icon: "dashboard", label: "Dashboard" },
+    { to: withTenant("/announcements"), icon: "campaign", label: "Announce" },
+    { to: withTenant("/discuss"), icon: "forum", label: "Discuss" },
+    { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
   ];
 
   return (
@@ -245,11 +246,11 @@ export default function Sidebar() {
 
         {/* Projects item with flyout sub-menu */}
         <NavItemWithFlyout
-          to="/projects"
+          to={withTenant("/projects")}
           icon="view_kanban"
           label="Project"
           isCollapsed={isCollapsed}
-          subItems={PROJECT_SUB_ITEMS}
+          subItems={projectSubItems}
         />
       </nav>
 
@@ -261,7 +262,7 @@ export default function Sidebar() {
 
       {/* Settings Button */}
       <NavItem
-        to="/settings"
+        to={withTenant("/settings")}
         icon="settings"
         label="Settings"
         isCollapsed={isCollapsed}

@@ -9,18 +9,26 @@ import org.springframework.web.context.annotation.RequestScope;
 @Component
 @RequestScope
 public class TenantContext {
-    
-    private String companyId;
-    
+
+    private String tenantId;
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
     public String getCompanyId() {
-        return companyId;
+        return tenantId;
     }
-    
+
     public void setCompanyId(String companyId) {
-        this.companyId = companyId;
+        this.tenantId = companyId;
     }
-    
+
     public void clear() {
-        this.companyId = null;
+        this.tenantId = null;
     }
 }

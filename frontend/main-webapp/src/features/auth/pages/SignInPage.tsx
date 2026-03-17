@@ -1,29 +1,46 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import { PersonIcon, LockIcon, PasskeyIcon } from "../../../components/common/Icons";
 import logo from "../../../assets/logo-without-text.svg";
+import { signInWithPassword } from "../../../services/auth";
 
 export default function SignInPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const { tenant } = useParams<{ tenant: string }>();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate auth then navigate to dashboard
-    setTimeout(() => {
+    setErrorMessage(null);
+
+    if (!tenant) {
       setIsLoading(false);
-      navigate("/dashboard");
-    }, 800);
+      setErrorMessage("Missing tenant in URL. Use /{company}/auth/login.");
+      return;
+    }
+
+    try {
+      await signInWithPassword(email, password);
+      navigate(`/${tenant}/dashboard`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sign in failed";
+      setErrorMessage(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePasskeySignIn = () => {
     // TODO: Implement passkey sign-in
-    navigate("/dashboard");
+    if (tenant) {
+      navigate(`/${tenant}/dashboard`);
+    }
   };
 
   return (
@@ -47,14 +64,14 @@ export default function SignInPage() {
           </p>
         </div>
 
-        {/* Username Input */}
+        {/* Email Input */}
         <Input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           icon={<PersonIcon />}
-          autoComplete="username"
+          autoComplete="email"
           required
         />
 
@@ -70,12 +87,16 @@ export default function SignInPage() {
             required
           />
           <Link
-            to="/forgot-password"
+            to={tenant ? `/${tenant}/auth/forgot-password` : "/auth/forgot-password"}
             className="self-end text-xs font-medium text-primary hover:underline transition-colors"
           >
             Forgot password?
           </Link>
         </div>
+
+        {errorMessage && (
+          <p className="w-full text-xs text-red-600 text-left">{errorMessage}</p>
+        )}
 
         {/* Sign In Button */}
         <Button

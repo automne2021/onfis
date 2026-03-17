@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
 import { ArrowRightAltOutlined } from '@mui/icons-material';
 import { useRole } from "../../../hooks/useRole";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 
 // Types
 interface Milestone {
@@ -254,6 +255,7 @@ const mockProject: ProjectDetail = {
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { withTenant } = useTenantPath();
   const location = useLocation();
   const { isManager } = useRole();
   const [status, setStatus] = useState<ProjectStatus>(mockProject.status);
@@ -267,10 +269,10 @@ export default function ProjectDetailPage() {
   const id = projectId ?? "1";
 
   const tabs = [
-    { to: `/projects/${id}`, label: "Overview", icon: "dashboard" },
-    { to: `/projects/${id}/tasks`, label: "Tasks", icon: "task_alt" },
-    { to: `/projects/${id}/members`, label: "Team", icon: "group" },
-    ...(isManager ? [{ to: `/projects/${id}/reviews`, label: "Reviews", icon: "rate_review" }] : []),
+    { to: withTenant(`/projects/${id}`), label: "Overview", icon: "dashboard" },
+    { to: withTenant(`/projects/${id}/tasks`), label: "Tasks", icon: "task_alt" },
+    { to: withTenant(`/projects/${id}/members`), label: "Team", icon: "group" },
+    ...(isManager ? [{ to: withTenant(`/projects/${id}/reviews`), label: "Reviews", icon: "rate_review" }] : []),
   ];
 
   const isTabActive = (path: string) => location.pathname === path;
@@ -287,7 +289,7 @@ export default function ProjectDetailPage() {
       {/* Breadcrumb Bar with Search */}
       <nav className="navbar-style">
         <div className="flex items-center gap-1 body-3-regular">
-          <Link to="/projects" className="hover:text-primary transition-colors">
+          <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">
             Project
           </Link>
           <span className="mx-1">/</span>
@@ -337,7 +339,7 @@ export default function ProjectDetailPage() {
               <StarIcon filled={project.isStarred} />
             </button>
             <Link
-              to={`/projects/${projectId}/tasks`}
+              to={withTenant(`/projects/${projectId ?? ""}/tasks`)}
               className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               <KanbanIcon />
@@ -482,7 +484,7 @@ export default function ProjectDetailPage() {
             Recent Tasks
           </h2>
           <Link
-            to={`/projects/${projectId}/tasks`}
+            to={withTenant(`/projects/${projectId ?? ""}/tasks`)}
             className="body-4-regular text-primary hover:underline inline-flex items-center gap-1"
           >
             View All Tasks

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useRole } from "../../../hooks/useRole";
 import { useToast } from "../../../contexts/useToast";
 import type { Task, ReviewComment } from "../types";
@@ -163,6 +164,7 @@ function Avatar({ name, avatar, size = 28 }: { name: string; avatar?: string; si
 
 // ── Manager Review Queue ───────────────────────────────────────────────────────
 function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
+  const { withTenant } = useTenantPath();
   const { showToast } = useToast();
   const [filter, setFilter] = useState<ManagerFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>(MOCK_REVIEW_TASKS);
@@ -264,7 +266,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
           )}
         </div>
         <Link
-          to={`/projects/${projectId}`}
+          to={withTenant(`/projects/${projectId ?? ""}`)}
           className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-primary transition-colors"
         >
           <span className="material-symbols-rounded" style={{ fontSize: 16 }}>arrow_back</span>
@@ -478,6 +480,7 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
 
 // ── Employee Submissions ───────────────────────────────────────────────────────
 function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
+  const { withTenant } = useTenantPath();
   const [filter, setFilter] = useState<EmployeeFilter>("all");
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -514,7 +517,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
           <p className="text-sm text-neutral-400 mt-0.5">Tasks you've submitted for review</p>
         </div>
         <Link
-          to={`/projects/${projectId}`}
+          to={withTenant(`/projects/${projectId ?? ""}`)}
           className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-primary transition-colors"
         >
           <span className="material-symbols-rounded" style={{ fontSize: 16 }}>arrow_back</span>
