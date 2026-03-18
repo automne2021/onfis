@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjectToolbar from "../components/ProjectToolbar";
 import KanbanBoard from "../components/KanbanBoard";
@@ -7,135 +7,70 @@ import { ProjectListView } from "../components/list";
 import { ProjectTimelineView } from "../components/timeline";
 import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
-import { useRole } from "../../../hooks/useRole";
-import { useAuth } from "../../../contexts/AuthContext";
-
-// Mock data - replace with real API data
-const mockProjects: Project[] = [
-  {
-    id: "1",
-    title: "Server Migration",
-    description: "Moving bla bla (2 lines) ..............................................................................",
-    tags: [{ label: "DevOps", type: "department" }],
-    priority: "low",
-    progress: 0,
-    dueDate: "Oct 1, 2025",
-    status: "planning",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-  {
-    id: "2",
-    title: "Server Migration",
-    description: "Moving bla bla...",
-    tags: [{ label: "DevOps", type: "department" }],
-    priority: "low",
-    progress: 0,
-    dueDate: "Oct 1, 2025",
-    status: "planning",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-  {
-    id: "3",
-    title: "Server Migration",
-    description: "Moving bla bla (2 lines) ..............................................................................",
-    tags: [{ label: "Internal", type: "scope" }],
-    priority: "high",
-    progress: 15,
-    dueDate: "Oct 1, 2025",
-    status: "in_progress",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-  {
-    id: "4",
-    title: "Server Migration",
-    description: "Moving bla bla...",
-    tags: [{ label: "Internal", type: "scope" }],
-    priority: "medium",
-    progress: 15,
-    dueDate: "Oct 1, 2025",
-    status: "in_progress",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-  {
-    id: "5",
-    title: "Server Migration",
-    description: "Moving bla bla...",
-    tags: [{ label: "Internal", type: "scope" }],
-    priority: "medium",
-    progress: 15,
-    dueDate: "Oct 1, 2025",
-    status: "in_progress",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-  {
-    id: "6",
-    title: "Server Migration",
-    description: "Moving bla bla...",
-    tags: [
-      { label: "R&D", type: "department" },
-      { label: "Internal", type: "scope" },
-    ],
-    priority: "low",
-    progress: 60,
-    dueDate: "Oct 1, 2025",
-    status: "on_hold",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-  {
-    id: "7",
-    title: "Server Migration",
-    description: "Moving bla bla...",
-    tags: [{ label: "Internal", type: "scope" }],
-    priority: "low",
-    progress: 100,
-    dueDate: "Oct 1, 2025",
-    status: "completed",
-    assignees: [
-      { id: "1", name: "User 1", avatar: "" },
-      { id: "2", name: "User 2", avatar: "" },
-    ],
-  },
-];
+import type { ProjectFormData } from "../components/CreateProjectModal";
+import { createProject, getCurrentProjectUser, listProjects } from "../../../services/projectService";
+import { useTenantPath } from "../../../hooks/useTenantPath";
+import { useToast } from "../../../contexts/useToast";
 
 type ViewMode = "kanban" | "list" | "timeline" | "calendar";
 
+const parseTagJson = (raw: string): Project["tags"] => {
+  try {
+    const data = JSON.parse(raw) as Array<{ label: string; type: "department" | "scope" }>;
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+};
+
+const toProjectViewModel = (apiProject: Awaited<ReturnType<typeof listProjects>>[number]): Project => ({
+  id: apiProject.id,
+  title: apiProject.title,
+  description: apiProject.description || "",
+  tags: parseTagJson(apiProject.tags || "[]"),
+  priority: apiProject.priority,
+  progress: apiProject.progress,
+  dueDate: apiProject.dueDate ? new Date(apiProject.dueDate).toLocaleDateString() : "",
+  status: apiProject.status,
+  assignees: apiProject.assignees,
+});
+
 export default function ProjectsPage() {
   const navigate = useNavigate();
-  const [projects] = useState<Project[]>(mockProjects);
+  const { withTenant } = useTenantPath();
+  const { showToast } = useToast();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [canCreateProject, setCanCreateProject] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { isManager } = useRole();
-  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [apiProjects, me] = await Promise.all([listProjects(), getCurrentProjectUser()]);
+        setProjects(apiProjects.map(toProjectViewModel));
+        setCanCreateProject(me.permissions.includes("PROJECT_CREATE"));
+      } catch {
+        setError("Failed to load projects.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, []);
 
   // Filter projects by search query
-  const baseProjects = isManager
-    ? projects
-    : projects.filter((p) => p.assignees.some((a) => a.id === currentUser.id));
-
-  const filteredProjects = baseProjects.filter(
+  const filteredProjects = useMemo(() => projects.filter(
     (project) =>
       project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [projects, searchQuery]);
 
   // Group projects by status for Kanban view
   const projectsByStatus = {
@@ -149,17 +84,34 @@ export default function ProjectsPage() {
     setIsCreateModalOpen(true);
   };
 
-
-
   const handleProjectClick = (project: Project) => {
-    navigate(`/projects/${project.id}/tasks`);
+    navigate(withTenant(`/projects/${project.id}/tasks`));
+  };
+
+  const handleCreateProject = async (data: ProjectFormData) => {
+    try {
+      const created = await createProject({
+        title: data.name,
+        description: data.description,
+        status: "PLANNING",
+        priority: "MEDIUM",
+        progress: 0,
+        startDate: data.startDate ? data.startDate.toISOString().slice(0, 10) : undefined,
+        dueDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : undefined,
+        tags: "[]",
+      });
+      setProjects((prev) => [toProjectViewModel(created), ...prev]);
+      showToast("Project created successfully", "success");
+    } catch {
+      showToast("Unable to create project", "error");
+    }
   };
 
   return (
     <div className="onfis-section">
       {/* Toolbar */}
       <ProjectToolbar
-        onNewProject={isManager ? handleNewProject : undefined}
+        onNewProject={canCreateProject ? handleNewProject : undefined}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
@@ -168,7 +120,10 @@ export default function ProjectsPage() {
 
       {/* Content with view switch animation */}
       <div className="flex-1 overflow-hidden px-3 pb-3">
-        <div key={viewMode} className="animate-viewSwitch h-full">
+        {loading && <div className="text-sm text-neutral-500 px-3 py-4">Loading projects...</div>}
+        {error && !loading && <div className="text-sm text-red-500 px-3 py-4">{error}</div>}
+        {!loading && !error && (
+          <div key={viewMode} className="animate-viewSwitch h-full">
           {viewMode === "kanban" && (
             <KanbanBoard projectsByStatus={projectsByStatus} onProjectClick={handleProjectClick} />
           )}
@@ -181,7 +136,8 @@ export default function ProjectsPage() {
           {viewMode === "calendar" && (
             <ProjectCalendarView projects={filteredProjects} onProjectClick={handleProjectClick} />
           )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Create Project Modal */}
@@ -189,8 +145,7 @@ export default function ProjectsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={(data) => {
-          console.log("Create project:", data);
-          // TODO: Implement API call to create project
+          void handleCreateProject(data);
           setIsCreateModalOpen(false);
         }}
       />

@@ -1,101 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useRole } from "../../../hooks/useRole";
 import { STATUS_CONFIG } from "../workflowUtils";
 import { TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
-import type { Stage, Task } from "../types";
-
-// Mock cross-project task data — current user id is "1"
-const mockAllStages: Stage[] = [
-  {
-    id: "stage-1",
-    title: "Stage 1 — ABC Website",
-    tasks: [
-      {
-        id: "task-1",
-        title: "Design homepage wireframes",
-        description: "Create UI/UX design for the main landing pages",
-        priority: "high",
-        status: "IN_PROGRESS",
-        progress: 75,
-        dueDate: "Mar 20, 2026",
-        assignees: [{ id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" }],
-        reporterId: "3",
-        estimatedEffort: 16,
-        actualEffort: 12,
-        tags: [{ id: "t1", type: "department", label: "Design" }],
-      },
-      {
-        id: "task-2",
-        title: "Design system components",
-        description: "Build shared component library and design tokens",
-        priority: "medium",
-        status: "IN_REVIEW",
-        progress: 100,
-        dueDate: "Mar 15, 2026",
-        assignees: [{ id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" }],
-        reporterId: "1",
-        estimatedEffort: 8,
-        actualEffort: 10,
-        tags: [{ id: "t2", type: "scope", label: "Internal" }],
-      },
-    ],
-  },
-  {
-    id: "stage-2",
-    title: "Stage 2 — ABC Website",
-    tasks: [
-      {
-        id: "task-3",
-        title: "Frontend implementation",
-        description: "Implement approved designs using React and Tailwind",
-        priority: "urgent",
-        status: "TODO",
-        progress: 0,
-        dueDate: "Apr 1, 2026",
-        assignees: [{ id: "2", name: "John Doe", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John" }],
-        reporterId: "1",
-        estimatedEffort: 40,
-        actualEffort: 0,
-        tags: [{ id: "t3", type: "department", label: "Frontend" }],
-      },
-      {
-        id: "task-4",
-        title: "Backend API integration",
-        description: "Connect frontend to REST APIs",
-        priority: "high",
-        status: "IN_REVIEW",
-        progress: 90,
-        dueDate: "Apr 5, 2026",
-        assignees: [{ id: "3", name: "Alice Smith", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice" }],
-        reporterId: "1",
-        estimatedEffort: 24,
-        actualEffort: 22,
-        tags: [{ id: "t4", type: "scope", label: "External" }],
-      },
-      {
-        id: "task-5",
-        title: "QA and bug fixing sprint",
-        description: "Full regression testing before release",
-        priority: "medium",
-        status: "TODO",
-        progress: 0,
-        dueDate: "Apr 15, 2026",
-        assignees: [{ id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" }],
-        reporterId: "2",
-        estimatedEffort: 20,
-        actualEffort: 0,
-        tags: [{ id: "t5", type: "scope", label: "QA" }],
-      },
-    ],
-  },
-];
-
-const PROJECT_LABELS: Record<string, string> = {
-  "stage-1": "ABC Website",
-  "stage-2": "ABC Website",
-};
+import type { Task } from "../types";
+import { listProjects } from "../../../services/projectService";
+import { listProjectTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
+import { useToast } from "../../../contexts/useToast";
 
 type Tab = "assigned" | "created" | "reviewing";
 
@@ -117,16 +29,50 @@ const TAB_CONFIG: Record<Tab, { label: string; emptyIcon: string; emptyMsg: stri
   },
 };
 
+const PRIORITY_DOT: Record<string, string> = {
+  urgent: "bg-red-500",
+  high: "bg-orange-500",
+  medium: "bg-amber-400",
+  low: "bg-neutral-400",
+};
+
+const toTaskView = (task: ApiTask): Task => ({
+  id: task.id,
+  title: task.title,
+  description: task.description || "",
+  priority: task.priority,
+  status: task.status,
+  progress: task.progress,
+  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "",
+  assignees: task.assignees,
+  reporterId: task.reporterId,
+  estimatedEffort: task.estimatedEffort,
+  actualEffort: task.actualEffort,
+  blockedBy: task.blockedBy,
+  tags: [],
+});
+
+const toApiPriority = (priority: Task["priority"]): "URGENT" | "HIGH" | "MEDIUM" | "LOW" => {
+  switch (priority) {
+    case "urgent":
+      return "URGENT";
+    case "high":
+      return "HIGH";
+    case "low":
+      return "LOW";
+    default:
+      return "MEDIUM";
+  }
+};
+
 function convertToTaskDetail(task: Task): TaskDetail {
   return {
     ...task,
     subTasks: [],
-    activities: [
-      { id: "a1", user: "System", action: "created this task", timestamp: "Recently" },
-    ],
+    activities: [{ id: "a1", user: "System", action: "synced from API", timestamp: "Recently" }],
     comments: [],
-    createdAt: "Mar 1, 2026",
-    updatedAt: "Recently",
+    createdAt: "",
+    updatedAt: "",
     key: `TASK-${task.id.toUpperCase()}`,
   };
 }
@@ -137,13 +83,6 @@ interface TaskItemRowProps {
   onClick: () => void;
 }
 
-const PRIORITY_DOT: Record<string, string> = {
-  urgent: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-amber-400",
-  low: "bg-neutral-400",
-};
-
 function TaskItemRow({ task, projectLabel, onClick }: TaskItemRowProps) {
   const statusCfg = STATUS_CONFIG[task.status];
   return (
@@ -151,35 +90,21 @@ function TaskItemRow({ task, projectLabel, onClick }: TaskItemRowProps) {
       className="grid grid-cols-[8px_2fr_1fr_1fr_1fr] gap-3 items-center px-4 py-3 hover:bg-neutral-50 transition-colors cursor-pointer border-b border-neutral-100 last:border-0"
       onClick={onClick}
     >
-      {/* Priority dot */}
       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority]}`} />
-
-      {/* Title + project */}
       <div className="min-w-0">
         <p className="text-sm font-medium text-neutral-900 truncate">{task.title}</p>
         <p className="text-xs text-neutral-400 mt-0.5">{projectLabel}</p>
       </div>
-
-      {/* Status chip */}
       <div className="flex items-center gap-1.5">
         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusCfg.color}`} />
         <span className="text-xs font-medium text-neutral-600">{statusCfg.label}</span>
       </div>
-
-      {/* Due date */}
       <span className="text-xs text-neutral-500">{task.dueDate}</span>
-
-      {/* Progress */}
       <div className="flex items-center gap-2">
         <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${task.progress}%` }}
-          />
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${task.progress}%` }} />
         </div>
-        <span className="text-xs text-neutral-400 w-8 text-right flex-shrink-0">
-          {task.progress}%
-        </span>
+        <span className="text-xs text-neutral-400 w-8 text-right flex-shrink-0">{task.progress}%</span>
       </div>
     </div>
   );
@@ -198,34 +123,64 @@ function EmptyState({ icon, message }: { icon: string; message: string }) {
 
 export default function MyTasksPage() {
   const { currentUser } = useAuth();
-  const { isManager } = useRole();
-  const [activeTab, setActiveTab] = useState<Tab>(isManager ? "created" : "assigned");
+  const { isManager, isAuthLoading } = useRole();
+  const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState<Tab>("assigned");
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [allTasks, setAllTasks] = useState<Array<{ task: Task; projectLabel: string }>>([]);
 
-  const allTasks: Array<{ task: Task; stageName: string; projectLabel: string }> =
-    mockAllStages.flatMap((stage) =>
-      stage.tasks.map((task) => ({
-        task,
-        stageName: stage.title,
-        projectLabel: PROJECT_LABELS[stage.id] ?? "Unknown Project",
-      }))
-    );
+  useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+    setActiveTab(isManager ? "created" : "assigned");
+  }, [isAuthLoading, isManager]);
 
-  const getTabTasks = () => {
+  useEffect(() => {
+    if (isAuthLoading || !currentUser.id) {
+      return;
+    }
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const projects = await listProjects();
+        const taskChunks = await Promise.all(
+          projects.map(async (project) => {
+            const tasks = await listProjectTasks(project.id);
+            return tasks.map((task) => ({
+              task: toTaskView(task),
+              projectLabel: project.title,
+            }));
+          }),
+        );
+        setAllTasks(taskChunks.flat());
+      } catch {
+        setError("Failed to load tasks from server.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [currentUser.id, isAuthLoading]);
+
+  const visibleTasks = useMemo(() => {
     switch (activeTab) {
       case "assigned":
         return allTasks.filter((t) => t.task.assignees.some((a) => a.id === currentUser.id));
       case "created":
         return allTasks.filter((t) => t.task.reporterId === currentUser.id);
       case "reviewing":
-        return allTasks.filter(
-          (t) => t.task.reporterId === currentUser.id && t.task.status === "IN_REVIEW"
-        );
+        return allTasks.filter((t) => t.task.reporterId === currentUser.id && t.task.status === "IN_REVIEW");
+      default:
+        return allTasks;
     }
-  };
-
-  const visibleTasks = getTabTasks();
+  }, [activeTab, allTasks, currentUser.id]);
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(convertToTaskDetail(task));
@@ -233,24 +188,74 @@ export default function MyTasksPage() {
   };
 
   const handleTaskSave = (updated: TaskDetail) => {
-    console.log("Task updated from My Tasks:", updated);
+    const run = async () => {
+      try {
+        await updateTask(updated.id, {
+          title: updated.title,
+          description: updated.description,
+          status: updated.status,
+          priority: toApiPriority(updated.priority),
+          progress: updated.progress,
+          dueDate: updated.dueDate ? new Date(updated.dueDate).toISOString().slice(0, 10) : undefined,
+          reporterId: updated.reporterId,
+          estimatedEffort: updated.estimatedEffort,
+          actualEffort: updated.actualEffort,
+          assigneeIds: updated.assignees.map((a) => a.id),
+          tags: "[]",
+        });
+
+        if (updated.reviews && updated.reviews.length > 0) {
+          const latest = updated.reviews[updated.reviews.length - 1];
+          if (latest.action === "approved" || latest.action === "changes_requested") {
+            await reviewTask(updated.id, {
+              action: latest.action === "approved" ? "APPROVED" : "CHANGES_REQUESTED",
+              content: latest.content,
+            });
+          }
+        }
+
+        setAllTasks((prev) =>
+          prev.map((item) =>
+            item.task.id === updated.id
+              ? {
+                  ...item,
+                  task: {
+                    ...item.task,
+                    title: updated.title,
+                    description: updated.description,
+                    status: updated.status,
+                    priority: updated.priority,
+                    progress: updated.progress,
+                    dueDate: updated.dueDate,
+                    assignees: updated.assignees,
+                    reporterId: updated.reporterId,
+                    estimatedEffort: updated.estimatedEffort,
+                    actualEffort: updated.actualEffort,
+                    blockedBy: updated.blockedBy,
+                  },
+                }
+              : item,
+          ),
+        );
+        showToast("Task updated", "success");
+      } catch {
+        showToast("Unable to update task", "error");
+      }
+    };
+
+    void run();
   };
 
   return (
     <div className="onfis-section">
-      {/* Toolbar */}
       <div className="navbar-style">
         <div>
           <h1 className="text-xl font-bold text-neutral-900">My Tasks</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">
-            All your tasks across every project
-          </p>
+          <p className="text-sm text-neutral-400 mt-0.5">All your tasks across every project</p>
         </div>
       </div>
 
-      {/* Tab bar + content */}
       <div className="bg-white rounded-xl shadow-sm border border-neutral-100 mt-3 overflow-hidden">
-        {/* Tabs */}
         <div className="flex border-b border-neutral-200 px-4 pt-3">
           {(Object.keys(TAB_CONFIG) as Tab[]).map((tab) => (
             <button
@@ -258,9 +263,7 @@ export default function MyTasksPage() {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                activeTab === tab
-                  ? "text-primary border-primary"
-                  : "text-neutral-500 border-transparent hover:text-neutral-800"
+                activeTab === tab ? "text-primary border-primary" : "text-neutral-500 border-transparent hover:text-neutral-800"
               }`}
             >
               {TAB_CONFIG[tab].label}
@@ -273,8 +276,10 @@ export default function MyTasksPage() {
           ))}
         </div>
 
-        {/* Column headers */}
-        {visibleTasks.length > 0 && (
+        {loading && <div className="px-4 py-8 text-sm text-neutral-500">Loading tasks...</div>}
+        {error && !loading && <div className="px-4 py-8 text-sm text-red-500">{error}</div>}
+
+        {!loading && !error && visibleTasks.length > 0 && (
           <div className="grid grid-cols-[8px_2fr_1fr_1fr_1fr] gap-3 px-4 py-2 bg-neutral-50 border-b border-neutral-100">
             <div />
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Task</span>
@@ -284,13 +289,9 @@ export default function MyTasksPage() {
           </div>
         )}
 
-        {/* Task list */}
         <div>
-          {visibleTasks.length === 0 ? (
-            <EmptyState
-              icon={TAB_CONFIG[activeTab].emptyIcon}
-              message={TAB_CONFIG[activeTab].emptyMsg}
-            />
+          {!loading && !error && visibleTasks.length === 0 ? (
+            <EmptyState icon={TAB_CONFIG[activeTab].emptyIcon} message={TAB_CONFIG[activeTab].emptyMsg} />
           ) : (
             visibleTasks.map(({ task, projectLabel }) => (
               <TaskItemRow
@@ -304,7 +305,6 @@ export default function MyTasksPage() {
         </div>
       </div>
 
-      {/* Task Detail Modal */}
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}

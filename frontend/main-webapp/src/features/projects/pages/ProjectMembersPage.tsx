@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTenantPath } from "../../../hooks/useTenantPath";
-import { useRole } from "../../../hooks/useRole";
 import type { ProjectMember, ProjectRole } from "../types";
+import {
+  addProjectMember,
+  getCurrentProjectUser,
+  getProjectMembers,
+  removeProjectMember,
+  updateProjectMemberRole,
+} from "../../../services/projectService";
+import { useToast } from "../../../contexts/useToast";
 
 // ── Mock data ──────────────────────────────────────────────────────────────────
 const MOCK_MEMBERS: ProjectMember[] = [
@@ -312,31 +319,100 @@ function MemberCard({ member, isManager, onRoleChange, onRemove }: MemberCardPro
 export default function ProjectMembersPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { withTenant } = useTenantPath();
-  const { isManager } = useRole();
-  const [members, setMembers] = useState<ProjectMember[]>(MOCK_MEMBERS);
+  const { showToast } = useToast();
+  const [isManager, setIsManager] = useState(false);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const handleRoleChange = (id: string, role: ProjectRole) => {
+  useEffect(() => {
+    const load = async () => {
+      if (!projectId) return;
+      try {
+        setLoading(true);
+        const [me, apiMembers] = await Promise.all([
+          getCurrentProjectUser(),
+          getProjectMembers(projectId),
+        ]);
+        setIsManager(me.permissions.includes("PROJECT_MANAGE"));
+        setMembers(apiMembers.map((m) => ({
+          ...m,
+          joinedAt: new Date(m.joinedAt).toLocaleDateString(),
+        })));
+      } catch {
+        showToast("Failed to load project members", "error");
+        setMembers(MOCK_MEMBERS);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [projectId, showToast]);
+
+  const toBackendRole = (role: ProjectRole): "LEAD" | "DEVELOPER" | "DESIGNER" | "QA" | "ANALYST" | "MEMBER" => {
+    switch (role) {
+      case "Lead":
+        return "LEAD";
+      case "Developer":
+        return "DEVELOPER";
+      case "Designer":
+        return "DESIGNER";
+      case "QA":
+        return "QA";
+      case "Analyst":
+        return "ANALYST";
+      default:
+        return "MEMBER";
+    }
+  };
+
+  const handleRoleChange = async (id: string, role: ProjectRole) => {
+    if (!projectId) return;
+    const previous = members;
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, projectRole: role } : m)));
+    try {
+      await updateProjectMemberRole(projectId, id, { userId: id, role: toBackendRole(role) });
+      showToast("Member role updated", "success");
+    } catch {
+      setMembers(previous);
+      showToast("Unable to update member role", "error");
+    }
   };
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
+    if (!projectId) return;
+    const previous = members;
     setMembers((prev) => prev.filter((m) => m.id !== id));
+    try {
+      await removeProjectMember(projectId, id);
+      showToast("Member removed", "success");
+    } catch {
+      setMembers(previous);
+      showToast("Unable to remove member", "error");
+    }
   };
 
-  const handleAdd = (userId: string, role: ProjectRole) => {
+  const handleAdd = async (userId: string, role: ProjectRole) => {
+    if (!projectId) return;
     const user = MOCK_AVAILABLE_USERS.find((u) => u.id === userId);
     if (!user) return;
-    const newMember: ProjectMember = {
-      id: user.id,
-      name: user.name,
-      avatar: user.avatar,
-      projectRole: role,
-      joinedAt: "Mar 12, 2026",
-      taskCount: 0,
-    };
-    setMembers((prev) => [...prev, newMember]);
-    setIsAddModalOpen(false);
+    try {
+      const added = await addProjectMember(projectId, {
+        userId,
+        role: toBackendRole(role),
+      });
+      setMembers((prev) => [
+        ...prev,
+        {
+          ...added,
+          joinedAt: new Date(added.joinedAt).toLocaleDateString(),
+        },
+      ]);
+      setIsAddModalOpen(false);
+      showToast("Member added", "success");
+    } catch {
+      showToast("Unable to add member", "error");
+    }
   };
 
   return (
@@ -369,6 +445,8 @@ export default function ProjectMembersPage() {
           {members.length}
         </span>
       </div>
+
+      {loading && <div className="text-sm text-neutral-500 mb-3">Loading members...</div>}
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">

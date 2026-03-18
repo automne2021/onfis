@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Stage, Task } from "../types";
 import TaskColumn from "./TaskColumn";
-import { AddIcon, SwitchLeftIcon } from "../../../components/common/Icons";
+import { AddIcon } from "../../../components/common/Icons";
 
 interface TaskKanbanBoardProps {
   stages: Stage[];

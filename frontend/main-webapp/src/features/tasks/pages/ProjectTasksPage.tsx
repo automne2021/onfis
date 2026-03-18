@@ -1,116 +1,106 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { TaskToolbar, TaskKanbanBoard, TaskListView, GanttView, TaskCalendarView, TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
-import { useRole } from "../../../hooks/useRole";
 
 import CreateTaskModal from "../../projects/components/CreateTaskModal";
 import type { Stage, ViewMode, Task } from "../types";
+import type { TaskFormData } from "../../projects/components/CreateTaskModal";
+import { getCurrentProjectUser } from "../../../services/projectService";
+import { createTask, listProjectTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
+import { useToast } from "../../../contexts/useToast";
 
-// Mock data — now includes status, reporterId, estimatedEffort, actualEffort, blockedBy
-const mockStages: Stage[] = [
-  {
-    id: "stage-1",
-    title: "Stage 1",
-    tasks: [
-      {
-        id: "task-1",
-        title: "Design",
-        description: "Create UI/UX design for the website",
-        priority: "medium",
-        status: "IN_PROGRESS",
-        progress: 75,
-        dueDate: "Oct 1, 2026",
-        assignees: [
-          { id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" },
-          { id: "2", name: "Bob" },
-        ],
-        reporterId: "3",
-        estimatedEffort: 16,
-        actualEffort: 12,
-        tags: [
-          { id: "tag-1", type: "department", label: "DevOps" },
-          { id: "tag-2", type: "scope", label: "Internal" },
-        ],
-      },
-      {
-        id: "task-2",
-        title: "Design System",
-        description: "Design system components",
-        priority: "medium",
-        status: "IN_REVIEW",
-        progress: 100,
-        dueDate: "Oct 1, 2026",
-        assignees: [
-          { id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" },
-        ],
-        reporterId: "2",
-        estimatedEffort: 8,
-        actualEffort: 10,
-        tags: [
-          { id: "tag-3", type: "department", label: "DevOps" },
-          { id: "tag-4", type: "scope", label: "Internal" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "stage-2",
-    title: "Stage 2",
-    tasks: [
-      {
-        id: "task-3",
-        title: "Development",
-        description: "Frontend implementation",
-        priority: "high",
-        status: "TODO",
-        progress: 0,
-        dueDate: "Oct 15, 2026",
-        assignees: [
-          { id: "4", name: "David" },
-        ],
-        reporterId: "1",
-        estimatedEffort: 40,
-        actualEffort: 0,
-        tags: [
-          { id: "tag-5", type: "department", label: "Frontend" },
-        ],
-      },
-      {
-        id: "task-4",
-        title: "Testing",
-        description: "QA and testing phase",
-        priority: "low",
-        status: "BLOCKED",
-        progress: 0,
-        dueDate: "Nov 1, 2026",
-        assignees: [],
-        reporterId: "1",
-        estimatedEffort: 20,
-        actualEffort: 0,
-        blockedBy: ["task-3"],
-        tags: [
-          { id: "tag-6", type: "scope", label: "QA" },
-        ],
-      },
-    ],
-  },
-];
+const STAGE_BY_STATUS: Record<Task["status"], string> = {
+  TODO: "To Do",
+  IN_PROGRESS: "In Progress",
+  BLOCKED: "Blocked",
+  IN_REVIEW: "In Review",
+  DONE: "Done",
+};
+
+const toTaskView = (task: ApiTask): Task => ({
+  id: task.id,
+  title: task.title,
+  description: task.description || "",
+  priority: task.priority,
+  status: task.status,
+  progress: task.progress,
+  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "",
+  assignees: task.assignees,
+  reporterId: task.reporterId,
+  estimatedEffort: task.estimatedEffort,
+  actualEffort: task.actualEffort,
+  blockedBy: task.blockedBy,
+  tags: [],
+});
+
+const toStageList = (tasks: Task[]): Stage[] => {
+  const byStatus: Record<Task["status"], Task[]> = {
+    TODO: [],
+    IN_PROGRESS: [],
+    BLOCKED: [],
+    IN_REVIEW: [],
+    DONE: [],
+  };
+  tasks.forEach((task) => {
+    byStatus[task.status].push(task);
+  });
+  return Object.entries(STAGE_BY_STATUS).map(([status, title]) => ({
+    id: status,
+    title,
+    tasks: byStatus[status as Task["status"]],
+  }));
+};
+
+const toApiPriority = (priority: Task["priority"]): "URGENT" | "HIGH" | "MEDIUM" | "LOW" => {
+  switch (priority) {
+    case "urgent":
+      return "URGENT";
+    case "high":
+      return "HIGH";
+    case "low":
+      return "LOW";
+    default:
+      return "MEDIUM";
+  }
+};
 
 export default function ProjectTasksPage() {
-  const { projectId: _projectId } = useParams<{ projectId: string }>();
-  const { isManager } = useRole();
+  const { projectId } = useParams<{ projectId: string }>();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
-  const [stages, setStages] = useState<Stage[]>(mockStages);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [canManage, setCanManage] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
 
-  // Project name would come from API based on projectId
-  const projectName = "ABC Website";
+  const projectName = "Project Tasks";
+
+  const allTasks = useMemo(() => stages.flatMap((stage) => stage.tasks), [stages]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!projectId) return;
+      try {
+        setLoading(true);
+        const [tasks, me] = await Promise.all([listProjectTasks(projectId), getCurrentProjectUser()]);
+        const mappedTasks = tasks.map(toTaskView);
+        setStages(toStageList(mappedTasks));
+        setCanManage(me.permissions.includes("PROJECT_MANAGE"));
+      } catch {
+        showToast("Failed to load tasks", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [projectId, showToast]);
 
   // Convert basic Task to TaskDetail for modal
   const convertToTaskDetail = (task: Task): TaskDetail => ({
@@ -148,39 +138,46 @@ export default function ProjectTasksPage() {
   };
 
   const handleTaskSave = (updatedTask: TaskDetail) => {
-    // Update the task in stages
-    const updatedStages = stages.map((stage) => ({
-      ...stage,
-      tasks: stage.tasks.map((t) =>
-        t.id === updatedTask.id
-          ? {
-            ...t,
-            title: updatedTask.title,
-            description: updatedTask.description,
-            priority: updatedTask.priority,
-            status: updatedTask.status,
-            progress: updatedTask.progress,
-            dueDate: updatedTask.dueDate,
-            assignees: updatedTask.assignees,
-            reporterId: updatedTask.reporterId,
-            estimatedEffort: updatedTask.estimatedEffort,
-            actualEffort: updatedTask.actualEffort,
-            blockedBy: updatedTask.blockedBy,
+    const run = async () => {
+      try {
+        await updateTask(updatedTask.id, {
+          title: updatedTask.title,
+          description: updatedTask.description,
+          status: updatedTask.status,
+          priority: toApiPriority(updatedTask.priority),
+          progress: updatedTask.progress,
+          dueDate: updatedTask.dueDate ? new Date(updatedTask.dueDate).toISOString().slice(0, 10) : undefined,
+          reporterId: updatedTask.reporterId,
+          estimatedEffort: updatedTask.estimatedEffort,
+          actualEffort: updatedTask.actualEffort,
+          assigneeIds: updatedTask.assignees.map((a) => a.id),
+          tags: "[]",
+        });
+
+        if (updatedTask.reviews && updatedTask.reviews.length > 0) {
+          const latest = updatedTask.reviews[updatedTask.reviews.length - 1];
+          if (latest.action === "approved" || latest.action === "changes_requested") {
+            await reviewTask(updatedTask.id, {
+              action: latest.action === "approved" ? "APPROVED" : "CHANGES_REQUESTED",
+              content: latest.content,
+            });
           }
-          : t
-      ),
-    }));
-    setStages(updatedStages);
-    console.log("Task saved:", updatedTask);
+        }
+
+        if (projectId) {
+          const refreshed = await listProjectTasks(projectId);
+          setStages(toStageList(refreshed.map(toTaskView)));
+        }
+      } catch {
+        showToast("Unable to update task", "error");
+      }
+    };
+
+    void run();
   };
 
   const handleAddStage = () => {
-    const newStage: Stage = {
-      id: `stage-${stages.length + 1}`,
-      title: `Stage ${stages.length + 1}`,
-      tasks: [],
-    };
-    setStages([...stages, newStage]);
+    showToast("Workflow stage management will be enabled in next API iteration", "info");
   };
 
   const handleAddTask = (stageId: string) => {
@@ -193,7 +190,7 @@ export default function ProjectTasksPage() {
       {/* Toolbar */}
       <TaskToolbar
         projectTitle={projectName}
-        projectId={_projectId}
+        projectId={projectId}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onNewTask={() => setIsCreateTaskModalOpen(true)}
@@ -204,10 +201,13 @@ export default function ProjectTasksPage() {
       {/* Main Content Area with view switch animation */}
       <div className="flex-1 overflow-hidden">
         <div key={viewMode} className="animate-viewSwitch h-full">
+          {loading && <div className="px-4 py-4 text-sm text-neutral-500">Loading tasks...</div>}
+          {!loading && (
+            <>
           {viewMode === "kanban" && (
             <TaskKanbanBoard
-              stages={stages}
-              onAddStage={isManager ? handleAddStage : undefined}
+              stages={toStageList(allTasks.filter((t) => t.title.toLowerCase().includes(searchQuery.toLowerCase())))}
+              onAddStage={canManage ? handleAddStage : undefined}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
             />
@@ -215,7 +215,7 @@ export default function ProjectTasksPage() {
 
           {viewMode === "list" && (
             <TaskListView
-              stages={stages}
+              stages={toStageList(allTasks.filter((t) => t.title.toLowerCase().includes(searchQuery.toLowerCase())))}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
             />
@@ -230,6 +230,8 @@ export default function ProjectTasksPage() {
               viewMode={viewMode}
               onViewModeChange={setViewMode}
             />
+          )}
+            </>
           )}
         </div>
       </div>
@@ -253,7 +255,33 @@ export default function ProjectTasksPage() {
           setSelectedStageId(null);
         }}
         onSubmit={(data) => {
-          console.log("Create task:", data, "in stage:", selectedStageId);
+          const submit = async (formData: TaskFormData) => {
+            if (!projectId) return;
+            try {
+              const status = selectedStageId && selectedStageId in STAGE_BY_STATUS
+                ? selectedStageId as Task["status"]
+                : "TODO";
+              await createTask(projectId, {
+                title: formData.name,
+                description: formData.description,
+                status,
+                priority: toApiPriority(formData.priority),
+                progress: 0,
+                dueDate: formData.endDate ? formData.endDate.toISOString().slice(0, 10) : undefined,
+                reporterId: formData.reporterId || undefined,
+                estimatedEffort: formData.estimatedEffort,
+                assigneeIds: formData.assigneeId ? [formData.assigneeId] : [],
+                tags: "[]",
+              });
+              const refreshed = await listProjectTasks(projectId);
+              setStages(toStageList(refreshed.map(toTaskView)));
+              showToast("Task created", "success");
+            } catch {
+              showToast("Unable to create task", "error");
+            }
+          };
+
+          void submit(data);
           setIsCreateTaskModalOpen(false);
           setSelectedStageId(null);
         }}

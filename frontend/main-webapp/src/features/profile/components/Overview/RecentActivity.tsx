@@ -1,6 +1,6 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
 
-export function RecentActivity({ icon, userInfo }: OverviewProps) {
+export function RecentActivity({ icon }: OverviewProps) {
   return (
     <div className="profile-section">
       <div className="flex items-center gap-3 text-primary">
