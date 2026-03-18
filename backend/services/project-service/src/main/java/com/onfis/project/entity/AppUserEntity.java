@@ -31,6 +31,9 @@ public class AppUserEntity {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "role", nullable = false)
     private String role;
 }

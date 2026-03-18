@@ -11,8 +11,33 @@ export interface ApiReview {
   createdAt: string;
 }
 
+export interface ApiTaskComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface ApiTaskSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface ApiTaskActivity {
+  id: string;
+  actorId: string | null;
+  actorName: string;
+  action: string;
+  value: string | null;
+  createdAt: string;
+}
+
 export interface ApiTask {
   id: string;
+  projectId?: string;
   title: string;
   description: string;
   priority: 'urgent' | 'high' | 'medium' | 'low';
@@ -29,6 +54,12 @@ export interface ApiTask {
   key: string;
   canEdit: boolean;
   canReview: boolean;
+}
+
+export interface ApiTaskDetail extends ApiTask {
+  subtasks: ApiTaskSubtask[];
+  comments: ApiTaskComment[];
+  activities: ApiTaskActivity[];
 }
 
 export interface UpsertTaskPayload {
@@ -81,5 +112,20 @@ export async function getReviewQueue(projectId?: string): Promise<ApiTask[]> {
   const { data } = await api.get<ApiTask[]>('/projects/reviews', {
     params: projectId ? { projectId } : undefined,
   });
+  return data;
+}
+
+export async function getTaskDetail(taskId: string): Promise<ApiTaskDetail> {
+  const { data } = await api.get<ApiTaskDetail>(`/projects/tasks/${taskId}/detail`);
+  return data;
+}
+
+export async function addTaskComment(taskId: string, content: string): Promise<ApiTaskComment> {
+  const { data } = await api.post<ApiTaskComment>(`/projects/tasks/${taskId}/comments`, { content });
+  return data;
+}
+
+export async function listTaskComments(taskId: string): Promise<ApiTaskComment[]> {
+  const { data } = await api.get<ApiTaskComment[]>(`/projects/tasks/${taskId}/comments`);
   return data;
 }

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 public record ProjectUpsertRequest(
         @NotBlank String title,
@@ -15,6 +16,8 @@ public record ProjectUpsertRequest(
         @Min(0) @Max(100) Integer progress,
         LocalDate startDate,
         LocalDate dueDate,
-        String tags
+        String tags,
+        UUID managerId,
+        String customer
 ) {
 }

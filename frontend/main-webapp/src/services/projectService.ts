@@ -6,6 +6,38 @@ export interface ApiUserSummary {
   avatar?: string;
 }
 
+export interface ApiMilestone {
+  id: string;
+  title: string;
+  targetDate: string | null;
+  status: 'completed' | 'upcoming' | 'at_risk' | 'in_progress';
+}
+
+export interface ApiProjectDetail {
+  id: string;
+  title: string;
+  description: string;
+  status: 'planning' | 'in_progress' | 'on_hold' | 'completed';
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  progress: number;
+  startDate: string | null;
+  endDate: string | null;
+  dueDate: string | null;
+  tags: string;
+  managerId: string | null;
+  managerName: string | null;
+  managerAvatar: string | null;
+  customer: string | null;
+  members: ApiUserSummary[];
+  memberCount: number;
+  canManage: boolean;
+  isStarred: boolean;
+  milestones: ApiMilestone[];
+  recentTasks: import('./taskService').ApiTask[];
+  daysRemaining: number;
+  createdAt: string | null;
+}
+
 export interface ApiCurrentUser {
   id: string;
   name: string;
@@ -44,6 +76,8 @@ export interface CreateProjectPayload {
   startDate?: string;
   dueDate?: string;
   tags?: string;
+  managerId?: string;
+  customer?: string;
 }
 
 export interface UpsertProjectMemberPayload {
@@ -87,4 +121,29 @@ export async function updateProjectMemberRole(
 
 export async function removeProjectMember(projectId: string, memberId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/members/${memberId}`);
+}
+
+export async function getProjectDetail(projectId: string): Promise<ApiProjectDetail> {
+  const { data } = await api.get<ApiProjectDetail>(`/projects/${projectId}/detail`);
+  return data;
+}
+
+export async function toggleProjectFavorite(projectId: string): Promise<{ isStarred: boolean }> {
+  const { data } = await api.post<{ isStarred: boolean }>(`/projects/${projectId}/favorite`);
+  return data;
+}
+
+export async function getProjectStages(projectId: string): Promise<{ id: string; name: string; stageOrder: number }[]> {
+  const { data } = await api.get<{ id: string; name: string; stageOrder: number }[]>(`/projects/${projectId}/stages`);
+  return data;
+}
+
+export async function getProjectMilestones(projectId: string): Promise<ApiMilestone[]> {
+  const { data } = await api.get<ApiMilestone[]>(`/projects/${projectId}/milestones`);
+  return data;
+}
+
+export async function searchProjectUsers(query: string): Promise<ApiUserSummary[]> {
+  const { data } = await api.get<ApiUserSummary[]>('/projects/users/search', { params: { q: query } });
+  return data;
 }

@@ -1,43 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
 import { ArrowRightAltOutlined } from '@mui/icons-material';
 import { useRole } from "../../../hooks/useRole";
 import { useTenantPath } from "../../../hooks/useTenantPath";
+import { getProjectDetail, toggleProjectFavorite, type ApiProjectDetail, type ApiMilestone, type ApiUserSummary } from "../../../services/projectService";
+import type { ApiTask } from "../../../services/taskService";
+import { useToast } from "../../../contexts/useToast";
 
-// Types
-interface Milestone {
-  id: string;
-  title: string;
-  date: string;
-  status: "completed" | "late" | "upcoming";
-}
-
-interface TeamMember {
-  id: string;
-  name: string;
-  avatar?: string;
-}
-
+// Types for local use
 type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed";
-
-interface ProjectDetail {
-  id: string;
-  title: string;
-  description: string;
-  projectManager: TeamMember;
-  customer: string;
-  tags: { label: string; type: "department" | "scope" }[];
-  teamMembers: TeamMember[];
-  plannedStartDate: string;
-  plannedEndDate: string;
-  priority: "urgent" | "high" | "medium" | "low";
-  status: ProjectStatus;
-  progress: number;
-  daysRemaining: number;
-  milestones: Milestone[];
-  isStarred: boolean;
-}
+type Priority = "urgent" | "high" | "medium" | "low";
+type TeamMember = ApiUserSummary;
 
 // Status Badge Component
 const StatusBadge = ({ status }: { status: ProjectStatus }) => {
@@ -47,14 +21,12 @@ const StatusBadge = ({ status }: { status: ProjectStatus }) => {
     on_hold: "bg-status-on_hold/15 text-status-on_hold",
     completed: "bg-status-done/15 text-status-done",
   };
-
   const labels: Record<ProjectStatus, string> = {
     planning: "Planning",
     in_progress: "In Progress",
     on_hold: "On Hold",
     completed: "Completed",
   };
-
   return (
     <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full font-medium text-xs leading-4 ${styles[status]}`}>
       {labels[status]}
@@ -63,24 +35,15 @@ const StatusBadge = ({ status }: { status: ProjectStatus }) => {
 };
 
 
-
 // Recent Task Item
-interface RecentTask {
-  id: string;
-  title: string;
-  priority: "urgent" | "high" | "medium" | "low";
-  progress: number;
-  assignee: string;
-  dueDate: string;
-}
-
-const RecentTaskItem = ({ task }: { task: RecentTask }) => {
+const RecentTaskItem = ({ task }: { task: ApiTask }) => {
   const priorityColors: Record<string, string> = {
     urgent: "bg-[#E7000B]",
     high: "bg-[#FF6900]",
     medium: "bg-[#FFD230]",
     low: "bg-neutral-400",
   };
+  const firstAssignee = task.assignees[0];
 
   return (
     <div className="grid grid-cols-[8px_1fr_100px_28px_60px] items-center gap-3 py-2 px-1 hover:bg-neutral-50 rounded-lg transition-colors">
@@ -93,19 +56,20 @@ const RecentTaskItem = ({ task }: { task: RecentTask }) => {
         <span className="body-4-regular w-8 text-right">{task.progress}%</span>
       </div>
       <div className="w-6 h-6 rounded-full bg-status-on_track flex items-center justify-center text-[10px] font-medium text-neutral-900">
-        {task.assignee.charAt(0).toUpperCase()}
+        {firstAssignee ? (
+          firstAssignee.avatar
+            ? <img src={firstAssignee.avatar} alt={firstAssignee.name} className="w-full h-full rounded-full object-cover" />
+            : firstAssignee.name.charAt(0).toUpperCase()
+        ) : '?'}
       </div>
-      <span className="text-xs text-neutral-400 text-right">{task.dueDate}</span>
+      <span className="text-xs text-neutral-400 text-right">
+        {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : ''}
+      </span>
     </div>
   );
 };
 
-const mockRecentTasks: RecentTask[] = [
-  { id: "t1", title: "Design homepage wireframes", priority: "high", progress: 75, assignee: "Alice", dueDate: "Feb 28" },
-  { id: "t2", title: "Set up CI/CD pipeline", priority: "urgent", progress: 30, assignee: "Bob", dueDate: "Mar 1" },
-  { id: "t3", title: "Implement user authentication", priority: "medium", progress: 50, assignee: "Charlie", dueDate: "Mar 5" },
-  { id: "t4", title: "Database schema migration", priority: "low", progress: 0, assignee: "Diana", dueDate: "Mar 10" },
-];
+
 
 // Tag Badge Component (reusing pattern from ProjectCard)
 const TagBadge = ({ label, type }: { label: string; type: "department" | "scope" }) => {
@@ -122,15 +86,14 @@ const TagBadge = ({ label, type }: { label: string; type: "department" | "scope"
 };
 
 // Priority Badge Component
-const PriorityBadge = ({ priority }: { priority: ProjectDetail["priority"] }) => {
-  const styles = {
+const PriorityBadge = ({ priority }: { priority: Priority }) => {
+  const styles: Record<Priority, string> = {
     urgent: "bg-status-off_track/15 text-status-off_track",
     high: "bg-status-off_track/15 text-status-off_track",
     medium: "bg-status-on_track/15 text-status-on_track",
     low: "bg-neutral-500/15 text-neutral-500",
   };
-
-  const labels = {
+  const labels: Record<Priority, string> = {
     urgent: "Urgent",
     high: "High",
     medium: "Medium",
@@ -145,22 +108,26 @@ const PriorityBadge = ({ priority }: { priority: ProjectDetail["priority"] }) =>
 };
 
 // Milestone Status Badge
-const MilestoneStatusBadge = ({ status }: { status: Milestone["status"] }) => {
-  const styles = {
+const MilestoneStatusBadge = ({ status }: { status: ApiMilestone['status'] | 'late' }) => {
+  const styles: Record<string, string> = {
     completed: "bg-status-done/15 text-status-done",
     late: "bg-status-off_track/15 text-status-off_track",
+    at_risk: "bg-status-off_track/15 text-status-off_track",
     upcoming: "bg-neutral-500/15 text-neutral-500",
+    in_progress: "bg-status-on_track/15 text-status-on_track",
   };
 
-  const labels = {
+  const labels: Record<string, string> = {
     completed: "Completed",
     late: "Late",
+    at_risk: "At Risk",
     upcoming: "Upcoming",
+    in_progress: "In Progress",
   };
 
   return (
-    <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full font-medium text-xs leading-4 ${styles[status]}`}>
-      {labels[status]}
+    <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full font-medium text-xs leading-4 ${styles[status] ?? styles.upcoming}`}>
+      {labels[status] ?? "Upcoming"}
     </span>
   );
 };
@@ -196,77 +163,72 @@ const AvatarStack = ({ members, maxDisplay = 3 }: { members: TeamMember[]; maxDi
 };
 
 // Milestone Item Component
-const MilestoneItem = ({ milestone }: { milestone: Milestone }) => {
-  const iconMap = {
+const MilestoneItem = ({ milestone }: { milestone: ApiMilestone }) => {
+  const iconMap: Record<string, ReactElement> = {
     completed: <CompletedMilestoneIcon />,
     late: <LateMilestoneIcon />,
+    at_risk: <LateMilestoneIcon />,
     upcoming: <UpcomingMilestoneIcon />,
+    in_progress: <UpcomingMilestoneIcon />,
   };
 
   return (
     <div className="flex flex-col items-center gap-1 min-w-[120px] lg:min-w-[140px]">
-      {iconMap[milestone.status]}
+      {iconMap[milestone.status] ?? <UpcomingMilestoneIcon />}
       <h4 className="body-3-medium text-neutral-900 text-center mt-0.5">
         {milestone.title}
       </h4>
       <p className="body-4-regular text-neutral-400 text-center">
-        {milestone.date}
+        {milestone.targetDate ? new Date(milestone.targetDate).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
       </p>
       <MilestoneStatusBadge status={milestone.status} />
     </div>
   );
 };
 
-// Mock Data
-const mockProject: ProjectDetail = {
-  id: "1",
-  title: "ABC WEBSITE",
-  description: "The bla bla...",
-  projectManager: { id: "1", name: "John Doe", avatar: "" },
-  customer: "Jane",
-  tags: [{ label: "External", type: "scope" }],
-  teamMembers: [
-    { id: "1", name: "Alice", avatar: "" },
-    { id: "2", name: "Bob", avatar: "" },
-    { id: "3", name: "Charlie", avatar: "" },
-    { id: "4", name: "Diana", avatar: "" },
-    { id: "5", name: "Eve", avatar: "" },
-    { id: "6", name: "Frank", avatar: "" },
-    { id: "7", name: "Grace", avatar: "" },
-    { id: "8", name: "Henry", avatar: "" },
-    { id: "9", name: "Ivy", avatar: "" },
-    { id: "10", name: "Jack", avatar: "" },
-    { id: "11", name: "Kate", avatar: "" },
-  ],
-  plannedStartDate: "01/01/2026",
-  plannedEndDate: "01/02/2026",
-  priority: "high",
-  status: "in_progress",
-  progress: 75,
-  daysRemaining: 3,
-  milestones: [
-    { id: "1", title: "Proposal Approval", date: "Sep 15, 2026", status: "completed" },
-    { id: "2", title: "Proposal Approval", date: "Sep 15, 2026", status: "late" },
-    { id: "3", title: "Proposal Approval", date: "Sep 15, 2026", status: "upcoming" },
-    { id: "4", title: "Proposal Approval", date: "Sep 15, 2026", status: "upcoming" },
-  ],
-  isStarred: false,
-};
+
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { withTenant } = useTenantPath();
   const location = useLocation();
   const { isManager } = useRole();
-  const [status, setStatus] = useState<ProjectStatus>(mockProject.status);
+  const { showToast } = useToast();
+  const [project, setProject] = useState<ApiProjectDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isStarred, setIsStarred] = useState(false);
+  const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
-  // TODO: Fetch project data based on projectId from API
-  // For now, using mock data
-  console.log("Loading project:", projectId);
-  const project = mockProject;
+  useEffect(() => {
+    const load = async () => {
+      if (!projectId) return;
+      try {
+        setLoading(true);
+        const detail = await getProjectDetail(projectId);
+        setProject(detail);
+        setStatus(detail.status);
+        setIsStarred(detail.isStarred);
+      } catch {
+        showToast('Failed to load project details', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [projectId, showToast]);
 
-  const id = projectId ?? "1";
+  const handleToggleStar = async () => {
+    if (!projectId) return;
+    try {
+      const res = await toggleProjectFavorite(projectId);
+      setIsStarred(res.isStarred);
+    } catch {
+      showToast('Failed to update favorite', 'error');
+    }
+  };
+
+  const id = projectId ?? '';
 
   const tabs = [
     { to: withTenant(`/projects/${id}`), label: "Overview", icon: "dashboard" },
@@ -283,6 +245,16 @@ export default function ProjectDetailPage() {
     { value: "on_hold", label: "On Hold" },
     { value: "completed", label: "Completed" },
   ];
+
+  if (loading) return <div className="onfis-section"><div className="p-6 text-sm text-neutral-500">Loading project...</div></div>;
+  if (!project) return <div className="onfis-section"><div className="p-6 text-sm text-red-500">Project not found.</div></div>;
+
+  const parseTagJson = (raw: string) => {
+    try { return JSON.parse(raw) as { label: string; type: 'department' | 'scope' }[]; } catch { return []; }
+  };
+  const tags = parseTagJson(project.tags ?? '[]');
+  const plannedStartDate = project.startDate ? new Date(project.startDate).toLocaleDateString() : '—';
+  const plannedEndDate = project.endDate ? new Date(project.endDate).toLocaleDateString() : project.dueDate ? new Date(project.dueDate).toLocaleDateString() : '—';
 
   return (
     <div className="onfis-section">
@@ -335,11 +307,11 @@ export default function ProjectDetailPage() {
             <p className="header-h6 leading-snug text-neutral-900">
               {project.title}
             </p>
-            <button type="button" className="shrink-0 hover:scale-110 transition-transform" aria-label="Toggle star">
-              <StarIcon filled={project.isStarred} />
+            <button type="button" onClick={handleToggleStar} className="shrink-0 hover:scale-110 transition-transform" aria-label="Toggle star">
+              <StarIcon filled={isStarred} />
             </button>
             <Link
-              to={withTenant(`/projects/${projectId ?? ""}/tasks`)}
+              to={withTenant(`/projects/${projectId ?? ''}/tasks`)}
               className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               <KanbanIcon />
@@ -374,25 +346,26 @@ export default function ProjectDetailPage() {
             <span className="font-medium text-xs leading-4 text-neutral-900">Project Manager</span>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-status-on_track flex items-center justify-center text-xs font-medium text-neutral-900">
-                {project.projectManager.avatar ? (
-                  <img src={project.projectManager.avatar} alt={project.projectManager.name} className="w-full h-full rounded-full object-cover" />
+                {project.managerAvatar ? (
+                  <img src={project.managerAvatar} alt={project.managerName ?? ''} className="w-full h-full rounded-full object-cover" />
                 ) : (
-                  project.projectManager.name.charAt(0).toUpperCase()
+                  (project.managerName ?? '?').charAt(0).toUpperCase()
                 )}
               </div>
-              <span className="text-xs leading-4 text-neutral-900">{project.projectManager.name}</span>
+              <span className="text-xs leading-4 text-neutral-900">{project.managerName ?? '—'}</span>
             </div>
 
             {/* Customer */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Customer</span>
-            <span className="text-xs leading-4 text-neutral-900">{project.customer}</span>
+            <span className="text-xs leading-4 text-neutral-900">{project.customer ?? '—'}</span>
 
             {/* Tags */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Tags</span>
             <div className="flex flex-wrap gap-1">
-              {project.tags.map((tag, index) => (
+              {tags.map((tag, index) => (
                 <TagBadge key={index} label={tag.label} type={tag.type} />
               ))}
+              {tags.length === 0 && <span className="text-xs text-neutral-400">—</span>}
             </div>
           </div>
 
@@ -400,14 +373,14 @@ export default function ProjectDetailPage() {
           <div className="grid grid-cols-[100px_1fr] lg:grid-cols-[120px_1fr] gap-x-4 lg:gap-x-8 gap-y-3 items-center">
             {/* Team Members */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Team Members</span>
-            <AvatarStack members={project.teamMembers} maxDisplay={3} />
+            <AvatarStack members={project.members} maxDisplay={3} />
 
             {/* Planned Date */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Planned Date</span>
             <div className="flex items-center gap-3">
-              <span className="text-xs leading-4 text-neutral-900">{project.plannedStartDate}</span>
+              <span className="text-xs leading-4 text-neutral-900">{plannedStartDate}</span>
               <ArrowRightAltOutlined fontSize="small"/>
-              <span className="text-xs leading-4 text-neutral-900">{project.plannedEndDate}</span>
+              <span className="text-xs leading-4 text-neutral-900">{plannedEndDate}</span>
             </div>
 
             {/* Priority */}
@@ -470,9 +443,11 @@ export default function ProjectDetailPage() {
           {/* Horizontal line through the center of the circles */}
           <div className="hidden lg:block absolute left-[60px] right-[60px] top-[24px] h-[2px] bg-neutral-200" style={{ zIndex: 0 }} />
           <div className="flex flex-wrap justify-center lg:justify-between gap-4 lg:gap-6 relative z-10">
-            {project.milestones.map((milestone) => (
-              <MilestoneItem key={milestone.id} milestone={milestone} />
-            ))}
+          {project.milestones.length === 0 ? (
+            <div className="text-xs text-neutral-400 py-3 text-center">No milestones yet</div>
+          ) : project.milestones.map((milestone) => (
+            <MilestoneItem key={milestone.id} milestone={milestone} />
+          ))}
           </div>
         </div>
       </div>
@@ -494,7 +469,9 @@ export default function ProjectDetailPage() {
           </Link>
         </div>
         <div className="flex flex-col divide-y divide-neutral-200">
-          {mockRecentTasks.map((task) => (
+          {project.recentTasks.length === 0 ? (
+            <div className="text-xs text-neutral-400 py-3 text-center">No recent tasks</div>
+          ) : project.recentTasks.map((task) => (
             <RecentTaskItem key={task.id} task={task} />
           ))}
         </div>
@@ -506,7 +483,7 @@ export default function ProjectDetailPage() {
           Description
         </h2>
         <p className="text-xs leading-4 text-neutral-900">
-          {project.description}
+          {project.description || <span className="text-neutral-400">No description provided.</span>}
         </p>
       </div>
     </div>

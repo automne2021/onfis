@@ -7,44 +7,65 @@ import com.onfis.project.domain.ReviewAction;
 import com.onfis.project.domain.TaskPriority;
 import com.onfis.project.domain.TaskStatus;
 import com.onfis.project.dto.CurrentUserResponse;
+import com.onfis.project.dto.MilestoneResponse;
+import com.onfis.project.dto.ProjectDetailResponse;
 import com.onfis.project.dto.ProjectMemberRequest;
 import com.onfis.project.dto.ProjectMemberResponse;
 import com.onfis.project.dto.ProjectResponse;
 import com.onfis.project.dto.ProjectUpsertRequest;
 import com.onfis.project.dto.ReviewCreateRequest;
+import com.onfis.project.dto.TaskActivityResponse;
+import com.onfis.project.dto.TaskCommentRequest;
+import com.onfis.project.dto.TaskCommentResponse;
+import com.onfis.project.dto.TaskDetailResponse;
 import com.onfis.project.dto.TaskResponse;
 import com.onfis.project.dto.TaskReviewResponse;
+import com.onfis.project.dto.TaskSubtaskResponse;
 import com.onfis.project.dto.TaskUpsertRequest;
+import com.onfis.project.dto.UserSearchResponse;
 import com.onfis.project.dto.UserSummaryResponse;
+import com.onfis.project.dto.WorkflowStageResponse;
 import com.onfis.project.entity.AppUserEntity;
 import com.onfis.project.entity.ProjectEntity;
+import com.onfis.project.entity.ProjectFavoriteEntity;
+import com.onfis.project.entity.ProjectFavoriteId;
 import com.onfis.project.entity.ProjectMemberEntity;
 import com.onfis.project.entity.ProjectMemberId;
 import com.onfis.project.entity.TaskAssigneeEntity;
 import com.onfis.project.entity.TaskAssigneeId;
+import com.onfis.project.entity.TaskCommentEntity;
 import com.onfis.project.entity.TaskEntity;
 import com.onfis.project.entity.TaskReviewEntity;
 import com.onfis.project.exception.BadRequestException;
 import com.onfis.project.exception.ForbiddenException;
 import com.onfis.project.exception.NotFoundException;
 import com.onfis.project.repository.AppUserRepository;
+import com.onfis.project.repository.ProjectFavoriteRepository;
 import com.onfis.project.repository.ProjectMemberRepository;
+import com.onfis.project.repository.ProjectMilestoneRepository;
 import com.onfis.project.repository.ProjectRepository;
+import com.onfis.project.repository.TaskActivityRepository;
 import com.onfis.project.repository.TaskAssigneeRepository;
+import com.onfis.project.repository.TaskCommentRepository;
 import com.onfis.project.repository.TaskRepository;
 import com.onfis.project.repository.TaskReviewRepository;
+import com.onfis.project.repository.TaskSubtaskRepository;
+import com.onfis.project.repository.WorkflowStageRepository;
 import com.onfis.shared.security.TenantContext;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectModuleService {
@@ -56,6 +77,12 @@ public class ProjectModuleService {
     private final TaskRepository taskRepository;
     private final TaskAssigneeRepository taskAssigneeRepository;
     private final TaskReviewRepository taskReviewRepository;
+    private final WorkflowStageRepository workflowStageRepository;
+    private final ProjectMilestoneRepository projectMilestoneRepository;
+    private final ProjectFavoriteRepository projectFavoriteRepository;
+    private final TaskCommentRepository taskCommentRepository;
+    private final TaskSubtaskRepository taskSubtaskRepository;
+    private final TaskActivityRepository taskActivityRepository;
 
     public ProjectModuleService(
             TenantContext tenantContext,
@@ -64,7 +91,13 @@ public class ProjectModuleService {
             ProjectMemberRepository projectMemberRepository,
             TaskRepository taskRepository,
             TaskAssigneeRepository taskAssigneeRepository,
-            TaskReviewRepository taskReviewRepository
+            TaskReviewRepository taskReviewRepository,
+            WorkflowStageRepository workflowStageRepository,
+            ProjectMilestoneRepository projectMilestoneRepository,
+            ProjectFavoriteRepository projectFavoriteRepository,
+            TaskCommentRepository taskCommentRepository,
+            TaskSubtaskRepository taskSubtaskRepository,
+            TaskActivityRepository taskActivityRepository
     ) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
@@ -73,7 +106,15 @@ public class ProjectModuleService {
         this.taskRepository = taskRepository;
         this.taskAssigneeRepository = taskAssigneeRepository;
         this.taskReviewRepository = taskReviewRepository;
+        this.workflowStageRepository = workflowStageRepository;
+        this.projectMilestoneRepository = projectMilestoneRepository;
+        this.projectFavoriteRepository = projectFavoriteRepository;
+        this.taskCommentRepository = taskCommentRepository;
+        this.taskSubtaskRepository = taskSubtaskRepository;
+        this.taskActivityRepository = taskActivityRepository;
     }
+
+    // ── Current user ──────────────────────────────────────────────────────────
 
     public CurrentUserResponse getCurrentUser(String userIdHeader) {
         UUID tenantId = tenantId();
@@ -85,6 +126,8 @@ public class ProjectModuleService {
                 : Set.of("TASK_CREATE", "TASK_UPDATE");
         return new CurrentUserResponse(user.getId(), fullName(user), role.name(), permissions);
     }
+
+    // ── Projects ─────────────────────────────────────────────────────────────
 
     public List<ProjectResponse> listProjects(String userIdHeader) {
         UUID tenantId = tenantId();
@@ -108,6 +151,87 @@ public class ProjectModuleService {
         ProjectEntity project = requireProject(projectId, tenantId);
         enforceProjectVisible(currentUser, project.getId());
         return toProjectResponse(project, currentUser);
+    }
+
+    public ProjectDetailResponse getProjectDetail(String userIdHeader, UUID projectId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        ProjectEntity project = requireProject(projectId, tenantId);
+        enforceProjectVisible(currentUser, project.getId());
+
+        // Manager info
+        String managerName = null;
+        String managerAvatar = null;
+        if (project.getManagerId() != null) {
+            AppUserEntity manager = appUserRepository.findById(project.getManagerId()).orElse(null);
+            if (manager != null) {
+                managerName = fullName(manager);
+                managerAvatar = manager.getAvatarUrl();
+            }
+        }
+
+        // Members
+        List<ProjectMemberEntity> memberEntities = projectMemberRepository.findByIdProjectId(projectId);
+        List<UserSummaryResponse> members = new ArrayList<>();
+        for (ProjectMemberEntity m : memberEntities) {
+            appUserRepository.findById(m.getId().getUserId())
+                    .ifPresent(u -> members.add(new UserSummaryResponse(u.getId(), fullName(u), u.getAvatarUrl())));
+        }
+
+        // Starred
+        boolean isStarred = projectFavoriteRepository.existsByIdProjectIdAndIdUserId(projectId, currentUser.getId());
+
+        // Milestones (limit to first 6)
+        List<MilestoneResponse> milestones = projectMilestoneRepository
+                .findByProjectIdOrderBySortOrderAsc(projectId)
+                .stream()
+                .limit(6)
+                .map(m -> new MilestoneResponse(m.getId().toString(), m.getTitle(), m.getTargetDate(),
+                        m.getStatus() != null ? m.getStatus().toLowerCase() : "upcoming"))
+                .collect(Collectors.toList());
+
+        // Recent tasks (limit 5)
+        List<TaskEntity> recentTaskEntities = taskRepository
+                .findByTenantIdAndProjectIdOrderByCreatedAtDesc(tenantId, projectId)
+                .stream()
+                .limit(5)
+                .collect(Collectors.toList());
+        List<TaskResponse> recentTasks = new ArrayList<>();
+        for (TaskEntity t : recentTaskEntities) {
+            recentTasks.add(toTaskResponse(t, currentUser));
+        }
+
+        // Days remaining
+        int daysRemaining = 0;
+        if (project.getDueDate() != null) {
+            long diff = ChronoUnit.DAYS.between(LocalDate.now(), project.getDueDate());
+            daysRemaining = (int) Math.max(0, diff);
+        }
+
+        return new ProjectDetailResponse(
+                project.getId(),
+                project.getName(),
+                project.getDescription(),
+                project.getManagerId(),
+                managerName,
+                managerAvatar,
+                project.getCustomer(),
+                toFrontendProjectStatus(project.getStatus().name()),
+                project.getPriority().name().toLowerCase(),
+                project.getProgress() == null ? 0 : project.getProgress(),
+                project.getStartDate(),
+                project.getEndDate(),
+                project.getDueDate(),
+                project.getTags(),
+                asOffset(project.getCreatedAt()),
+                members,
+                canManageProject(currentUser, projectId),
+                isStarred,
+                milestones,
+                recentTasks,
+                members.size(),
+                daysRemaining
+        );
     }
 
     @Transactional
@@ -150,6 +274,29 @@ public class ProjectModuleService {
         ProjectEntity project = requireProject(projectId, tenantId);
         projectRepository.delete(project);
     }
+
+    @Transactional
+    public boolean toggleFavorite(String userIdHeader, UUID projectId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectVisible(currentUser, projectId);
+
+        ProjectFavoriteId favId = new ProjectFavoriteId(projectId, currentUser.getId());
+        if (projectFavoriteRepository.existsByIdProjectIdAndIdUserId(projectId, currentUser.getId())) {
+            projectFavoriteRepository.deleteByIdProjectIdAndIdUserId(projectId, currentUser.getId());
+            return false;
+        } else {
+            ProjectFavoriteEntity fav = new ProjectFavoriteEntity();
+            fav.setId(favId);
+            fav.setTenantId(tenantId);
+            fav.setCreatedAt(Instant.now());
+            projectFavoriteRepository.save(fav);
+            return true;
+        }
+    }
+
+    // ── Members ───────────────────────────────────────────────────────────────
 
     public List<ProjectMemberResponse> listMembers(String userIdHeader, UUID projectId) {
         UUID tenantId = tenantId();
@@ -240,6 +387,37 @@ public class ProjectModuleService {
         projectMemberRepository.delete(member);
     }
 
+    // ── Workflow stages ────────────────────────────────────────────────────────
+
+    public List<WorkflowStageResponse> listStages(String userIdHeader, UUID projectId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectVisible(currentUser, projectId);
+
+        return workflowStageRepository.findByProjectIdOrderByStageOrderAsc(projectId)
+                .stream()
+                .map(s -> new WorkflowStageResponse(s.getId().toString(), s.getName(), s.getStageOrder()))
+                .collect(Collectors.toList());
+    }
+
+    // ── Milestones ─────────────────────────────────────────────────────────────
+
+    public List<MilestoneResponse> listMilestones(String userIdHeader, UUID projectId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectVisible(currentUser, projectId);
+
+        return projectMilestoneRepository.findByProjectIdOrderBySortOrderAsc(projectId)
+                .stream()
+                .map(m -> new MilestoneResponse(m.getId().toString(), m.getTitle(), m.getTargetDate(),
+                        m.getStatus() != null ? m.getStatus().toLowerCase() : "upcoming"))
+                .collect(Collectors.toList());
+    }
+
+    // ── Tasks ─────────────────────────────────────────────────────────────────
+
     public List<TaskResponse> listTasks(String userIdHeader, UUID projectId) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
@@ -260,6 +438,14 @@ public class ProjectModuleService {
         TaskEntity task = requireTask(taskId, tenantId);
         enforceProjectVisible(currentUser, task.getProjectId());
         return toTaskResponse(task, currentUser);
+    }
+
+    public TaskDetailResponse getTaskDetail(String userIdHeader, UUID taskId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceProjectVisible(currentUser, task.getProjectId());
+        return toTaskDetailResponse(task, currentUser, tenantId);
     }
 
     @Transactional
@@ -351,6 +537,76 @@ public class ProjectModuleService {
         return responses;
     }
 
+    // ── Task comments ─────────────────────────────────────────────────────────
+
+    @Transactional
+    public TaskCommentResponse addComment(String userIdHeader, UUID taskId, TaskCommentRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceProjectVisible(currentUser, task.getProjectId());
+
+        TaskCommentEntity comment = new TaskCommentEntity();
+        comment.setTenantId(tenantId);
+        comment.setTaskId(taskId);
+        comment.setAuthorId(currentUser.getId());
+        comment.setContent(request.content());
+        TaskCommentEntity saved = taskCommentRepository.save(comment);
+
+        return new TaskCommentResponse(
+                saved.getId(),
+                saved.getAuthorId(),
+                fullName(currentUser),
+                currentUser.getAvatarUrl(),
+                saved.getContent(),
+                asOffset(saved.getCreatedAt())
+        );
+    }
+
+    public List<TaskCommentResponse> listComments(String userIdHeader, UUID taskId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceProjectVisible(currentUser, task.getProjectId());
+
+        return taskCommentRepository.findByTaskIdOrderByCreatedAtAsc(taskId)
+                .stream()
+                .map(c -> {
+                    AppUserEntity author = appUserRepository.findById(c.getAuthorId()).orElse(null);
+                    return new TaskCommentResponse(
+                            c.getId(),
+                            c.getAuthorId(),
+                            author == null ? "Unknown" : fullName(author),
+                            author == null ? null : author.getAvatarUrl(),
+                            c.getContent(),
+                            asOffset(c.getCreatedAt())
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    // ── Users search ──────────────────────────────────────────────────────────
+
+    public List<UserSearchResponse> searchUsers(String userIdHeader, String query) {
+        UUID tenantId = tenantId();
+        requireUser(parseUserId(userIdHeader), tenantId);
+
+        List<AppUserEntity> all = appUserRepository.findByTenantIdOrderByFirstNameAsc(tenantId);
+        String lq = query == null ? "" : query.trim().toLowerCase();
+
+        return all.stream()
+                .filter(u -> {
+                    if (lq.isEmpty()) return true;
+                    String name = fullName(u).toLowerCase();
+                    return name.contains(lq) || (u.getEmail() != null && u.getEmail().toLowerCase().contains(lq));
+                })
+                .limit(30)
+                .map(u -> new UserSearchResponse(u.getId(), fullName(u), u.getAvatarUrl()))
+                .collect(Collectors.toList());
+    }
+
+    // ── Internal helpers ──────────────────────────────────────────────────────
+
     private ProjectResponse toProjectResponse(ProjectEntity project, AppUserEntity currentUser) {
         List<UserSummaryResponse> assignees = new ArrayList<>();
         for (ProjectMemberEntity member : projectMemberRepository.findByIdProjectId(project.getId())) {
@@ -362,6 +618,8 @@ public class ProjectModuleService {
                 project.getId(),
                 project.getName(),
                 project.getDescription(),
+                project.getManagerId(),
+                project.getCustomer(),
                 toFrontendProjectStatus(project.getStatus().name()),
                 project.getPriority().name().toLowerCase(),
                 project.getProgress() == null ? 0 : project.getProgress(),
@@ -429,6 +687,108 @@ public class ProjectModuleService {
         );
     }
 
+    private TaskDetailResponse toTaskDetailResponse(TaskEntity task, AppUserEntity currentUser, UUID tenantId) {
+        // Build base task data
+        List<UserSummaryResponse> assignees = new ArrayList<>();
+        List<TaskAssigneeEntity> taskAssignees = taskAssigneeRepository.findByIdTaskId(task.getId());
+        Set<UUID> assigneeIds = new HashSet<>();
+        for (TaskAssigneeEntity assignee : taskAssignees) {
+            assigneeIds.add(assignee.getId().getUserId());
+            appUserRepository.findById(assignee.getId().getUserId())
+                    .ifPresent(u -> assignees.add(new UserSummaryResponse(u.getId(), fullName(u), u.getAvatarUrl())));
+        }
+
+        List<TaskReviewResponse> reviews = taskReviewRepository
+                .findByTenantIdAndTaskIdOrderByCreatedAtAsc(tenantId, task.getId())
+                .stream()
+                .map(review -> {
+                    AppUserEntity author = appUserRepository.findById(review.getReviewerId()).orElse(null);
+                    return new TaskReviewResponse(
+                            review.getId(),
+                            review.getReviewerId(),
+                            author == null ? "Unknown" : fullName(author),
+                            author == null ? null : author.getAvatarUrl(),
+                            toFrontendReviewAction(review.getAction()),
+                            review.getContent(),
+                            asOffset(review.getCreatedAt())
+                    );
+                })
+                .toList();
+
+        boolean canEdit = isManager(currentUser)
+                || assigneeIds.contains(currentUser.getId())
+                || (task.getReporterId() != null && task.getReporterId().equals(currentUser.getId()));
+        boolean canReview = isManager(currentUser)
+                || (task.getReporterId() != null && task.getReporterId().equals(currentUser.getId()));
+
+        // Subtasks
+        List<TaskSubtaskResponse> subtasks = taskSubtaskRepository
+                .findByTaskIdOrderByCreatedAtAsc(task.getId())
+                .stream()
+                .map(s -> new TaskSubtaskResponse(s.getId(), s.getTitle(), Boolean.TRUE.equals(s.getCompleted())))
+                .collect(Collectors.toList());
+
+        // Comments
+        List<TaskCommentResponse> comments = taskCommentRepository
+                .findByTaskIdOrderByCreatedAtAsc(task.getId())
+                .stream()
+                .map(c -> {
+                    AppUserEntity author = appUserRepository.findById(c.getAuthorId()).orElse(null);
+                    return new TaskCommentResponse(
+                            c.getId(),
+                            c.getAuthorId(),
+                            author == null ? "Unknown" : fullName(author),
+                            author == null ? null : author.getAvatarUrl(),
+                            c.getContent(),
+                            asOffset(c.getCreatedAt())
+                    );
+                })
+                .collect(Collectors.toList());
+
+        // Activities
+        List<TaskActivityResponse> activities = taskActivityRepository
+                .findByTaskIdOrderByCreatedAtAsc(task.getId())
+                .stream()
+                .map(a -> {
+                    AppUserEntity actor = a.getActorId() != null ? appUserRepository.findById(a.getActorId()).orElse(null) : null;
+                    return new TaskActivityResponse(
+                            a.getId(),
+                            a.getActorId(),
+                            actor == null ? "System" : fullName(actor),
+                            a.getAction(),
+                            a.getValue(),
+                            asOffset(a.getCreatedAt())
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return new TaskDetailResponse(
+                task.getId(),
+                task.getProjectId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getPriority().name().toLowerCase(),
+                task.getStatus().name(),
+                task.getProgress() == null ? 0 : task.getProgress(),
+                task.getDueDate(),
+                assignees,
+                task.getTags(),
+                task.getReporterId(),
+                task.getEstimatedEffort(),
+                task.getActualEffort(),
+                List.of(),
+                reviews,
+                asOffset(task.getCreatedAt()),
+                asOffset(task.getUpdatedAt()),
+                task.getTaskKey() == null ? "TASK-" + task.getId().toString().substring(0, 8).toUpperCase() : task.getTaskKey(),
+                canEdit,
+                canReview,
+                subtasks,
+                comments,
+                activities
+        );
+    }
+
     private void applyProjectUpsert(ProjectEntity project, ProjectUpsertRequest request) {
         project.setName(request.title());
         project.setDescription(request.description());
@@ -438,11 +798,13 @@ public class ProjectModuleService {
         project.setStartDate(request.startDate());
         project.setDueDate(request.dueDate());
         project.setTags(request.tags() == null || request.tags().isBlank() ? "[]" : request.tags());
+        project.setManagerId(request.managerId());
+        project.setCustomer(request.customer());
     }
 
     private void applyTaskUpsert(TaskEntity task, TaskUpsertRequest request, AppUserEntity currentUser) {
         TaskStatus nextStatus = TaskStatus.valueOf(request.status().toUpperCase());
-        if (nextStatus == TaskStatus.IN_REVIEW && request.reporterId() == null) {
+        if (nextStatus == TaskStatus.IN_REVIEW && request.reporterId() == null && task.getReporterId() == null) {
             throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
         }
 
@@ -452,7 +814,9 @@ public class ProjectModuleService {
         task.setPriority(TaskPriority.valueOf(request.priority().toUpperCase()));
         task.setProgress(request.progress() == null ? 0 : request.progress());
         task.setDueDate(request.dueDate());
-        task.setReporterId(request.reporterId() == null ? currentUser.getId() : request.reporterId());
+        if (request.reporterId() != null) {
+            task.setReporterId(request.reporterId());
+        }
         task.setEstimatedEffort(request.estimatedEffort());
         task.setActualEffort(request.actualEffort());
         task.setParentTaskId(request.parentTaskId());

@@ -47,6 +47,12 @@ public class ProjectEntity {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
+    @Column(name = "manager_id")
+    private UUID managerId;
+
+    @Column(name = "customer")
+    private String customer;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ProjectStatus status = ProjectStatus.PLANNING;

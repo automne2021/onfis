@@ -99,6 +99,7 @@ export default function ProjectsPage() {
         startDate: data.startDate ? data.startDate.toISOString().slice(0, 10) : undefined,
         dueDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : undefined,
         tags: "[]",
+        managerId: data.managerId || undefined,
       });
       setProjects((prev) => [toProjectViewModel(created), ...prev]);
       showToast("Project created successfully", "success");

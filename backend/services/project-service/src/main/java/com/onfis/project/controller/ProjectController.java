@@ -1,13 +1,20 @@
 package com.onfis.project.controller;
 
 import com.onfis.project.dto.CurrentUserResponse;
+import com.onfis.project.dto.MilestoneResponse;
+import com.onfis.project.dto.ProjectDetailResponse;
 import com.onfis.project.dto.ProjectMemberRequest;
 import com.onfis.project.dto.ProjectMemberResponse;
 import com.onfis.project.dto.ProjectResponse;
 import com.onfis.project.dto.ProjectUpsertRequest;
 import com.onfis.project.dto.ReviewCreateRequest;
+import com.onfis.project.dto.TaskCommentRequest;
+import com.onfis.project.dto.TaskCommentResponse;
+import com.onfis.project.dto.TaskDetailResponse;
 import com.onfis.project.dto.TaskResponse;
 import com.onfis.project.dto.TaskUpsertRequest;
+import com.onfis.project.dto.UserSearchResponse;
+import com.onfis.project.dto.WorkflowStageResponse;
 import com.onfis.project.service.ProjectModuleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -41,10 +48,24 @@ public class ProjectController {
         return ResponseEntity.ok(response);
     }
 
+    // ── Current user ──────────────────────────────────────────────────────────
+
     @GetMapping("/me")
     public ResponseEntity<CurrentUserResponse> me(@RequestHeader(USER_HEADER) String userId) {
         return ResponseEntity.ok(projectModuleService.getCurrentUser(userId));
     }
+
+    // ── User search ───────────────────────────────────────────────────────────
+
+    @GetMapping("/users/search")
+    public ResponseEntity<List<UserSearchResponse>> searchUsers(
+            @RequestHeader(USER_HEADER) String userId,
+            @RequestParam(required = false, defaultValue = "") String q
+    ) {
+        return ResponseEntity.ok(projectModuleService.searchUsers(userId, q));
+    }
+
+    // ── Projects ──────────────────────────────────────────────────────────────
 
     @GetMapping
     public ResponseEntity<List<ProjectResponse>> listProjects(@RequestHeader(USER_HEADER) String userId) {
@@ -67,6 +88,14 @@ public class ProjectController {
         return ResponseEntity.ok(projectModuleService.getProject(userId, projectId));
     }
 
+    @GetMapping("/{projectId}/detail")
+    public ResponseEntity<ProjectDetailResponse> getProjectDetail(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId
+    ) {
+        return ResponseEntity.ok(projectModuleService.getProjectDetail(userId, projectId));
+    }
+
     @PutMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> updateProject(
             @RequestHeader(USER_HEADER) String userId,
@@ -84,6 +113,19 @@ public class ProjectController {
         projectModuleService.deleteProject(userId, projectId);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{projectId}/favorite")
+    public ResponseEntity<Map<String, Object>> toggleFavorite(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId
+    ) {
+        boolean isNowStarred = projectModuleService.toggleFavorite(userId, projectId);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("isStarred", isNowStarred);
+        return ResponseEntity.ok(resp);
+    }
+
+    // ── Members ───────────────────────────────────────────────────────────────
 
     @GetMapping("/{projectId}/members")
     public ResponseEntity<List<ProjectMemberResponse>> listMembers(
@@ -122,6 +164,28 @@ public class ProjectController {
         return ResponseEntity.noContent().build();
     }
 
+    // ── Workflow stages ────────────────────────────────────────────────────────
+
+    @GetMapping("/{projectId}/stages")
+    public ResponseEntity<List<WorkflowStageResponse>> listStages(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId
+    ) {
+        return ResponseEntity.ok(projectModuleService.listStages(userId, projectId));
+    }
+
+    // ── Milestones ─────────────────────────────────────────────────────────────
+
+    @GetMapping("/{projectId}/milestones")
+    public ResponseEntity<List<MilestoneResponse>> listMilestones(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId
+    ) {
+        return ResponseEntity.ok(projectModuleService.listMilestones(userId, projectId));
+    }
+
+    // ── Tasks ─────────────────────────────────────────────────────────────────
+
     @GetMapping("/{projectId}/tasks")
     public ResponseEntity<List<TaskResponse>> listTasks(
             @RequestHeader(USER_HEADER) String userId,
@@ -147,6 +211,14 @@ public class ProjectController {
         return ResponseEntity.ok(projectModuleService.getTask(userId, taskId));
     }
 
+    @GetMapping("/tasks/{taskId}/detail")
+    public ResponseEntity<TaskDetailResponse> getTaskDetail(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId
+    ) {
+        return ResponseEntity.ok(projectModuleService.getTaskDetail(userId, taskId));
+    }
+
     @PutMapping("/tasks/{taskId}")
     public ResponseEntity<TaskResponse> updateTask(
             @RequestHeader(USER_HEADER) String userId,
@@ -164,6 +236,25 @@ public class ProjectController {
     ) {
         return ResponseEntity.ok(projectModuleService.reviewTask(userId, taskId, request));
     }
+
+    @GetMapping("/tasks/{taskId}/comments")
+    public ResponseEntity<List<TaskCommentResponse>> listComments(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId
+    ) {
+        return ResponseEntity.ok(projectModuleService.listComments(userId, taskId));
+    }
+
+    @PostMapping("/tasks/{taskId}/comments")
+    public ResponseEntity<TaskCommentResponse> addComment(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @Valid @RequestBody TaskCommentRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.addComment(userId, taskId, request));
+    }
+
+    // ── Review queue ──────────────────────────────────────────────────────────
 
     @GetMapping("/reviews")
     public ResponseEntity<List<TaskResponse>> reviewQueue(

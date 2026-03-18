@@ -7,6 +7,7 @@ import {
   getCurrentProjectUser,
   getProjectMembers,
   removeProjectMember,
+  searchProjectUsers,
   updateProjectMemberRole,
 } from "../../../services/projectService";
 import { useToast } from "../../../contexts/useToast";
@@ -62,13 +63,8 @@ const MOCK_MEMBERS: ProjectMember[] = [
   },
 ];
 
-const MOCK_AVAILABLE_USERS = [
-  { id: "7", name: "Emma Watson", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma" },
-  { id: "8", name: "Frank Miller", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Frank" },
-  { id: "9", name: "Grace Lee", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Grace" },
-];
-
 const ALL_PROJECT_ROLES: ProjectRole[] = ["Lead", "Developer", "Designer", "QA", "Analyst"];
+
 
 // ── Role badge config ──────────────────────────────────────────────────────────
 const ROLE_BADGE: Record<ProjectRole, string> = {
@@ -106,11 +102,28 @@ function AddMemberModal({ existingIds, onAdd, onClose }: AddMemberModalProps) {
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<ProjectRole>("Developer");
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
+  const [searching, setSearching] = useState(false);
 
-  const filteredUsers = MOCK_AVAILABLE_USERS.filter(
-    (u) =>
-      !existingIds.includes(u.id) &&
-      u.name.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setSearching(true);
+        const results = await searchProjectUsers(search);
+        setAvailableUsers(results.filter((u) => !existingIds.includes(u.id)));
+      } catch {
+        // ignore
+      } finally {
+        setSearching(false);
+      }
+    };
+
+    const timer = setTimeout(() => { void fetchUsers(); }, 300);
+    return () => clearTimeout(timer);
+  }, [search, existingIds]);
+
+  const filteredUsers = availableUsers.filter(
+    (u) => !existingIds.includes(u.id)
   );
 
   return (
@@ -143,7 +156,8 @@ function AddMemberModal({ existingIds, onAdd, onClose }: AddMemberModalProps) {
 
         {/* User list */}
         <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-          {filteredUsers.length === 0 ? (
+          {searching && <p className="text-sm text-neutral-400 text-center py-4">Searching...</p>}
+          {!searching && filteredUsers.length === 0 ? (
             <p className="text-sm text-neutral-400 text-center py-4">No users found</p>
           ) : (
             filteredUsers.map((user) => (
@@ -394,8 +408,6 @@ export default function ProjectMembersPage() {
 
   const handleAdd = async (userId: string, role: ProjectRole) => {
     if (!projectId) return;
-    const user = MOCK_AVAILABLE_USERS.find((u) => u.id === userId);
-    if (!user) return;
     try {
       const added = await addProjectMember(projectId, {
         userId,
