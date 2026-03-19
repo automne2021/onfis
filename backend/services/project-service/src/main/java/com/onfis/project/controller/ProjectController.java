@@ -1,6 +1,7 @@
 package com.onfis.project.controller;
 
 import com.onfis.project.dto.CurrentUserResponse;
+import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
 import com.onfis.project.dto.ProjectDetailResponse;
 import com.onfis.project.dto.ProjectMemberRequest;
@@ -8,15 +9,19 @@ import com.onfis.project.dto.ProjectMemberResponse;
 import com.onfis.project.dto.ProjectResponse;
 import com.onfis.project.dto.ProjectUpsertRequest;
 import com.onfis.project.dto.ReviewCreateRequest;
+import com.onfis.project.dto.TaskDependencyRequest;
 import com.onfis.project.dto.TaskCommentRequest;
 import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
 import com.onfis.project.dto.TaskResponse;
+import com.onfis.project.dto.TaskStageUpdateRequest;
 import com.onfis.project.dto.TaskSubtaskRequest;
 import com.onfis.project.dto.TaskSubtaskResponse;
 import com.onfis.project.dto.TaskUpsertRequest;
 import com.onfis.project.dto.UserSearchResponse;
+import com.onfis.project.dto.WorkflowStageReorderRequest;
 import com.onfis.project.dto.WorkflowStageResponse;
+import com.onfis.project.dto.WorkflowStageUpsertRequest;
 import com.onfis.project.service.ProjectModuleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -176,6 +181,44 @@ public class ProjectController {
         return ResponseEntity.ok(projectModuleService.listStages(userId, projectId));
     }
 
+    @PostMapping("/{projectId}/stages")
+    public ResponseEntity<WorkflowStageResponse> createStage(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @Valid @RequestBody WorkflowStageUpsertRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.createStage(userId, projectId, request));
+    }
+
+    @PutMapping("/{projectId}/stages/{stageId}")
+    public ResponseEntity<WorkflowStageResponse> updateStage(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID stageId,
+            @Valid @RequestBody WorkflowStageUpsertRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.updateStage(userId, projectId, stageId, request));
+    }
+
+    @DeleteMapping("/{projectId}/stages/{stageId}")
+    public ResponseEntity<Void> deleteStage(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID stageId
+    ) {
+        projectModuleService.deleteStage(userId, projectId, stageId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{projectId}/stages/reorder")
+    public ResponseEntity<List<WorkflowStageResponse>> reorderStages(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @Valid @RequestBody WorkflowStageReorderRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.reorderStages(userId, projectId, request));
+    }
+
     // ── Milestones ─────────────────────────────────────────────────────────────
 
     @GetMapping("/{projectId}/milestones")
@@ -186,6 +229,35 @@ public class ProjectController {
         return ResponseEntity.ok(projectModuleService.listMilestones(userId, projectId));
     }
 
+    @PostMapping("/{projectId}/milestones")
+    public ResponseEntity<MilestoneResponse> createMilestone(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @RequestBody MilestoneUpsertRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.createMilestone(userId, projectId, request));
+    }
+
+    @PutMapping("/{projectId}/milestones/{milestoneId}")
+    public ResponseEntity<MilestoneResponse> updateMilestone(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID milestoneId,
+            @RequestBody MilestoneUpsertRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.updateMilestone(userId, projectId, milestoneId, request));
+    }
+
+    @DeleteMapping("/{projectId}/milestones/{milestoneId}")
+    public ResponseEntity<Void> deleteMilestone(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID projectId,
+            @PathVariable UUID milestoneId
+    ) {
+        projectModuleService.deleteMilestone(userId, projectId, milestoneId);
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Tasks ─────────────────────────────────────────────────────────────────
 
     @GetMapping("/{projectId}/tasks")
@@ -194,6 +266,13 @@ public class ProjectController {
             @PathVariable UUID projectId
     ) {
         return ResponseEntity.ok(projectModuleService.listTasks(userId, projectId));
+    }
+
+    @GetMapping("/tasks/me")
+    public ResponseEntity<List<TaskResponse>> listMyTasks(
+            @RequestHeader(USER_HEADER) String userId
+    ) {
+        return ResponseEntity.ok(projectModuleService.listMyTasks(userId));
     }
 
     @PostMapping("/{projectId}/tasks")
@@ -228,6 +307,33 @@ public class ProjectController {
             @Valid @RequestBody TaskUpsertRequest request
     ) {
         return ResponseEntity.ok(projectModuleService.updateTask(userId, taskId, request));
+    }
+
+    @PatchMapping("/tasks/{taskId}/stage")
+    public ResponseEntity<TaskResponse> updateTaskStage(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @Valid @RequestBody TaskStageUpdateRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.updateTaskStage(userId, taskId, request));
+    }
+
+    @PostMapping("/tasks/{taskId}/dependencies")
+    public ResponseEntity<TaskResponse> addDependency(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @Valid @RequestBody TaskDependencyRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.addDependency(userId, taskId, request));
+    }
+
+    @DeleteMapping("/tasks/{taskId}/dependencies/{blockedByTaskId}")
+    public ResponseEntity<TaskResponse> removeDependency(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID blockedByTaskId
+    ) {
+        return ResponseEntity.ok(projectModuleService.removeDependency(userId, taskId, blockedByTaskId));
     }
 
     @PostMapping("/tasks/{taskId}/reviews")

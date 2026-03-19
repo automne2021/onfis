@@ -10,4 +10,8 @@ import java.util.UUID;
 public interface TaskDependencyRepository extends JpaRepository<TaskDependencyEntity, TaskDependencyId> {
 
     List<TaskDependencyEntity> findByIdTaskId(UUID taskId);
+
+    boolean existsByIdTaskIdAndIdBlockedByTaskId(UUID taskId, UUID blockedByTaskId);
+
+    void deleteByIdTaskIdAndIdBlockedByTaskId(UUID taskId, UUID blockedByTaskId);
 }

@@ -7,6 +7,7 @@ import com.onfis.project.domain.ReviewAction;
 import com.onfis.project.domain.TaskPriority;
 import com.onfis.project.domain.TaskStatus;
 import com.onfis.project.dto.CurrentUserResponse;
+import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
 import com.onfis.project.dto.ProjectDetailResponse;
 import com.onfis.project.dto.ProjectMemberRequest;
@@ -14,31 +15,39 @@ import com.onfis.project.dto.ProjectMemberResponse;
 import com.onfis.project.dto.ProjectResponse;
 import com.onfis.project.dto.ProjectUpsertRequest;
 import com.onfis.project.dto.ReviewCreateRequest;
+import com.onfis.project.dto.TaskDependencyRequest;
 import com.onfis.project.dto.TaskActivityResponse;
 import com.onfis.project.dto.TaskCommentRequest;
 import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
 import com.onfis.project.dto.TaskResponse;
+import com.onfis.project.dto.TaskStageUpdateRequest;
 import com.onfis.project.dto.TaskReviewResponse;
 import com.onfis.project.dto.TaskSubtaskRequest;
 import com.onfis.project.dto.TaskSubtaskResponse;
 import com.onfis.project.dto.TaskUpsertRequest;
 import com.onfis.project.dto.UserSearchResponse;
 import com.onfis.project.dto.UserSummaryResponse;
+import com.onfis.project.dto.WorkflowStageReorderRequest;
 import com.onfis.project.dto.WorkflowStageResponse;
+import com.onfis.project.dto.WorkflowStageUpsertRequest;
 import com.onfis.project.entity.AppUserEntity;
 import com.onfis.project.entity.ProjectEntity;
 import com.onfis.project.entity.ProjectFavoriteEntity;
 import com.onfis.project.entity.ProjectFavoriteId;
 import com.onfis.project.entity.ProjectMemberEntity;
 import com.onfis.project.entity.ProjectMemberId;
+import com.onfis.project.entity.ProjectMilestoneEntity;
 import com.onfis.project.entity.TaskAssigneeEntity;
 import com.onfis.project.entity.TaskAssigneeId;
 import com.onfis.project.entity.TaskActivityEntity;
 import com.onfis.project.entity.TaskCommentEntity;
+import com.onfis.project.entity.TaskDependencyEntity;
+import com.onfis.project.entity.TaskDependencyId;
 import com.onfis.project.entity.TaskEntity;
 import com.onfis.project.entity.TaskSubtaskEntity;
 import com.onfis.project.entity.TaskReviewEntity;
+import com.onfis.project.entity.WorkflowStageEntity;
 import com.onfis.project.exception.BadRequestException;
 import com.onfis.project.exception.ForbiddenException;
 import com.onfis.project.exception.NotFoundException;
@@ -412,6 +421,97 @@ public class ProjectModuleService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public WorkflowStageResponse createStage(String userIdHeader, UUID projectId, WorkflowStageUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        WorkflowStageEntity stage = new WorkflowStageEntity();
+        stage.setTenantId(tenantId);
+        stage.setProjectId(projectId);
+        stage.setName(request.name().trim());
+        stage.setStageOrder(nextStageOrder(projectId));
+        WorkflowStageEntity saved = workflowStageRepository.save(stage);
+        return toWorkflowStageResponse(saved);
+    }
+
+    @Transactional
+    public WorkflowStageResponse updateStage(String userIdHeader, UUID projectId, UUID stageId, WorkflowStageUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        WorkflowStageEntity stage = workflowStageRepository.findById(stageId)
+                .orElseThrow(() -> new NotFoundException("Workflow stage not found"));
+        if (!stage.getProjectId().equals(projectId)) {
+            throw new BadRequestException("Workflow stage does not belong to this project");
+        }
+
+        stage.setName(request.name().trim());
+        WorkflowStageEntity saved = workflowStageRepository.save(stage);
+        return toWorkflowStageResponse(saved);
+    }
+
+    @Transactional
+    public void deleteStage(String userIdHeader, UUID projectId, UUID stageId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        WorkflowStageEntity stage = workflowStageRepository.findById(stageId)
+                .orElseThrow(() -> new NotFoundException("Workflow stage not found"));
+        if (!stage.getProjectId().equals(projectId)) {
+            throw new BadRequestException("Workflow stage does not belong to this project");
+        }
+        if (taskRepository.countByProjectIdAndStageId(projectId, stageId) > 0) {
+            throw new BadRequestException("Cannot delete a stage with assigned tasks");
+        }
+
+        workflowStageRepository.delete(stage);
+        resequenceStages(projectId);
+    }
+
+    @Transactional
+    public List<WorkflowStageResponse> reorderStages(String userIdHeader, UUID projectId, WorkflowStageReorderRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        List<WorkflowStageEntity> stages = workflowStageRepository.findByProjectIdOrderByStageOrderAsc(projectId);
+        if (request.orderedStageIds() == null || request.orderedStageIds().isEmpty()) {
+            throw new BadRequestException("Stage order list cannot be empty");
+        }
+
+        Set<UUID> existingIds = stages.stream().map(WorkflowStageEntity::getId).collect(Collectors.toSet());
+        Set<UUID> requestedIds = new HashSet<>(request.orderedStageIds());
+        if (requestedIds.size() != request.orderedStageIds().size()) {
+            throw new BadRequestException("Stage order list cannot contain duplicates");
+        }
+        if (!existingIds.equals(requestedIds)) {
+            throw new BadRequestException("Stage order list must include all stages exactly once");
+        }
+
+        int order = 1;
+        for (UUID stageId : request.orderedStageIds()) {
+            WorkflowStageEntity stage = stages.stream()
+                    .filter(s -> s.getId().equals(stageId))
+                    .findFirst()
+                    .orElseThrow(() -> new BadRequestException("Invalid stage in order list"));
+            stage.setStageOrder(order++);
+        }
+        workflowStageRepository.saveAll(stages);
+
+        return stages.stream()
+                .sorted((a, b) -> Integer.compare(a.getStageOrder(), b.getStageOrder()))
+                .map(this::toWorkflowStageResponse)
+                .collect(Collectors.toList());
+    }
+
     // ── Milestones ─────────────────────────────────────────────────────────────
 
     public List<MilestoneResponse> listMilestones(String userIdHeader, UUID projectId) {
@@ -427,6 +527,76 @@ public class ProjectModuleService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public MilestoneResponse createMilestone(String userIdHeader, UUID projectId, MilestoneUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        if (request.title() == null || request.title().isBlank()) {
+            throw new BadRequestException("Milestone title is required");
+        }
+
+        ProjectMilestoneEntity milestone = new ProjectMilestoneEntity();
+        milestone.setTenantId(tenantId);
+        milestone.setProjectId(projectId);
+        milestone.setTitle(request.title().trim());
+        milestone.setTargetDate(request.targetDate());
+        milestone.setStatus(normalizeMilestoneStatus(request.status()));
+        milestone.setSortOrder(nextMilestoneOrder(projectId, request.sortOrder()));
+        ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
+        return toMilestoneResponse(saved);
+    }
+
+    @Transactional
+    public MilestoneResponse updateMilestone(String userIdHeader, UUID projectId, UUID milestoneId, MilestoneUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectMilestoneEntity milestone = projectMilestoneRepository.findById(milestoneId)
+                .orElseThrow(() -> new NotFoundException("Milestone not found"));
+        if (!milestone.getProjectId().equals(projectId)) {
+            throw new BadRequestException("Milestone does not belong to this project");
+        }
+
+        if (request.title() != null) {
+            if (request.title().isBlank()) {
+                throw new BadRequestException("Milestone title cannot be blank");
+            }
+            milestone.setTitle(request.title().trim());
+        }
+        if (request.targetDate() != null) {
+            milestone.setTargetDate(request.targetDate());
+        }
+        if (request.status() != null && !request.status().isBlank()) {
+            milestone.setStatus(normalizeMilestoneStatus(request.status()));
+        }
+        if (request.sortOrder() != null) {
+            milestone.setSortOrder(request.sortOrder());
+        }
+
+        ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
+        return toMilestoneResponse(saved);
+    }
+
+    @Transactional
+    public void deleteMilestone(String userIdHeader, UUID projectId, UUID milestoneId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectMilestoneEntity milestone = projectMilestoneRepository.findById(milestoneId)
+                .orElseThrow(() -> new NotFoundException("Milestone not found"));
+        if (!milestone.getProjectId().equals(projectId)) {
+            throw new BadRequestException("Milestone does not belong to this project");
+        }
+        projectMilestoneRepository.delete(milestone);
+    }
+
     // ── Tasks ─────────────────────────────────────────────────────────────────
 
     public List<TaskResponse> listTasks(String userIdHeader, UUID projectId) {
@@ -438,6 +608,22 @@ public class ProjectModuleService {
         List<TaskEntity> tasks = taskRepository.findByTenantIdAndProjectIdOrderByCreatedAtDesc(tenantId, projectId);
         List<TaskResponse> responses = new ArrayList<>();
         for (TaskEntity task : tasks) {
+            responses.add(toTaskResponse(task, currentUser));
+        }
+        return responses;
+    }
+
+    public List<TaskResponse> listMyTasks(String userIdHeader) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+
+        List<TaskEntity> tasks = taskRepository.findAssignedToUser(tenantId, currentUser.getId());
+        List<TaskResponse> responses = new ArrayList<>();
+        for (TaskEntity task : tasks) {
+            if (!isManager(currentUser)
+                    && !projectMemberRepository.existsByIdProjectIdAndIdUserId(task.getProjectId(), currentUser.getId())) {
+                continue;
+            }
             responses.add(toTaskResponse(task, currentUser));
         }
         return responses;
@@ -511,6 +697,97 @@ public class ProjectModuleService {
             request.assigneeIds()
         );
         return toTaskResponse(saved, currentUser);
+    }
+
+    @Transactional
+    public TaskResponse updateTaskStage(String userIdHeader, UUID taskId, TaskStageUpdateRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        WorkflowStageEntity stage = workflowStageRepository.findById(request.stageId())
+                .orElseThrow(() -> new NotFoundException("Workflow stage not found"));
+        if (!stage.getProjectId().equals(task.getProjectId())) {
+            throw new BadRequestException("Stage does not belong to the task's project");
+        }
+
+        TaskStatus previousStatus = task.getStatus();
+        Integer previousProgress = task.getProgress();
+        UUID previousStageId = task.getStageId();
+
+        TaskStatus nextStatus = parseTaskStatus(request.status(), task.getStatus());
+        if (nextStatus == TaskStatus.IN_REVIEW && task.getReporterId() == null) {
+            throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
+        }
+
+        task.setStageId(request.stageId());
+        task.setStatus(nextStatus);
+        if (request.progress() != null) {
+            task.setProgress(request.progress());
+        }
+        task.setUpdatedBy(currentUser.getId());
+
+        TaskEntity saved = taskRepository.save(task);
+        if (!Objects.equals(previousStatus, saved.getStatus())) {
+            logActivity(tenantId, saved.getId(), currentUser.getId(), "status_changed", formatChange(previousStatus, saved.getStatus()));
+        }
+        if (!Objects.equals(previousProgress, saved.getProgress())) {
+            logActivity(tenantId, saved.getId(), currentUser.getId(), "progress_changed", formatChange(previousProgress, saved.getProgress()));
+        }
+        if (!Objects.equals(previousStageId, saved.getStageId())) {
+            logActivity(tenantId, saved.getId(), currentUser.getId(), "stage_changed", formatChange(previousStageId, saved.getStageId()));
+        }
+
+        return toTaskResponse(saved, currentUser);
+    }
+
+    @Transactional
+    public TaskResponse addDependency(String userIdHeader, UUID taskId, TaskDependencyRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        TaskEntity blocker = requireTask(request.blockedByTaskId(), tenantId);
+        if (!task.getProjectId().equals(blocker.getProjectId())) {
+            throw new BadRequestException("Tasks must belong to the same project");
+        }
+        if (taskId.equals(blocker.getId())) {
+            throw new BadRequestException("A task cannot depend on itself");
+        }
+        if (taskDependencyRepository.existsByIdTaskIdAndIdBlockedByTaskId(taskId, blocker.getId())) {
+            throw new BadRequestException("Dependency already exists");
+        }
+        if (hasDependencyPath(blocker.getId(), taskId)) {
+            throw new BadRequestException("Circular dependency detected");
+        }
+
+        TaskDependencyEntity dependency = new TaskDependencyEntity();
+        dependency.setId(new TaskDependencyId(taskId, blocker.getId()));
+        taskDependencyRepository.save(dependency);
+        logActivity(tenantId, taskId, currentUser.getId(), "dependency_added", blocker.getId().toString());
+        return toTaskResponse(task, currentUser);
+    }
+
+    @Transactional
+    public TaskResponse removeDependency(String userIdHeader, UUID taskId, UUID blockedByTaskId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        TaskEntity blocker = requireTask(blockedByTaskId, tenantId);
+        if (!task.getProjectId().equals(blocker.getProjectId())) {
+            throw new BadRequestException("Tasks must belong to the same project");
+        }
+        if (!taskDependencyRepository.existsByIdTaskIdAndIdBlockedByTaskId(taskId, blockedByTaskId)) {
+            throw new NotFoundException("Dependency not found");
+        }
+
+        taskDependencyRepository.deleteByIdTaskIdAndIdBlockedByTaskId(taskId, blockedByTaskId);
+        logActivity(tenantId, taskId, currentUser.getId(), "dependency_removed", blockedByTaskId.toString());
+        return toTaskResponse(task, currentUser);
     }
 
     @Transactional
@@ -1038,6 +1315,77 @@ public class ProjectModuleService {
 
     private String safeTags(String raw) {
         return normalizeTags(raw);
+    }
+
+    private String normalizeMilestoneStatus(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "UPCOMING";
+        }
+        return raw.trim().toUpperCase();
+    }
+
+    private int nextStageOrder(UUID projectId) {
+        return workflowStageRepository.findByProjectIdOrderByStageOrderAsc(projectId)
+                .stream()
+                .map(WorkflowStageEntity::getStageOrder)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+    }
+
+    private void resequenceStages(UUID projectId) {
+        List<WorkflowStageEntity> stages = workflowStageRepository.findByProjectIdOrderByStageOrderAsc(projectId);
+        int order = 1;
+        for (WorkflowStageEntity stage : stages) {
+            stage.setStageOrder(order++);
+        }
+        workflowStageRepository.saveAll(stages);
+    }
+
+    private int nextMilestoneOrder(UUID projectId, Integer requestedOrder) {
+        if (requestedOrder != null) {
+            return requestedOrder;
+        }
+        return projectMilestoneRepository.findByProjectIdOrderBySortOrderAsc(projectId)
+                .stream()
+                .map(ProjectMilestoneEntity::getSortOrder)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+    }
+
+    private WorkflowStageResponse toWorkflowStageResponse(WorkflowStageEntity stage) {
+        return new WorkflowStageResponse(stage.getId().toString(), stage.getName(), stage.getStageOrder());
+    }
+
+    private MilestoneResponse toMilestoneResponse(ProjectMilestoneEntity milestone) {
+        return new MilestoneResponse(
+                milestone.getId().toString(),
+                milestone.getTitle(),
+                milestone.getTargetDate(),
+                milestone.getStatus() != null ? milestone.getStatus().toLowerCase() : "upcoming"
+        );
+    }
+
+    private boolean hasDependencyPath(UUID fromTaskId, UUID targetTaskId) {
+        return hasDependencyPath(fromTaskId, targetTaskId, new HashSet<>());
+    }
+
+    private boolean hasDependencyPath(UUID currentTaskId, UUID targetTaskId, Set<UUID> visited) {
+        if (!visited.add(currentTaskId)) {
+            return false;
+        }
+        List<TaskDependencyEntity> deps = taskDependencyRepository.findByIdTaskId(currentTaskId);
+        for (TaskDependencyEntity dep : deps) {
+            UUID blockerId = dep.getId().getBlockedByTaskId();
+            if (blockerId.equals(targetTaskId)) {
+                return true;
+            }
+            if (hasDependencyPath(blockerId, targetTaskId, visited)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void logTaskChanges(
