@@ -20,6 +20,7 @@ import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
 import com.onfis.project.dto.TaskResponse;
 import com.onfis.project.dto.TaskReviewResponse;
+import com.onfis.project.dto.TaskSubtaskRequest;
 import com.onfis.project.dto.TaskSubtaskResponse;
 import com.onfis.project.dto.TaskUpsertRequest;
 import com.onfis.project.dto.UserSearchResponse;
@@ -33,13 +34,16 @@ import com.onfis.project.entity.ProjectMemberEntity;
 import com.onfis.project.entity.ProjectMemberId;
 import com.onfis.project.entity.TaskAssigneeEntity;
 import com.onfis.project.entity.TaskAssigneeId;
+import com.onfis.project.entity.TaskActivityEntity;
 import com.onfis.project.entity.TaskCommentEntity;
 import com.onfis.project.entity.TaskEntity;
+import com.onfis.project.entity.TaskSubtaskEntity;
 import com.onfis.project.entity.TaskReviewEntity;
 import com.onfis.project.exception.BadRequestException;
 import com.onfis.project.exception.ForbiddenException;
 import com.onfis.project.exception.NotFoundException;
 import com.onfis.project.repository.AppUserRepository;
+import com.onfis.project.repository.TaskDependencyRepository;
 import com.onfis.project.repository.ProjectFavoriteRepository;
 import com.onfis.project.repository.ProjectMemberRepository;
 import com.onfis.project.repository.ProjectMilestoneRepository;
@@ -52,6 +56,7 @@ import com.onfis.project.repository.TaskReviewRepository;
 import com.onfis.project.repository.TaskSubtaskRepository;
 import com.onfis.project.repository.WorkflowStageRepository;
 import com.onfis.shared.security.TenantContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -63,12 +68,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class ProjectModuleService {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final TenantContext tenantContext;
     private final AppUserRepository appUserRepository;
@@ -83,6 +91,7 @@ public class ProjectModuleService {
     private final TaskCommentRepository taskCommentRepository;
     private final TaskSubtaskRepository taskSubtaskRepository;
     private final TaskActivityRepository taskActivityRepository;
+    private final TaskDependencyRepository taskDependencyRepository;
 
     public ProjectModuleService(
             TenantContext tenantContext,
@@ -97,7 +106,8 @@ public class ProjectModuleService {
             ProjectFavoriteRepository projectFavoriteRepository,
             TaskCommentRepository taskCommentRepository,
             TaskSubtaskRepository taskSubtaskRepository,
-            TaskActivityRepository taskActivityRepository
+                TaskActivityRepository taskActivityRepository,
+                TaskDependencyRepository taskDependencyRepository
     ) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
@@ -112,6 +122,7 @@ public class ProjectModuleService {
         this.taskCommentRepository = taskCommentRepository;
         this.taskSubtaskRepository = taskSubtaskRepository;
         this.taskActivityRepository = taskActivityRepository;
+        this.taskDependencyRepository = taskDependencyRepository;
     }
 
     // ── Current user ──────────────────────────────────────────────────────────
@@ -216,13 +227,13 @@ public class ProjectModuleService {
                 managerName,
                 managerAvatar,
                 project.getCustomer(),
-                toFrontendProjectStatus(project.getStatus().name()),
-                project.getPriority().name().toLowerCase(),
+            toFrontendProjectStatus(safeProjectStatus(project).name()),
+            safeProjectPriority(project).name().toLowerCase(),
                 project.getProgress() == null ? 0 : project.getProgress(),
                 project.getStartDate(),
                 project.getEndDate(),
                 project.getDueDate(),
-                project.getTags(),
+            safeTags(project.getTags()),
                 asOffset(project.getCreatedAt()),
                 members,
                 canManageProject(currentUser, projectId),
@@ -464,6 +475,8 @@ public class ProjectModuleService {
 
         TaskEntity saved = taskRepository.save(task);
         saveAssignees(saved.getId(), request.assigneeIds());
+        logActivity(tenantId, saved.getId(), currentUser.getId(), "created", saved.getTitle());
+        logAssigneeChanges(tenantId, saved.getId(), currentUser.getId(), List.of(), request.assigneeIds());
         return toTaskResponse(saved, currentUser);
     }
 
@@ -474,9 +487,29 @@ public class ProjectModuleService {
         TaskEntity task = requireTask(taskId, tenantId);
         enforceTaskEdit(currentUser, task);
 
+        TaskStatus previousStatus = task.getStatus();
+        TaskPriority previousPriority = task.getPriority();
+        Integer previousProgress = task.getProgress();
+        LocalDate previousDueDate = task.getDueDate();
+        List<UUID> previousAssignees = taskAssigneeRepository.findByIdTaskId(taskId)
+            .stream()
+            .map(a -> a.getId().getUserId())
+            .toList();
+
         applyTaskUpsert(task, request, currentUser);
         TaskEntity saved = taskRepository.save(task);
         saveAssignees(saved.getId(), request.assigneeIds());
+        logTaskChanges(
+            tenantId,
+            saved,
+            currentUser.getId(),
+            previousStatus,
+            previousPriority,
+            previousProgress,
+            previousDueDate,
+            previousAssignees,
+            request.assigneeIds()
+        );
         return toTaskResponse(saved, currentUser);
     }
 
@@ -493,7 +526,8 @@ public class ProjectModuleService {
             throw new ForbiddenException("You do not have review permission for this task");
         }
 
-        ReviewAction action = ReviewAction.valueOf(request.action().toUpperCase());
+        // Guard enum parsing to avoid NPEs and invalid enum values from client input.
+        ReviewAction action = parseReviewAction(request.action());
         TaskReviewEntity review = new TaskReviewEntity();
         review.setTenantId(tenantId);
         review.setTaskId(taskId);
@@ -501,6 +535,8 @@ public class ProjectModuleService {
         review.setAction(action.name());
         review.setContent(request.content());
         taskReviewRepository.save(review);
+
+        TaskStatus previousStatus = task.getStatus();
 
         if (action == ReviewAction.APPROVED) {
             task.setStatus(TaskStatus.DONE);
@@ -511,6 +547,16 @@ public class ProjectModuleService {
 
         task.setUpdatedBy(currentUser.getId());
         taskRepository.save(task);
+        logActivity(tenantId, task.getId(), currentUser.getId(), "reviewed", action.name().toLowerCase());
+        if (previousStatus != task.getStatus()) {
+            logActivity(
+                    tenantId,
+                    task.getId(),
+                    currentUser.getId(),
+                    "status_changed",
+                    formatChange(previousStatus, task.getStatus())
+            );
+        }
         return toTaskResponse(task, currentUser);
     }
 
@@ -585,6 +631,68 @@ public class ProjectModuleService {
                 .collect(Collectors.toList());
     }
 
+    // ── Task subtasks ───────────────────────────────────────────────────────
+
+    @Transactional
+    public TaskSubtaskResponse createSubtask(String userIdHeader, UUID taskId, TaskSubtaskRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        if (request.title() == null || request.title().isBlank()) {
+            throw new BadRequestException("Subtask title is required");
+        }
+
+        TaskSubtaskEntity subtask = new TaskSubtaskEntity();
+        subtask.setTenantId(tenantId);
+        subtask.setTaskId(taskId);
+        subtask.setTitle(request.title().trim());
+        subtask.setCompleted(Boolean.TRUE.equals(request.completed()));
+        TaskSubtaskEntity saved = taskSubtaskRepository.save(subtask);
+
+        logActivity(tenantId, taskId, currentUser.getId(), "subtask_added", saved.getTitle());
+        return new TaskSubtaskResponse(saved.getId(), saved.getTitle(), Boolean.TRUE.equals(saved.getCompleted()));
+    }
+
+    @Transactional
+    public TaskSubtaskResponse updateSubtask(String userIdHeader, UUID taskId, UUID subtaskId, TaskSubtaskRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        TaskSubtaskEntity subtask = taskSubtaskRepository.findByIdAndTaskId(subtaskId, taskId)
+                .orElseThrow(() -> new NotFoundException("Subtask not found"));
+
+        if (request.title() != null) {
+            if (request.title().isBlank()) {
+                throw new BadRequestException("Subtask title cannot be blank");
+            }
+            subtask.setTitle(request.title().trim());
+        }
+        if (request.completed() != null) {
+            subtask.setCompleted(request.completed());
+        }
+
+        TaskSubtaskEntity saved = taskSubtaskRepository.save(subtask);
+        logActivity(tenantId, taskId, currentUser.getId(), "subtask_updated", saved.getTitle());
+        return new TaskSubtaskResponse(saved.getId(), saved.getTitle(), Boolean.TRUE.equals(saved.getCompleted()));
+    }
+
+    @Transactional
+    public void deleteSubtask(String userIdHeader, UUID taskId, UUID subtaskId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        TaskSubtaskEntity subtask = taskSubtaskRepository.findByIdAndTaskId(subtaskId, taskId)
+                .orElseThrow(() -> new NotFoundException("Subtask not found"));
+        taskSubtaskRepository.delete(subtask);
+        logActivity(tenantId, taskId, currentUser.getId(), "subtask_deleted", subtask.getTitle());
+    }
+
     // ── Users search ──────────────────────────────────────────────────────────
 
     public List<UserSearchResponse> searchUsers(String userIdHeader, String query) {
@@ -620,11 +728,11 @@ public class ProjectModuleService {
                 project.getDescription(),
                 project.getManagerId(),
                 project.getCustomer(),
-                toFrontendProjectStatus(project.getStatus().name()),
-                project.getPriority().name().toLowerCase(),
+            toFrontendProjectStatus(safeProjectStatus(project).name()),
+            safeProjectPriority(project).name().toLowerCase(),
                 project.getProgress() == null ? 0 : project.getProgress(),
                 project.getDueDate(),
-                project.getTags(),
+            safeTags(project.getTags()),
                 asOffset(project.getCreatedAt()),
                 assignees,
                 canManageProject(currentUser, project.getId())
@@ -664,20 +772,25 @@ public class ProjectModuleService {
         boolean canReview = isManager(currentUser)
                 || (task.getReporterId() != null && task.getReporterId().equals(currentUser.getId()));
 
+        List<UUID> blockedBy = taskDependencyRepository.findByIdTaskId(task.getId())
+            .stream()
+            .map(dep -> dep.getId().getBlockedByTaskId())
+            .toList();
+
         return new TaskResponse(
                 task.getId(),
                 task.getTitle(),
                 task.getDescription(),
-                task.getPriority().name().toLowerCase(),
-                task.getStatus().name(),
+            safeTaskPriority(task).name().toLowerCase(),
+            safeTaskStatus(task).name(),
                 task.getProgress() == null ? 0 : task.getProgress(),
                 task.getDueDate(),
                 assignees,
-                task.getTags(),
+            safeTags(task.getTags()),
                 task.getReporterId(),
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
-                List.of(),
+            blockedBy,
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),
@@ -762,21 +875,26 @@ public class ProjectModuleService {
                 })
                 .collect(Collectors.toList());
 
+        List<UUID> blockedBy = taskDependencyRepository.findByIdTaskId(task.getId())
+            .stream()
+            .map(dep -> dep.getId().getBlockedByTaskId())
+            .toList();
+
         return new TaskDetailResponse(
                 task.getId(),
                 task.getProjectId(),
                 task.getTitle(),
                 task.getDescription(),
-                task.getPriority().name().toLowerCase(),
-                task.getStatus().name(),
+            safeTaskPriority(task).name().toLowerCase(),
+            safeTaskStatus(task).name(),
                 task.getProgress() == null ? 0 : task.getProgress(),
                 task.getDueDate(),
                 assignees,
-                task.getTags(),
+            safeTags(task.getTags()),
                 task.getReporterId(),
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
-                List.of(),
+            blockedBy,
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),
@@ -792,18 +910,21 @@ public class ProjectModuleService {
     private void applyProjectUpsert(ProjectEntity project, ProjectUpsertRequest request) {
         project.setName(request.title());
         project.setDescription(request.description());
-        project.setStatus(ProjectStatus.valueOf(request.status().toUpperCase()));
-        project.setPriority(TaskPriority.valueOf(request.priority().toUpperCase()));
+        // Guard enum parsing to avoid NPEs and invalid enum values from client input.
+        project.setStatus(parseProjectStatus(request.status(), project.getStatus()));
+        project.setPriority(parseTaskPriority(request.priority(), project.getPriority()));
         project.setProgress(request.progress() == null ? 0 : request.progress());
         project.setStartDate(request.startDate());
         project.setDueDate(request.dueDate());
-        project.setTags(request.tags() == null || request.tags().isBlank() ? "[]" : request.tags());
+        // Normalize jsonb tags to a valid JSON string to prevent casting errors.
+        project.setTags(normalizeTags(request.tags()));
         project.setManagerId(request.managerId());
         project.setCustomer(request.customer());
     }
 
     private void applyTaskUpsert(TaskEntity task, TaskUpsertRequest request, AppUserEntity currentUser) {
-        TaskStatus nextStatus = TaskStatus.valueOf(request.status().toUpperCase());
+        // Guard enum parsing to avoid NPEs and invalid enum values from client input.
+        TaskStatus nextStatus = parseTaskStatus(request.status(), task.getStatus());
         if (nextStatus == TaskStatus.IN_REVIEW && request.reporterId() == null && task.getReporterId() == null) {
             throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
         }
@@ -811,7 +932,7 @@ public class ProjectModuleService {
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setStatus(nextStatus);
-        task.setPriority(TaskPriority.valueOf(request.priority().toUpperCase()));
+        task.setPriority(parseTaskPriority(request.priority(), task.getPriority()));
         task.setProgress(request.progress() == null ? 0 : request.progress());
         task.setDueDate(request.dueDate());
         if (request.reporterId() != null) {
@@ -821,7 +942,8 @@ public class ProjectModuleService {
         task.setActualEffort(request.actualEffort());
         task.setParentTaskId(request.parentTaskId());
         task.setStageId(request.stageId());
-        task.setTags(request.tags() == null || request.tags().isBlank() ? "[]" : request.tags());
+        // Normalize jsonb tags to a valid JSON string to prevent casting errors.
+        task.setTags(normalizeTags(request.tags()));
         task.setUpdatedBy(currentUser.getId());
     }
 
@@ -836,6 +958,153 @@ public class ProjectModuleService {
             entity.setAssignedAt(Instant.now());
             taskAssigneeRepository.save(entity);
         }
+    }
+
+    private ProjectStatus parseProjectStatus(String raw, ProjectStatus fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback == null ? ProjectStatus.PLANNING : fallback;
+        }
+        try {
+            return ProjectStatus.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid project status: " + raw);
+        }
+    }
+
+    private TaskStatus parseTaskStatus(String raw, TaskStatus fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback == null ? TaskStatus.TODO : fallback;
+        }
+        try {
+            return TaskStatus.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid task status: " + raw);
+        }
+    }
+
+    private TaskPriority parseTaskPriority(String raw, TaskPriority fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback == null ? TaskPriority.MEDIUM : fallback;
+        }
+        try {
+            return TaskPriority.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid task priority: " + raw);
+        }
+    }
+
+    private ReviewAction parseReviewAction(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new BadRequestException("Review action is required");
+        }
+        try {
+            return ReviewAction.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid review action: " + raw);
+        }
+    }
+
+    private ProjectStatus safeProjectStatus(ProjectEntity project) {
+        // Fall back to the DB default if the status is missing.
+        return project.getStatus() == null ? ProjectStatus.PLANNING : project.getStatus();
+    }
+
+    private TaskPriority safeProjectPriority(ProjectEntity project) {
+        // Fall back to the DB default if the priority is missing.
+        return project.getPriority() == null ? TaskPriority.MEDIUM : project.getPriority();
+    }
+
+    private TaskStatus safeTaskStatus(TaskEntity task) {
+        // Fall back to the DB default if the status is missing.
+        return task.getStatus() == null ? TaskStatus.TODO : task.getStatus();
+    }
+
+    private TaskPriority safeTaskPriority(TaskEntity task) {
+        // Fall back to the DB default if the priority is missing.
+        return task.getPriority() == null ? TaskPriority.MEDIUM : task.getPriority();
+    }
+
+    private String normalizeTags(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "[]";
+        }
+        try {
+            OBJECT_MAPPER.readTree(raw);
+            return raw;
+        } catch (Exception ex) {
+            return "[]";
+        }
+    }
+
+    private String safeTags(String raw) {
+        return normalizeTags(raw);
+    }
+
+    private void logTaskChanges(
+            UUID tenantId,
+            TaskEntity task,
+            UUID actorId,
+            TaskStatus previousStatus,
+            TaskPriority previousPriority,
+            Integer previousProgress,
+            LocalDate previousDueDate,
+            List<UUID> previousAssignees,
+            List<UUID> nextAssignees
+    ) {
+        if (!Objects.equals(previousStatus, task.getStatus())) {
+            logActivity(tenantId, task.getId(), actorId, "status_changed", formatChange(previousStatus, task.getStatus()));
+        }
+        if (!Objects.equals(previousPriority, task.getPriority())) {
+            logActivity(tenantId, task.getId(), actorId, "priority_changed", formatChange(previousPriority, task.getPriority()));
+        }
+        if (!Objects.equals(previousProgress, task.getProgress())) {
+            logActivity(tenantId, task.getId(), actorId, "progress_changed", formatChange(previousProgress, task.getProgress()));
+        }
+        if (!Objects.equals(previousDueDate, task.getDueDate())) {
+            logActivity(tenantId, task.getId(), actorId, "due_date_changed", formatChange(previousDueDate, task.getDueDate()));
+        }
+        logAssigneeChanges(tenantId, task.getId(), actorId, previousAssignees, nextAssignees);
+    }
+
+    private void logAssigneeChanges(
+            UUID tenantId,
+            UUID taskId,
+            UUID actorId,
+            List<UUID> previousAssignees,
+            List<UUID> nextAssignees
+    ) {
+        Set<UUID> before = new HashSet<>(previousAssignees == null ? List.of() : previousAssignees);
+        Set<UUID> after = new HashSet<>(nextAssignees == null ? List.of() : nextAssignees);
+
+        Set<UUID> added = new HashSet<>(after);
+        added.removeAll(before);
+        if (!added.isEmpty()) {
+            logActivity(tenantId, taskId, actorId, "assignees_added", joinIds(added));
+        }
+
+        Set<UUID> removed = new HashSet<>(before);
+        removed.removeAll(after);
+        if (!removed.isEmpty()) {
+            logActivity(tenantId, taskId, actorId, "assignees_removed", joinIds(removed));
+        }
+    }
+
+    private void logActivity(UUID tenantId, UUID taskId, UUID actorId, String action, String value) {
+        TaskActivityEntity activity = new TaskActivityEntity();
+        activity.setTenantId(tenantId);
+        activity.setTaskId(taskId);
+        activity.setActorId(actorId);
+        activity.setAction(action);
+        activity.setValue(value);
+        taskActivityRepository.save(activity);
+    }
+
+    private String joinIds(Set<UUID> ids) {
+        return ids.stream().map(UUID::toString).collect(Collectors.joining(", "));
+    }
+
+    private String formatChange(Object from, Object to) {
+        return String.valueOf(from) + " -> " + String.valueOf(to);
     }
 
     private ProjectEntity requireProject(UUID projectId, UUID tenantId) {

@@ -12,6 +12,8 @@ import com.onfis.project.dto.TaskCommentRequest;
 import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
 import com.onfis.project.dto.TaskResponse;
+import com.onfis.project.dto.TaskSubtaskRequest;
+import com.onfis.project.dto.TaskSubtaskResponse;
 import com.onfis.project.dto.TaskUpsertRequest;
 import com.onfis.project.dto.UserSearchResponse;
 import com.onfis.project.dto.WorkflowStageResponse;
@@ -252,6 +254,37 @@ public class ProjectController {
             @Valid @RequestBody TaskCommentRequest request
     ) {
         return ResponseEntity.ok(projectModuleService.addComment(userId, taskId, request));
+    }
+
+    // ── Task subtasks ───────────────────────────────────────────────────────
+
+    @PostMapping("/tasks/{taskId}/subtasks")
+    public ResponseEntity<TaskSubtaskResponse> createSubtask(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @RequestBody TaskSubtaskRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.createSubtask(userId, taskId, request));
+    }
+
+    @PutMapping("/tasks/{taskId}/subtasks/{subtaskId}")
+    public ResponseEntity<TaskSubtaskResponse> updateSubtask(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID subtaskId,
+            @RequestBody TaskSubtaskRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.updateSubtask(userId, taskId, subtaskId, request));
+    }
+
+    @DeleteMapping("/tasks/{taskId}/subtasks/{subtaskId}")
+    public ResponseEntity<Void> deleteSubtask(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID subtaskId
+    ) {
+        projectModuleService.deleteSubtask(userId, taskId, subtaskId);
+        return ResponseEntity.noContent().build();
     }
 
     // ── Review queue ──────────────────────────────────────────────────────────
