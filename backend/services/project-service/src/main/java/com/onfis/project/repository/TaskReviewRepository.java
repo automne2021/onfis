@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface TaskReviewRepository extends JpaRepository<TaskReviewEntity, UUID> {
 
     List<TaskReviewEntity> findByTenantIdAndTaskIdOrderByCreatedAtAsc(UUID tenantId, UUID taskId);
+
+    List<TaskReviewEntity> findByTenantIdAndTaskIdInOrderByCreatedAtAsc(UUID tenantId, List<UUID> taskIds);
 }

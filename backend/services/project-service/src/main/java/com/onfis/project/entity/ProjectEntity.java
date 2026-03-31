@@ -35,6 +35,9 @@ public class ProjectEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "slug")
+    private String slug;
+
     @Column(name = "description")
     private String description;
 

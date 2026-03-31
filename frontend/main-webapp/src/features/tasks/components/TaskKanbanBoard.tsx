@@ -8,9 +8,18 @@ interface TaskKanbanBoardProps {
   onAddStage?: () => void;
   onAddTask?: (stageId: string) => void;
   onTaskClick?: (task: Task) => void;
+  onDeleteStage?: (stageId: string) => void;
+  onRenameStage?: (stageId: string, currentName: string) => void;
 }
 
-export default function TaskKanbanBoard({ stages, onAddStage, onAddTask, onTaskClick }: TaskKanbanBoardProps) {
+export default function TaskKanbanBoard({
+  stages,
+  onAddStage,
+  onAddTask,
+  onTaskClick,
+  onDeleteStage,
+  onRenameStage,
+}: TaskKanbanBoardProps) {
   const [localStages, setLocalStages] = useState<Stage[]>(stages);
   const [newStageId, setNewStageId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,24 +50,30 @@ export default function TaskKanbanBoard({ stages, onAddStage, onAddTask, onTaskC
   };
 
   const handleDeleteStage = (stageId: string) => {
-    setLocalStages((prev) => prev.filter((s) => s.id !== stageId));
-    console.log("Delete stage:", stageId);
+    if (onDeleteStage) {
+      onDeleteStage(stageId);
+    } else {
+      setLocalStages((prev) => prev.filter((s) => s.id !== stageId));
+    }
   };
 
   const handleClearTasks = (stageId: string) => {
     setLocalStages((prev) =>
       prev.map((s) => (s.id === stageId ? { ...s, tasks: [] } : s))
     );
-    console.log("Clear tasks in stage:", stageId);
   };
 
   const handleRenameStage = (stageId: string) => {
     const stage = localStages.find((s) => s.id === stageId);
-    const newName = prompt("Rename stage:", stage?.title || "");
-    if (newName && newName.trim()) {
-      setLocalStages((prev) =>
-        prev.map((s) => (s.id === stageId ? { ...s, title: newName.trim() } : s))
-      );
+    if (onRenameStage) {
+      onRenameStage(stageId, stage?.title || "");
+    } else {
+      const newName = prompt("Rename stage:", stage?.title || "");
+      if (newName && newName.trim()) {
+        setLocalStages((prev) =>
+          prev.map((s) => (s.id === stageId ? { ...s, title: newName.trim() } : s))
+        );
+      }
     }
   };
 

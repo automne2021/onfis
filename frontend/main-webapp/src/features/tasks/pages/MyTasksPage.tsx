@@ -5,8 +5,7 @@ import { STATUS_CONFIG } from "../workflowUtils";
 import { TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
 import type { Task } from "../types";
-import { listProjects } from "../../../services/projectService";
-import { listProjectTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
+import { listMyTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
 
 type Tab = "assigned" | "created" | "reviewing";
@@ -148,17 +147,13 @@ export default function MyTasksPage() {
       try {
         setLoading(true);
         setError(null);
-        const projects = await listProjects();
-        const taskChunks = await Promise.all(
-          projects.map(async (project) => {
-            const tasks = await listProjectTasks(project.id);
-            return tasks.map((task) => ({
-              task: toTaskView(task),
-              projectLabel: project.title,
-            }));
-          }),
+        const tasks = await listMyTasks();
+        setAllTasks(
+          tasks.map((task) => ({
+            task: toTaskView(task),
+            projectLabel: task.projectId ? `Project ${task.projectId.slice(0, 6)}` : "Unknown",
+          })),
         );
-        setAllTasks(taskChunks.flat());
       } catch {
         setError("Failed to load tasks from server.");
       } finally {

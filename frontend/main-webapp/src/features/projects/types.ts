@@ -17,6 +17,7 @@ export interface Assignee {
 
 export interface Project {
   id: string;
+  slug: string;
   title: string;
   description: string;
   tags: Tag[];

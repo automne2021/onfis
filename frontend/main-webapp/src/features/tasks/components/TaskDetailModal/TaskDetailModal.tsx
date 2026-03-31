@@ -18,6 +18,7 @@ import { useRole } from "../../../../hooks/useRole";
 import { RichTextEditor } from "../../../../components/common";
 import ReviewPanel from "../ReviewPanel";
 import type { ReviewComment } from "../../types";
+import { addTaskComment } from "../../../../services/taskService";
 
 // Mock assignee options - would come from API in real app
 const mockAssignees: Assignee[] = [
@@ -277,15 +278,6 @@ export default function TaskDetailModal({
         ...task,
         status: "IN_PROGRESS" as const,
         reviews: [...taskReviews, newReview],
-        comments: [
-          ...task.comments,
-          {
-            id: `cmt-${Date.now()}`,
-            user: { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
-            content: `[REJECTION] ${reason}`,
-            timestamp: "Just now",
-          },
-        ],
       };
       setTaskReviews((prev) => [...prev, newReview]);
       onSave(updated);
@@ -372,6 +364,7 @@ export default function TaskDetailModal({
 
                 {/* Sub-tasks Section */}
                 <SubTaskList
+                  taskId={task.id}
                   subTasks={task.subTasks}
                   onChange={(subTasks) => setTask({ ...task, subTasks })}
                 />
@@ -435,16 +428,24 @@ export default function TaskDetailModal({
                   activities={task.activities}
                   comments={task.comments}
                   onAddComment={(content) => {
-                    const newComment = {
-                      id: `cmt-${Date.now()}`,
-                      user: { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
-                      content,
-                      timestamp: "Just now",
+                    const run = async () => {
+                      try {
+                        const saved = await addTaskComment(task.id, content);
+                        const newComment = {
+                          id: saved.id,
+                          user: { id: saved.authorId, name: saved.authorName, avatar: saved.authorAvatar },
+                          content: saved.content,
+                          timestamp: saved.createdAt,
+                        };
+                        setTask((prev) => ({
+                          ...prev,
+                          comments: [...prev.comments, newComment],
+                        }));
+                      } catch {
+                        showToast("Unable to add comment", "error");
+                      }
                     };
-                    setTask({
-                      ...task,
-                      comments: [...task.comments, newComment],
-                    });
+                    void run();
                   }}
                 />
               </div>

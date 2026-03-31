@@ -11,6 +11,8 @@ public interface TaskDependencyRepository extends JpaRepository<TaskDependencyEn
 
     List<TaskDependencyEntity> findByIdTaskId(UUID taskId);
 
+    List<TaskDependencyEntity> findByIdTaskIdIn(List<UUID> taskIds);
+
     boolean existsByIdTaskIdAndIdBlockedByTaskId(UUID taskId, UUID blockedByTaskId);
 
     void deleteByIdTaskIdAndIdBlockedByTaskId(UUID taskId, UUID blockedByTaskId);

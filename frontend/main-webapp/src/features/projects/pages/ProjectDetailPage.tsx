@@ -1,12 +1,13 @@
 import { useEffect, useState, type ReactElement } from "react";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
 import { ArrowRightAltOutlined } from '@mui/icons-material';
 import { useRole } from "../../../hooks/useRole";
 import { useTenantPath } from "../../../hooks/useTenantPath";
-import { getProjectDetail, toggleProjectFavorite, type ApiProjectDetail, type ApiMilestone, type ApiUserSummary } from "../../../services/projectService";
+import { getProjectDetail, toggleProjectFavorite, deleteProject, updateProject, type ApiProjectDetail, type ApiMilestone, type ApiUserSummary } from "../../../services/projectService";
 import type { ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
 // Types for local use
 type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed";
@@ -189,7 +190,8 @@ const MilestoneItem = ({ milestone }: { milestone: ApiMilestone }) => {
 
 
 export default function ProjectDetailPage() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId: projectIdentifier } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
   const { withTenant } = useTenantPath();
   const location = useLocation();
   const { isManager } = useRole();
@@ -199,13 +201,14 @@ export default function ProjectDetailPage() {
   const [isStarred, setIsStarred] = useState(false);
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      if (!projectId) return;
+      if (!projectIdentifier) return;
       try {
         setLoading(true);
-        const detail = await getProjectDetail(projectId);
+        const detail = await getProjectDetail(projectIdentifier);
         setProject(detail);
         setStatus(detail.status);
         setIsStarred(detail.isStarred);
@@ -216,19 +219,56 @@ export default function ProjectDetailPage() {
       }
     };
     void load();
-  }, [projectId, showToast]);
+  }, [projectIdentifier, showToast]);
 
   const handleToggleStar = async () => {
-    if (!projectId) return;
+    if (!projectIdentifier) return;
     try {
-      const res = await toggleProjectFavorite(projectId);
+      const res = await toggleProjectFavorite(projectIdentifier);
       setIsStarred(res.isStarred);
     } catch {
       showToast('Failed to update favorite', 'error');
     }
   };
 
-  const id = projectId ?? '';
+  const handleStatusChange = async (newStatus: ProjectStatus) => {
+    if (!projectIdentifier || !project) return;
+    const prevStatus = status;
+    setStatus(newStatus);
+    setIsStatusOpen(false);
+    try {
+      await updateProject(projectIdentifier, {
+        title: project.title,
+        description: project.description,
+        status: newStatus.toUpperCase() as 'PLANNING' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED',
+        priority: project.priority.toUpperCase() as 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW',
+        progress: project.progress,
+        startDate: project.startDate ?? undefined,
+        dueDate: project.dueDate ?? undefined,
+        tags: project.tags,
+        managerId: project.managerId ?? undefined,
+        customer: project.customer ?? undefined,
+      });
+      showToast('Project status updated', 'success');
+    } catch {
+      setStatus(prevStatus);
+      showToast('Failed to update status', 'error');
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!projectIdentifier) return;
+    setShowDeleteConfirm(false);
+    try {
+      await deleteProject(projectIdentifier);
+      showToast('Project deleted', 'success');
+      navigate(withTenant('/projects'));
+    } catch {
+      showToast('Failed to delete project', 'error');
+    }
+  };
+
+  const id = project?.slug || projectIdentifier || '';
 
   const tabs = [
     { to: withTenant(`/projects/${id}`), label: "Overview", icon: "dashboard" },
@@ -311,12 +351,22 @@ export default function ProjectDetailPage() {
               <StarIcon filled={isStarred} />
             </button>
             <Link
-              to={withTenant(`/projects/${projectId ?? ''}/tasks`)}
+              to={withTenant(`/projects/${id}/tasks`)}
               className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               <KanbanIcon />
               Manage Tasks
             </Link>
+            {isManager && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+              >
+                <span className="material-symbols-rounded" style={{ fontSize: 14 }}>delete</span>
+                Delete
+              </button>
+            )}
           </div>
 
           {/* Progress Section */}
@@ -413,8 +463,7 @@ export default function ProjectDetailPage() {
                     className={`text-left px-2 py-1 text-xs hover:bg-neutral-50 rounded transition-colors ${status === option.value ? 'font-bold' : ''
                       }`}
                     onClick={() => {
-                      setStatus(option.value);
-                      setIsStatusOpen(false);
+                      void handleStatusChange(option.value);
                     }}
                   >
                     <StatusBadge status={option.value} />
@@ -459,7 +508,7 @@ export default function ProjectDetailPage() {
             Recent Tasks
           </h2>
           <Link
-            to={withTenant(`/projects/${projectId ?? ""}/tasks`)}
+            to={withTenant(`/projects/${id}/tasks`)}
             className="body-4-regular text-primary hover:underline inline-flex items-center gap-1"
           >
             View All Tasks
@@ -486,6 +535,22 @@ export default function ProjectDetailPage() {
           {project.description || <span className="text-neutral-400">No description provided.</span>}
         </p>
       </div>
+
+      {/* Delete project confirmation dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Project"
+        message={
+          <>
+            Are you sure you want to delete <strong>{project.title}</strong>? All tasks, milestones, and associated data will be permanently removed. This action cannot be undone.
+          </>
+        }
+        confirmLabel="Delete Project"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleDeleteProject()}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record ProjectResponse(
         UUID id,
+        String slug,
         String title,
         String description,
         UUID managerId,

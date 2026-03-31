@@ -8,7 +8,7 @@ import { ProjectTimelineView } from "../components/timeline";
 import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
 import type { ProjectFormData } from "../components/CreateProjectModal";
-import { createProject, getCurrentProjectUser, listProjects } from "../../../services/projectService";
+import { createProject, getCurrentProjectUser, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useToast } from "../../../contexts/useToast";
 
@@ -25,6 +25,7 @@ const parseTagJson = (raw: string): Project["tags"] => {
 
 const toProjectViewModel = (apiProject: Awaited<ReturnType<typeof listProjects>>[number]): Project => ({
   id: apiProject.id,
+  slug: apiProject.slug,
   title: apiProject.title,
   description: apiProject.description || "",
   tags: parseTagJson(apiProject.tags || "[]"),
@@ -40,6 +41,7 @@ export default function ProjectsPage() {
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [managerOptions, setManagerOptions] = useState<ApiUserSummary[]>([]);
   const [canCreateProject, setCanCreateProject] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +54,14 @@ export default function ProjectsPage() {
       try {
         setLoading(true);
         setError(null);
-        const [apiProjects, me] = await Promise.all([listProjects(), getCurrentProjectUser()]);
+        const [apiProjects, me, users] = await Promise.all([
+          listProjects(),
+          getCurrentProjectUser(),
+          searchProjectUsers(""),
+        ]);
         setProjects(apiProjects.map(toProjectViewModel));
         setCanCreateProject(me.permissions.includes("PROJECT_CREATE"));
+        setManagerOptions(users);
       } catch {
         setError("Failed to load projects.");
       } finally {
@@ -85,7 +92,7 @@ export default function ProjectsPage() {
   };
 
   const handleProjectClick = (project: Project) => {
-    navigate(withTenant(`/projects/${project.id}/tasks`));
+    navigate(withTenant(`/projects/${project.slug}/tasks`));
   };
 
   const handleCreateProject = async (data: ProjectFormData) => {
@@ -145,6 +152,7 @@ export default function ProjectsPage() {
       <CreateProjectModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        managers={managerOptions}
         onSubmit={(data) => {
           void handleCreateProject(data);
           setIsCreateModalOpen(false);

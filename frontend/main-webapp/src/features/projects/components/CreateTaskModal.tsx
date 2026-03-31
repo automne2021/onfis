@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Modal from "../../../components/common/Modal";
 import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
@@ -14,6 +14,9 @@ interface SubTask {
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
+  users?: Array<{ id: string; name: string; avatar?: string }>;
+  projects?: Array<{ id: string; name: string }>;
+  defaultProjectId?: string;
   onSubmit?: (data: TaskFormData) => void;
 }
 
@@ -30,24 +33,6 @@ export interface TaskFormData {
   subtasks: SubTask[];
 }
 
-const ASSIGNEES = [
-  {
-    id: "1",
-    name: "Michael Chen",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAJPWaqMq7LGHKEaa9oKc4MnTiZB6RSJDVsj0F_yWXL1I69pVXeOfZACSeFqEeqm_WUtAoERFRXc1-mt0NmyZT2cgZv1Zt_MkYX4W9MAfwdoCLWu_mRNuA1RedxiOIWdaE2EEiYZijqmC7hLMs-9lB0s2UXUSfqdUO7qzpbCIP6C9I1OpPmfYs_ltzSdT2y2GQADxo2xnr7brYA0strhsvaR7ljwV-WkJco2O15Ms4wEeOenhMnE-pkjxkIZu2mvlgbC1kfBibTk5Y",
-    initials: "MC",
-  },
-  { id: "2", name: "Sarah Jenkins", initials: "SJ" },
-  { id: "3", name: "Amara Okafor", initials: "AO" },
-];
-
-const PROJECTS = [
-  { id: "1", name: "ERP Migration" },
-  { id: "2", name: "Mobile App Refresh" },
-  { id: "3", name: "Q4 Marketing" },
-];
-
 const PRIORITIES = [
   { value: "low" as const, label: "Low Priority", color: "bg-green-500" },
   { value: "medium" as const, label: "Medium Priority", color: "bg-yellow-500" },
@@ -58,6 +43,9 @@ const PRIORITIES = [
 export default function CreateTaskModal({
   isOpen,
   onClose,
+  users = [],
+  projects = [],
+  defaultProjectId,
   onSubmit,
 }: CreateTaskModalProps) {
   const [formData, setFormData] = useState<TaskFormData>({
@@ -73,13 +61,31 @@ export default function CreateTaskModal({
     subtasks: [{ id: "1", name: "", completed: false }],
   });
   const [showReporterDropdown, setShowReporterDropdown] = useState(false);
-  const selectedReporter = ASSIGNEES.find((a) => a.id === formData.reporterId);
+  const selectedReporter = users.find((a) => a.id === formData.reporterId);
   const [errors, setErrors] = useState<{ name?: string }>({});
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
 
-  const selectedAssignee = ASSIGNEES.find((a) => a.id === formData.assigneeId);
+  const selectedAssignee = users.find((a) => a.id === formData.assigneeId);
   const selectedPriority = PRIORITIES.find((p) => p.value === formData.priority);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      projectId: defaultProjectId || projects[0]?.id || "",
+    }));
+  }, [defaultProjectId, isOpen, projects]);
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, name: e.target.value }));
@@ -243,7 +249,7 @@ export default function CreateTaskModal({
                       />
                     ) : (
                       <div className="size-6 rounded-full bg-neutral-300 text-[10px] flex items-center justify-center text-neutral-500 font-bold">
-                        {selectedAssignee.initials}
+                        {getInitials(selectedAssignee.name)}
                       </div>
                     )}
                     <span className="text-neutral-900 truncate">
@@ -261,7 +267,7 @@ export default function CreateTaskModal({
               {/* Dropdown */}
               {showAssigneeDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-20">
-                  {ASSIGNEES.map((assignee) => (
+                  {users.map((assignee) => (
                     <button
                       key={assignee.id}
                       type="button"
@@ -275,7 +281,7 @@ export default function CreateTaskModal({
                       className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-100"
                     >
                       <div className="size-6 rounded-full bg-neutral-300 text-[10px] flex items-center justify-center text-neutral-500 font-bold">
-                        {assignee.initials}
+                        {getInitials(assignee.name)}
                       </div>
                       <span>{assignee.name}</span>
                     </button>
@@ -350,7 +356,7 @@ export default function CreateTaskModal({
                 <option disabled value="">
                   Select a project...
                 </option>
-                {PROJECTS.map((project) => (
+                {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
@@ -379,7 +385,7 @@ export default function CreateTaskModal({
                 {selectedReporter ? (
                   <>
                     <div className="size-6 rounded-full bg-amber-400 text-[10px] flex items-center justify-center text-white font-bold">
-                      {selectedReporter.initials}
+                      {getInitials(selectedReporter.name)}
                     </div>
                     <span className="text-neutral-900 truncate">
                       {selectedReporter.name}
@@ -394,7 +400,7 @@ export default function CreateTaskModal({
               </div>
               {showReporterDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-20">
-                  {ASSIGNEES.map((assignee) => (
+                  {users.map((assignee) => (
                     <button
                       key={assignee.id}
                       type="button"
@@ -405,7 +411,7 @@ export default function CreateTaskModal({
                       className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-100"
                     >
                       <div className="size-6 rounded-full bg-amber-400 text-[10px] flex items-center justify-center text-white font-bold">
-                        {assignee.initials}
+                        {getInitials(assignee.name)}
                       </div>
                       <span>{assignee.name}</span>
                     </button>

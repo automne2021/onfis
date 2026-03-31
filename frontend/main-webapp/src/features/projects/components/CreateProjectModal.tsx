@@ -14,6 +14,7 @@ interface Milestone {
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  managers?: Array<{ id: string; name: string }>;
   onSubmit?: (data: ProjectFormData) => void;
 }
 
@@ -26,15 +27,10 @@ export interface ProjectFormData {
   milestones: Milestone[];
 }
 
-const MANAGERS = [
-  { id: "1", name: "Sarah Jenkins" },
-  { id: "2", name: "Michael Chen" },
-  { id: "3", name: "Amara Okafor" },
-];
-
 export default function CreateProjectModal({
   isOpen,
   onClose,
+  managers = [],
   onSubmit,
 }: CreateProjectModalProps) {
   const [formData, setFormData] = useState<ProjectFormData>({
@@ -195,12 +191,13 @@ export default function CreateProjectModal({
             <select
               value={formData.managerId}
               onChange={handleManagerChange}
+              disabled={managers.length === 0}
               className="w-full appearance-none pl-3 pr-10 py-2 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 text-sm cursor-pointer"
             >
               <option disabled value="">
-                Select a manager...
+                {managers.length === 0 ? "No users available" : "Select a manager..."}
               </option>
-              {MANAGERS.map((manager) => (
+              {managers.map((manager) => (
                 <option key={manager.id} value={manager.id}>
                   {manager.name}
                 </option>

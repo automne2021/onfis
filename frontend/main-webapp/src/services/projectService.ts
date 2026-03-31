@@ -15,6 +15,7 @@ export interface ApiMilestone {
 
 export interface ApiProjectDetail {
   id: string;
+  slug: string;
   title: string;
   description: string;
   status: 'planning' | 'in_progress' | 'on_hold' | 'completed';
@@ -47,6 +48,7 @@ export interface ApiCurrentUser {
 
 export interface ApiProject {
   id: string;
+  slug: string;
   title: string;
   description: string;
   status: 'planning' | 'in_progress' | 'on_hold' | 'completed';
@@ -85,10 +87,46 @@ export interface UpsertProjectMemberPayload {
   role: 'LEAD' | 'DEVELOPER' | 'DESIGNER' | 'QA' | 'ANALYST' | 'MEMBER';
 }
 
+// ── Workflow Stages ─────────────────────────────────────────────────────
+
+export interface ApiWorkflowStage {
+  id: string;
+  name: string;
+  stageOrder: number;
+}
+
+export interface WorkflowStagePayload {
+  name: string;
+}
+
+export interface WorkflowStageReorderPayload {
+  orderedStageIds: string[];
+}
+
+// ── Milestones ──────────────────────────────────────────────────────────
+
+export interface MilestonePayload {
+  title: string;
+  targetDate?: string;
+  status: 'completed' | 'upcoming' | 'at_risk' | 'in_progress';
+  sortOrder?: number;
+}
+
+// ── Current user ────────────────────────────────────────────────────────
+
 export async function getCurrentProjectUser(): Promise<ApiCurrentUser> {
   const { data } = await api.get<ApiCurrentUser>('/projects/me');
   return data;
 }
+
+// ── User search ─────────────────────────────────────────────────────────
+
+export async function searchProjectUsers(query: string): Promise<ApiUserSummary[]> {
+  const { data } = await api.get<ApiUserSummary[]>('/projects/users/search', { params: { q: query } });
+  return data;
+}
+
+// ── Projects ────────────────────────────────────────────────────────────
 
 export async function listProjects(): Promise<ApiProject[]> {
   const { data } = await api.get<ApiProject[]>('/projects');
@@ -99,6 +137,32 @@ export async function createProject(payload: CreateProjectPayload): Promise<ApiP
   const { data } = await api.post<ApiProject>('/projects', payload);
   return data;
 }
+
+export async function getProject(projectId: string): Promise<ApiProject> {
+  const { data } = await api.get<ApiProject>(`/projects/${projectId}`);
+  return data;
+}
+
+export async function getProjectDetail(projectId: string): Promise<ApiProjectDetail> {
+  const { data } = await api.get<ApiProjectDetail>(`/projects/${projectId}/detail`);
+  return data;
+}
+
+export async function updateProject(projectId: string, payload: CreateProjectPayload): Promise<ApiProject> {
+  const { data } = await api.put<ApiProject>(`/projects/${projectId}`, payload);
+  return data;
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}`);
+}
+
+export async function toggleProjectFavorite(projectId: string): Promise<{ isStarred: boolean }> {
+  const { data } = await api.post<{ isStarred: boolean }>(`/projects/${projectId}/favorite`);
+  return data;
+}
+
+// ── Members ─────────────────────────────────────────────────────────────
 
 export async function getProjectMembers(projectId: string): Promise<ApiProjectMember[]> {
   const { data } = await api.get<ApiProjectMember[]>(`/projects/${projectId}/members`);
@@ -123,27 +187,75 @@ export async function removeProjectMember(projectId: string, memberId: string): 
   await api.delete(`/projects/${projectId}/members/${memberId}`);
 }
 
-export async function getProjectDetail(projectId: string): Promise<ApiProjectDetail> {
-  const { data } = await api.get<ApiProjectDetail>(`/projects/${projectId}/detail`);
+// ── Workflow Stages ─────────────────────────────────────────────────────
+
+export async function getProjectStages(projectId: string): Promise<ApiWorkflowStage[]> {
+  const { data } = await api.get<ApiWorkflowStage[]>(`/projects/${projectId}/stages`);
   return data;
 }
 
-export async function toggleProjectFavorite(projectId: string): Promise<{ isStarred: boolean }> {
-  const { data } = await api.post<{ isStarred: boolean }>(`/projects/${projectId}/favorite`);
+export async function createProjectStage(
+  projectId: string,
+  payload: WorkflowStagePayload,
+): Promise<ApiWorkflowStage> {
+  const { data } = await api.post<ApiWorkflowStage>(`/projects/${projectId}/stages`, payload);
   return data;
 }
 
-export async function getProjectStages(projectId: string): Promise<{ id: string; name: string; stageOrder: number }[]> {
-  const { data } = await api.get<{ id: string; name: string; stageOrder: number }[]>(`/projects/${projectId}/stages`);
+export async function updateProjectStage(
+  projectId: string,
+  stageId: string,
+  payload: WorkflowStagePayload,
+): Promise<ApiWorkflowStage> {
+  const { data } = await api.put<ApiWorkflowStage>(
+    `/projects/${projectId}/stages/${stageId}`,
+    payload,
+  );
   return data;
 }
+
+export async function deleteProjectStage(projectId: string, stageId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/stages/${stageId}`);
+}
+
+export async function reorderProjectStages(
+  projectId: string,
+  payload: WorkflowStageReorderPayload,
+): Promise<ApiWorkflowStage[]> {
+  const { data } = await api.put<ApiWorkflowStage[]>(
+    `/projects/${projectId}/stages/reorder`,
+    payload,
+  );
+  return data;
+}
+
+// ── Milestones ──────────────────────────────────────────────────────────
 
 export async function getProjectMilestones(projectId: string): Promise<ApiMilestone[]> {
   const { data } = await api.get<ApiMilestone[]>(`/projects/${projectId}/milestones`);
   return data;
 }
 
-export async function searchProjectUsers(query: string): Promise<ApiUserSummary[]> {
-  const { data } = await api.get<ApiUserSummary[]>('/projects/users/search', { params: { q: query } });
+export async function createMilestone(
+  projectId: string,
+  payload: MilestonePayload,
+): Promise<ApiMilestone> {
+  const { data } = await api.post<ApiMilestone>(`/projects/${projectId}/milestones`, payload);
   return data;
+}
+
+export async function updateMilestone(
+  projectId: string,
+  milestoneId: string,
+  payload: MilestonePayload,
+): Promise<ApiMilestone> {
+  const { data } = await api.put<ApiMilestone>(
+    `/projects/${projectId}/milestones/${milestoneId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function deleteMilestone(projectId: string, milestoneId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/milestones/${milestoneId}`);
 }

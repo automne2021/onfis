@@ -6,9 +6,10 @@ import type { TaskDetail } from "../components";
 import CreateTaskModal from "../../projects/components/CreateTaskModal";
 import type { Stage, ViewMode, Task } from "../types";
 import type { TaskFormData } from "../../projects/components/CreateTaskModal";
-import { getCurrentProjectUser } from "../../../services/projectService";
-import { createTask, listProjectTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
+import { getCurrentProjectUser, createProjectStage, updateProjectStage, deleteProjectStage, getProjectMembers, getProject } from "../../../services/projectService";
+import { createTask, listProjectTasks, reviewTask, updateTask, getTaskDetail, type ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
+import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
 const STAGE_BY_STATUS: Record<Task["status"], string> = {
   TODO: "To Do",
@@ -66,32 +67,40 @@ const toApiPriority = (priority: Task["priority"]): "URGENT" | "HIGH" | "MEDIUM"
 };
 
 export default function ProjectTasksPage() {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId: projectIdentifier } = useParams<{ projectId: string }>();
   const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [stages, setStages] = useState<Stage[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [projectName, setProjectName] = useState("Project Tasks");
+  const [taskUsers, setTaskUsers] = useState<Array<{ id: string; name: string; avatar?: string }>>([]);
 
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
-
-  const projectName = "Project Tasks";
+  const [stageDeleteId, setStageDeleteId] = useState<string | null>(null);
 
   const allTasks = useMemo(() => stages.flatMap((stage) => stage.tasks), [stages]);
 
   useEffect(() => {
     const load = async () => {
-      if (!projectId) return;
+      if (!projectIdentifier) return;
       try {
         setLoading(true);
-        const [tasks, me] = await Promise.all([listProjectTasks(projectId), getCurrentProjectUser()]);
+        const [tasks, me, members, project] = await Promise.all([
+          listProjectTasks(projectIdentifier),
+          getCurrentProjectUser(),
+          getProjectMembers(projectIdentifier),
+          getProject(projectIdentifier),
+        ]);
         const mappedTasks = tasks.map(toTaskView);
         setStages(toStageList(mappedTasks));
         setCanManage(me.permissions.includes("PROJECT_MANAGE"));
+        setTaskUsers(members.map((member) => ({ id: member.id, name: member.name, avatar: member.avatar })));
+        setProjectName(project.title || "Project Tasks");
       } catch {
         showToast("Failed to load tasks", "error");
       } finally {
@@ -100,41 +109,54 @@ export default function ProjectTasksPage() {
     };
 
     void load();
-  }, [projectId, showToast]);
-
-  // Convert basic Task to TaskDetail for modal
-  const convertToTaskDetail = (task: Task): TaskDetail => ({
-    ...task,
-    subTasks: [
-      { id: "st-1", title: "Research available OAuth 2.0 libraries for Node.js", completed: true },
-      { id: "st-2", title: "Configure API credentials in Google Cloud Console", completed: false },
-      { id: "st-3", title: "Implement callback route handler", completed: false },
-    ],
-    activities: [
-      {
-        id: "act-1",
-        user: "Sarah Jenkins",
-        action: "changed status to",
-        value: task.status,
-        timestamp: "10 mins ago",
-      },
-    ],
-    comments: [
-      {
-        id: "cmt-1",
-        user: { id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" },
-        content: "Let's prioritize the Google SSO implementation first.",
-        timestamp: "2 hours ago",
-      },
-    ],
-    createdAt: "Oct 20, 2023 9:41 AM",
-    updatedAt: "4 hours ago",
-    key: "DEV-162",
-  });
+  }, [projectIdentifier, showToast]);
 
   const handleTaskClick = (task: Task) => {
-    setSelectedTask(convertToTaskDetail(task));
-    setIsModalOpen(true);
+    const loadDetail = async () => {
+      try {
+        const detail = await getTaskDetail(task.id);
+        const taskDetail: TaskDetail = {
+          ...task,
+          subTasks: (detail.subtasks || []).map((st) => ({
+            id: st.id,
+            title: st.title,
+            completed: st.completed,
+          })),
+          activities: (detail.activities || []).map((a) => ({
+            id: a.id,
+            user: a.actorName,
+            action: a.action,
+            value: a.value ?? undefined,
+            timestamp: a.createdAt,
+          })),
+          comments: (detail.comments || []).map((c) => ({
+            id: c.id,
+            user: { id: c.authorId, name: c.authorName, avatar: c.authorAvatar },
+            content: c.content,
+            timestamp: c.createdAt,
+          })),
+          createdAt: "",
+          updatedAt: "",
+          key: detail.key || `TASK-${task.id.slice(0, 6)}`,
+        };
+        setSelectedTask(taskDetail);
+        setIsModalOpen(true);
+      } catch {
+        // Fallback: open modal with minimal data
+        setSelectedTask({
+          ...task,
+          subTasks: [],
+          activities: [],
+          comments: [],
+          createdAt: "",
+          updatedAt: "",
+          key: `TASK-${task.id.slice(0, 6)}`,
+        });
+        setIsModalOpen(true);
+        showToast("Could not load full task details", "warning");
+      }
+    };
+    void loadDetail();
   };
 
   const handleTaskSave = (updatedTask: TaskDetail) => {
@@ -164,8 +186,8 @@ export default function ProjectTasksPage() {
           }
         }
 
-        if (projectId) {
-          const refreshed = await listProjectTasks(projectId);
+        if (projectIdentifier) {
+          const refreshed = await listProjectTasks(projectIdentifier);
           setStages(toStageList(refreshed.map(toTaskView)));
         }
       } catch {
@@ -176,8 +198,43 @@ export default function ProjectTasksPage() {
     void run();
   };
 
-  const handleAddStage = () => {
-    showToast("Workflow stage management will be enabled in next API iteration", "info");
+  const handleAddStage = async () => {
+    if (!projectIdentifier) return;
+    const name = prompt("Enter stage name:");
+    if (!name?.trim()) return;
+    try {
+      await createProjectStage(projectIdentifier, { name: name.trim() });
+      const refreshed = await listProjectTasks(projectIdentifier);
+      setStages(toStageList(refreshed.map(toTaskView)));
+      showToast("Stage created", "success");
+    } catch {
+      showToast("Unable to create stage", "error");
+    }
+  };
+
+  const handleRenameStage = async (stageId: string, currentName: string) => {
+    if (!projectIdentifier) return;
+    const newName = prompt("Rename stage:", currentName);
+    if (!newName?.trim() || newName.trim() === currentName) return;
+    try {
+      await updateProjectStage(projectIdentifier, stageId, { name: newName.trim() });
+      showToast("Stage renamed", "success");
+    } catch {
+      showToast("Unable to rename stage", "error");
+    }
+  };
+
+  const handleDeleteStageConfirmed = async () => {
+    if (!projectIdentifier || !stageDeleteId) return;
+    setStageDeleteId(null);
+    try {
+      await deleteProjectStage(projectIdentifier, stageDeleteId);
+      const refreshed = await listProjectTasks(projectIdentifier);
+      setStages(toStageList(refreshed.map(toTaskView)));
+      showToast("Stage deleted", "success");
+    } catch {
+      showToast("Unable to delete stage", "error");
+    }
   };
 
   const handleAddTask = (stageId: string) => {
@@ -190,7 +247,7 @@ export default function ProjectTasksPage() {
       {/* Toolbar */}
       <TaskToolbar
         projectTitle={projectName}
-        projectId={projectId}
+        projectId={projectIdentifier}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onNewTask={() => setIsCreateTaskModalOpen(true)}
@@ -207,9 +264,11 @@ export default function ProjectTasksPage() {
           {viewMode === "kanban" && (
             <TaskKanbanBoard
               stages={toStageList(allTasks.filter((t) => t.title.toLowerCase().includes(searchQuery.toLowerCase())))}
-              onAddStage={canManage ? handleAddStage : undefined}
+              onAddStage={canManage ? (() => void handleAddStage()) : undefined}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
+              onDeleteStage={canManage ? ((stageId) => setStageDeleteId(stageId)) : undefined}
+              onRenameStage={canManage ? ((stageId, currentName) => void handleRenameStage(stageId, currentName)) : undefined}
             />
           )}
 
@@ -250,18 +309,21 @@ export default function ProjectTasksPage() {
       {/* Create Task Modal */}
       <CreateTaskModal
         isOpen={isCreateTaskModalOpen}
+        users={taskUsers}
+        projects={projectIdentifier ? [{ id: projectIdentifier, name: projectName }] : []}
+        defaultProjectId={projectIdentifier}
         onClose={() => {
           setIsCreateTaskModalOpen(false);
           setSelectedStageId(null);
         }}
         onSubmit={(data) => {
           const submit = async (formData: TaskFormData) => {
-            if (!projectId) return;
+            if (!projectIdentifier) return;
             try {
               const status = selectedStageId && selectedStageId in STAGE_BY_STATUS
                 ? selectedStageId as Task["status"]
                 : "TODO";
-              await createTask(projectId, {
+              await createTask(projectIdentifier, {
                 title: formData.name,
                 description: formData.description,
                 status,
@@ -273,7 +335,7 @@ export default function ProjectTasksPage() {
                 assigneeIds: formData.assigneeId ? [formData.assigneeId] : [],
                 tags: "[]",
               });
-              const refreshed = await listProjectTasks(projectId);
+              const refreshed = await listProjectTasks(projectIdentifier);
               setStages(toStageList(refreshed.map(toTaskView)));
               showToast("Task created", "success");
             } catch {
@@ -285,6 +347,18 @@ export default function ProjectTasksPage() {
           setIsCreateTaskModalOpen(false);
           setSelectedStageId(null);
         }}
+      />
+
+      {/* Confirm dialog for stage deletion */}
+      <ConfirmDialog
+        isOpen={!!stageDeleteId}
+        title="Delete Workflow Stage"
+        message="Are you sure you want to delete this workflow stage? Tasks in this stage will be unassigned. This action cannot be undone."
+        confirmLabel="Delete Stage"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleDeleteStageConfirmed()}
+        onCancel={() => setStageDeleteId(null)}
       />
     </div>
   );
