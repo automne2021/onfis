@@ -1,6 +1,8 @@
 package com.onfis.project.controller;
 
 import com.onfis.project.dto.CurrentUserResponse;
+import com.onfis.project.dto.CompanyTagResponse;
+import com.onfis.project.dto.CompanyTagUpsertRequest;
 import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
 import com.onfis.project.dto.ProjectDetailResponse;
@@ -71,6 +73,41 @@ public class ProjectController {
             @RequestParam(required = false, defaultValue = "") String q
     ) {
         return ResponseEntity.ok(projectModuleService.searchUsers(userId, q));
+    }
+
+    // ── Settings: Company tags ───────────────────────────────────────────────
+
+    @GetMapping("/settings/tags")
+    public ResponseEntity<List<CompanyTagResponse>> listCompanyTags(
+            @RequestHeader(USER_HEADER) String userId
+    ) {
+        return ResponseEntity.ok(projectModuleService.listCompanyTags(userId));
+    }
+
+    @PostMapping("/settings/tags")
+    public ResponseEntity<CompanyTagResponse> createCompanyTag(
+            @RequestHeader(USER_HEADER) String userId,
+            @Valid @RequestBody CompanyTagUpsertRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.createCompanyTag(userId, request));
+    }
+
+    @PutMapping("/settings/tags/{tagId}")
+    public ResponseEntity<CompanyTagResponse> updateCompanyTag(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID tagId,
+            @Valid @RequestBody CompanyTagUpsertRequest request
+    ) {
+        return ResponseEntity.ok(projectModuleService.updateCompanyTag(userId, tagId, request));
+    }
+
+    @DeleteMapping("/settings/tags/{tagId}")
+    public ResponseEntity<Void> deleteCompanyTag(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID tagId
+    ) {
+        projectModuleService.deleteCompanyTag(userId, tagId);
+        return ResponseEntity.noContent().build();
     }
 
     // ── Projects ──────────────────────────────────────────────────────────────

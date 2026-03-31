@@ -18,6 +18,8 @@ public interface TaskRepository extends JpaRepository<TaskEntity, UUID> {
 
     Optional<TaskEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 
+    boolean existsByTenantIdAndProjectIdAndTaskKey(UUID tenantId, UUID projectId, String taskKey);
+
     List<TaskEntity> findByTenantIdAndStatusOrderByUpdatedAtDesc(UUID tenantId, TaskStatus status);
 
     List<TaskEntity> findByTenantIdAndStatusAndReporterIdOrderByUpdatedAtDesc(UUID tenantId, TaskStatus status, UUID reporterId);

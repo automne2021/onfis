@@ -9,6 +9,10 @@ interface ActivityLogProps {
 }
 
 function ActivityEntry({ activity }: { activity: ActivityItem }) {
+  const fallbackDescription = activity.value
+    ? `${activity.action}: ${activity.value}`
+    : activity.action;
+
   return (
     <div className="flex items-start gap-3 py-3">
       <div className="flex-shrink-0 mt-1">
@@ -17,12 +21,8 @@ function ActivityEntry({ activity }: { activity: ActivityItem }) {
       <div className="flex-1">
         <p className="text-sm text-neutral-900">
           <span className="font-medium">{activity.user}</span>
-          {" changed status to "}
-          {activity.value && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-status-to_do/15 text-status-to_do text-xs font-medium">
-              {activity.value}
-            </span>
-          )}
+          {" "}
+          {activity.description || fallbackDescription}
         </p>
         <p className="text-xs text-neutral-400 mt-1">{activity.timestamp}</p>
       </div>

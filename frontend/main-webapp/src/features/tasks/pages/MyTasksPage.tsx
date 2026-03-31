@@ -28,23 +28,29 @@ const TAB_CONFIG: Record<Tab, { label: string; emptyIcon: string; emptyMsg: stri
   },
 };
 
-const PRIORITY_DOT: Record<string, string> = {
-  urgent: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-amber-400",
-  low: "bg-neutral-400",
+const PRIORITY_BADGE: Record<string, string> = {
+  urgent: "bg-red-50 text-red-700 border border-red-200",
+  high: "bg-orange-50 text-orange-700 border border-orange-200",
+  medium: "bg-amber-50 text-amber-700 border border-amber-200",
+  low: "bg-neutral-100 text-neutral-600 border border-neutral-200",
 };
 
 const toTaskView = (task: ApiTask): Task => ({
   id: task.id,
+  key: task.key,
+  projectTitle: task.projectTitle,
+  projectSlug: task.projectSlug,
   title: task.title,
   description: task.description || "",
   priority: task.priority,
   status: task.status,
   progress: task.progress,
-  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "",
+  startDateRaw: task.startDate,
+  dueDateRaw: task.dueDate,
+  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-",
   assignees: task.assignees,
   reporterId: task.reporterId,
+  reporterName: task.reporterName,
   estimatedEffort: task.estimatedEffort,
   actualEffort: task.actualEffort,
   blockedBy: task.blockedBy,
@@ -68,32 +74,33 @@ function convertToTaskDetail(task: Task): TaskDetail {
   return {
     ...task,
     subTasks: [],
-    activities: [{ id: "a1", user: "System", action: "synced from API", timestamp: "Recently" }],
+    activities: [{ id: "a1", user: "System", action: "synced", description: "Synced from API", timestamp: "Recently" }],
     comments: [],
     createdAt: "",
     updatedAt: "",
-    key: `TASK-${task.id.toUpperCase()}`,
+    key: task.key || "TASK-000",
   };
 }
 
 interface TaskItemRowProps {
   task: Task;
-  projectLabel: string;
   onClick: () => void;
 }
 
-function TaskItemRow({ task, projectLabel, onClick }: TaskItemRowProps) {
+function TaskItemRow({ task, onClick }: TaskItemRowProps) {
   const statusCfg = STATUS_CONFIG[task.status];
   return (
     <div
-      className="grid grid-cols-[8px_2fr_1fr_1fr_1fr] gap-3 items-center px-4 py-3 hover:bg-neutral-50 transition-colors cursor-pointer border-b border-neutral-100 last:border-0"
+      className="grid grid-cols-[2fr_0.9fr_1fr_1fr_1fr] gap-3 items-center px-4 py-3 hover:bg-neutral-50 transition-colors cursor-pointer border-b border-neutral-100 last:border-0"
       onClick={onClick}
     >
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority]}`} />
       <div className="min-w-0">
         <p className="text-sm font-medium text-neutral-900 truncate">{task.title}</p>
-        <p className="text-xs text-neutral-400 mt-0.5">{projectLabel}</p>
+        <p className="text-xs text-neutral-400 mt-0.5">{task.projectTitle || "Project"}</p>
       </div>
+      <span className={`inline-flex w-fit items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${PRIORITY_BADGE[task.priority]}`}>
+        {task.priority.replace("_", " ")}
+      </span>
       <div className="flex items-center gap-1.5">
         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusCfg.color}`} />
         <span className="text-xs font-medium text-neutral-600">{statusCfg.label}</span>
@@ -129,7 +136,7 @@ export default function MyTasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [allTasks, setAllTasks] = useState<Array<{ task: Task; projectLabel: string }>>([]);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -148,12 +155,7 @@ export default function MyTasksPage() {
         setLoading(true);
         setError(null);
         const tasks = await listMyTasks();
-        setAllTasks(
-          tasks.map((task) => ({
-            task: toTaskView(task),
-            projectLabel: task.projectId ? `Project ${task.projectId.slice(0, 6)}` : "Unknown",
-          })),
-        );
+        setAllTasks(tasks.map(toTaskView));
       } catch {
         setError("Failed to load tasks from server.");
       } finally {
@@ -167,11 +169,11 @@ export default function MyTasksPage() {
   const visibleTasks = useMemo(() => {
     switch (activeTab) {
       case "assigned":
-        return allTasks.filter((t) => t.task.assignees.some((a) => a.id === currentUser.id));
+        return allTasks.filter((task) => task.assignees.some((assignee) => assignee.id === currentUser.id));
       case "created":
-        return allTasks.filter((t) => t.task.reporterId === currentUser.id);
+        return allTasks.filter((task) => task.reporterId === currentUser.id);
       case "reviewing":
-        return allTasks.filter((t) => t.task.reporterId === currentUser.id && t.task.status === "IN_REVIEW");
+        return allTasks.filter((task) => task.reporterId === currentUser.id && task.status === "IN_REVIEW");
       default:
         return allTasks;
     }
@@ -211,23 +213,21 @@ export default function MyTasksPage() {
 
         setAllTasks((prev) =>
           prev.map((item) =>
-            item.task.id === updated.id
+            item.id === updated.id
               ? {
                   ...item,
-                  task: {
-                    ...item.task,
-                    title: updated.title,
-                    description: updated.description,
-                    status: updated.status,
-                    priority: updated.priority,
-                    progress: updated.progress,
-                    dueDate: updated.dueDate,
-                    assignees: updated.assignees,
-                    reporterId: updated.reporterId,
-                    estimatedEffort: updated.estimatedEffort,
-                    actualEffort: updated.actualEffort,
-                    blockedBy: updated.blockedBy,
-                  },
+                  title: updated.title,
+                  description: updated.description,
+                  status: updated.status,
+                  priority: updated.priority,
+                  progress: updated.progress,
+                  dueDate: updated.dueDate,
+                  assignees: updated.assignees,
+                  reporterId: updated.reporterId,
+                  reporterName: updated.reporterName,
+                  estimatedEffort: updated.estimatedEffort,
+                  actualEffort: updated.actualEffort,
+                  blockedBy: updated.blockedBy,
                 }
               : item,
           ),
@@ -271,13 +271,19 @@ export default function MyTasksPage() {
           ))}
         </div>
 
-        {loading && <div className="px-4 py-8 text-sm text-neutral-500">Loading tasks...</div>}
+        {loading && (
+          <div className="px-4 py-4 space-y-2">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="h-12 rounded-lg bg-neutral-100 animate-pulse" />
+            ))}
+          </div>
+        )}
         {error && !loading && <div className="px-4 py-8 text-sm text-red-500">{error}</div>}
 
         {!loading && !error && visibleTasks.length > 0 && (
-          <div className="grid grid-cols-[8px_2fr_1fr_1fr_1fr] gap-3 px-4 py-2 bg-neutral-50 border-b border-neutral-100">
-            <div />
+          <div className="grid grid-cols-[2fr_0.9fr_1fr_1fr_1fr] gap-3 px-4 py-2 bg-neutral-50 border-b border-neutral-100">
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Task</span>
+            <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Priority</span>
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status</span>
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Due</span>
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Progress</span>
@@ -288,11 +294,10 @@ export default function MyTasksPage() {
           {!loading && !error && visibleTasks.length === 0 ? (
             <EmptyState icon={TAB_CONFIG[activeTab].emptyIcon} message={TAB_CONFIG[activeTab].emptyMsg} />
           ) : (
-            visibleTasks.map(({ task, projectLabel }) => (
+            visibleTasks.map((task) => (
               <TaskItemRow
                 key={task.id}
                 task={task}
-                projectLabel={projectLabel}
                 onClick={() => handleTaskClick(task)}
               />
             ))

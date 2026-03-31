@@ -6,6 +6,8 @@ import com.onfis.project.domain.ProjectStatus;
 import com.onfis.project.domain.ReviewAction;
 import com.onfis.project.domain.TaskPriority;
 import com.onfis.project.domain.TaskStatus;
+import com.onfis.project.dto.CompanyTagResponse;
+import com.onfis.project.dto.CompanyTagUpsertRequest;
 import com.onfis.project.dto.CurrentUserResponse;
 import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
@@ -33,6 +35,7 @@ import com.onfis.project.dto.WorkflowStageReorderRequest;
 import com.onfis.project.dto.WorkflowStageResponse;
 import com.onfis.project.dto.WorkflowStageUpsertRequest;
 import com.onfis.project.entity.AppUserEntity;
+import com.onfis.project.entity.CompanyTagEntity;
 import com.onfis.project.entity.ProjectEntity;
 import com.onfis.project.entity.ProjectFavoriteEntity;
 import com.onfis.project.entity.ProjectFavoriteId;
@@ -53,6 +56,7 @@ import com.onfis.project.exception.BadRequestException;
 import com.onfis.project.exception.ForbiddenException;
 import com.onfis.project.exception.NotFoundException;
 import com.onfis.project.repository.AppUserRepository;
+import com.onfis.project.repository.CompanyTagRepository;
 import com.onfis.project.repository.TaskDependencyRepository;
 import com.onfis.project.repository.ProjectFavoriteRepository;
 import com.onfis.project.repository.ProjectMemberRepository;
@@ -81,9 +85,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -106,6 +110,7 @@ public class ProjectModuleService {
 
     private final TenantContext tenantContext;
     private final AppUserRepository appUserRepository;
+    private final CompanyTagRepository companyTagRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskRepository taskRepository;
@@ -122,6 +127,7 @@ public class ProjectModuleService {
     public ProjectModuleService(
             TenantContext tenantContext,
             AppUserRepository appUserRepository,
+            CompanyTagRepository companyTagRepository,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
             TaskRepository taskRepository,
@@ -137,6 +143,7 @@ public class ProjectModuleService {
     ) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
+        this.companyTagRepository = companyTagRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.taskRepository = taskRepository;
@@ -686,6 +693,10 @@ public class ProjectModuleService {
             requireUser(request.reporterId(), tenantId);
         }
         applyTaskUpsert(task, request, currentUser);
+        task.setTaskKey(generateTaskKey(tenantId, projectId));
+        if (task.getStartDate() == null) {
+            task.setStartDate(LocalDate.now());
+        }
 
         TaskEntity saved = taskRepository.save(task);
         saveAssignees(tenantId, saved.getId(), request.assigneeIds());
@@ -809,7 +820,7 @@ public class ProjectModuleService {
         TaskDependencyEntity dependency = new TaskDependencyEntity();
         dependency.setId(new TaskDependencyId(taskId, blocker.getId()));
         taskDependencyRepository.save(dependency);
-        logActivity(tenantId, taskId, currentUser.getId(), "dependency_added", blocker.getId().toString());
+        logActivity(tenantId, taskId, currentUser.getId(), "dependency_added", blocker.getTitle());
         return toTaskResponse(task, currentUser);
     }
 
@@ -829,7 +840,7 @@ public class ProjectModuleService {
         }
 
         taskDependencyRepository.deleteByIdTaskIdAndIdBlockedByTaskId(taskId, blockedByTaskId);
-        logActivity(tenantId, taskId, currentUser.getId(), "dependency_removed", blockedByTaskId.toString());
+        logActivity(tenantId, taskId, currentUser.getId(), "dependency_removed", blocker.getTitle());
         return toTaskResponse(task, currentUser);
     }
 
@@ -876,7 +887,17 @@ public class ProjectModuleService {
 
         task.setUpdatedBy(currentUser.getId());
         taskRepository.save(task);
-        logActivity(tenantId, task.getId(), currentUser.getId(), "reviewed", action.name().toLowerCase());
+        String reviewValue = switch (action) {
+            case APPROVED -> "Approved";
+            case CHANGES_REQUESTED -> {
+                if (request.content() != null && !request.content().isBlank()) {
+                    yield "Changes requested: " + request.content().trim();
+                }
+                yield "Changes requested";
+            }
+            default -> request.content() == null ? "Commented" : request.content().trim();
+        };
+        logActivity(tenantId, task.getId(), currentUser.getId(), "reviewed", reviewValue);
         if (previousStatus != task.getStatus()) {
             logActivity(
                     tenantId,
@@ -1067,6 +1088,72 @@ public class ProjectModuleService {
                 .collect(Collectors.toList());
     }
 
+    // ── Settings: Company tags ───────────────────────────────────────────────
+
+    public List<CompanyTagResponse> listCompanyTags(String userIdHeader) {
+        UUID tenantId = tenantId();
+        requireUser(parseUserId(userIdHeader), tenantId);
+        return companyTagRepository.findByTenantIdOrderByNameAsc(tenantId)
+                .stream()
+                .map(this::toCompanyTagResponse)
+                .toList();
+    }
+
+    @Transactional
+    public CompanyTagResponse createCompanyTag(String userIdHeader, CompanyTagUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireManager(currentUser);
+
+        String normalizedName = normalizeCompanyTagName(request.name());
+        if (companyTagRepository.existsByTenantIdAndNormalizedName(tenantId, normalizedName)) {
+            throw new BadRequestException("Tag already exists");
+        }
+
+        CompanyTagEntity entity = new CompanyTagEntity();
+        entity.setTenantId(tenantId);
+        entity.setName(request.name().trim());
+        entity.setNormalizedName(normalizedName);
+        entity.setCreatedBy(currentUser.getId());
+        entity.setUpdatedBy(currentUser.getId());
+
+        CompanyTagEntity saved = companyTagRepository.save(entity);
+        return toCompanyTagResponse(saved);
+    }
+
+    @Transactional
+    public CompanyTagResponse updateCompanyTag(String userIdHeader, UUID tagId, CompanyTagUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireManager(currentUser);
+
+        CompanyTagEntity entity = companyTagRepository.findByIdAndTenantId(tagId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Company tag not found"));
+
+        String normalizedName = normalizeCompanyTagName(request.name());
+        if (companyTagRepository.existsByTenantIdAndNormalizedNameAndIdNot(tenantId, normalizedName, tagId)) {
+            throw new BadRequestException("Tag already exists");
+        }
+
+        entity.setName(request.name().trim());
+        entity.setNormalizedName(normalizedName);
+        entity.setUpdatedBy(currentUser.getId());
+
+        CompanyTagEntity saved = companyTagRepository.save(entity);
+        return toCompanyTagResponse(saved);
+    }
+
+    @Transactional
+    public void deleteCompanyTag(String userIdHeader, UUID tagId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireManager(currentUser);
+
+        CompanyTagEntity entity = companyTagRepository.findByIdAndTenantId(tagId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Company tag not found"));
+        companyTagRepository.delete(entity);
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     private List<ProjectResponse> toProjectResponses(List<ProjectEntity> projects, AppUserEntity currentUser, UUID tenantId) {
@@ -1164,6 +1251,7 @@ public class ProjectModuleService {
     }
 
     private TaskResponse toTaskResponse(TaskEntity task, AppUserEntity currentUser, TaskMappingContext context) {
+        ProjectEntity project = context.projectsById().get(task.getProjectId());
         List<TaskAssigneeEntity> taskAssignees = context.assigneesByTaskId().getOrDefault(task.getId(), List.of());
         Set<UUID> assigneeIds = new HashSet<>();
         List<UserSummaryResponse> assignees = new ArrayList<>(taskAssignees.size());
@@ -1203,25 +1291,31 @@ public class ProjectModuleService {
                 .map(dep -> dep.getId().getBlockedByTaskId())
                 .toList();
 
+        AppUserEntity reporter = task.getReporterId() == null ? null : context.usersById().get(task.getReporterId());
+
         return new TaskResponse(
                 task.getId(),
                 task.getProjectId(),
+            project == null ? "Project" : project.getName(),
+            project == null ? null : project.getSlug(),
                 task.getTitle(),
                 task.getDescription(),
                 safeTaskPriority(task).name().toLowerCase(),
                 safeTaskStatus(task).name(),
                 task.getProgress() == null ? 0 : task.getProgress(),
+            task.getStartDate(),
                 task.getDueDate(),
                 assignees,
                 safeTags(task.getTags()),
                 task.getReporterId(),
+            reporter == null ? null : fullName(reporter),
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
                 blockedBy,
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),
-                task.getTaskKey() == null ? "TASK-" + task.getId().toString().substring(0, 8).toUpperCase() : task.getTaskKey(),
+            resolveTaskKey(task, project),
                 canEdit,
                 canReview
         );
@@ -1229,10 +1323,11 @@ public class ProjectModuleService {
 
     private TaskMappingContext buildTaskMappingContext(List<TaskEntity> tasks, UUID tenantId) {
         if (tasks.isEmpty()) {
-            return new TaskMappingContext(Map.of(), Map.of(), Map.of(), Map.of());
+            return new TaskMappingContext(Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
         }
 
         List<UUID> taskIds = tasks.stream().map(TaskEntity::getId).toList();
+        List<UUID> projectIds = tasks.stream().map(TaskEntity::getProjectId).distinct().toList();
 
         List<TaskAssigneeEntity> assignees = taskAssigneeRepository.findByIdTaskIdIn(taskIds);
         List<TaskReviewEntity> reviews = taskReviewRepository.findByTenantIdAndTaskIdInOrderByCreatedAtAsc(tenantId, taskIds);
@@ -1254,24 +1349,36 @@ public class ProjectModuleService {
         for (TaskReviewEntity review : reviews) {
             userIds.add(review.getReviewerId());
         }
+        for (TaskEntity task : tasks) {
+            if (task.getReporterId() != null) {
+                userIds.add(task.getReporterId());
+            }
+        }
+
+        Map<UUID, ProjectEntity> projectsById = projectRepository.findAllById(projectIds)
+                .stream()
+                .filter(project -> tenantId.equals(project.getTenantId()))
+                .collect(Collectors.toMap(ProjectEntity::getId, p -> p));
 
         Map<UUID, AppUserEntity> usersById = appUserRepository.findAllById(userIds)
                 .stream()
                 .filter(user -> tenantId.equals(user.getTenantId()))
                 .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
 
-        return new TaskMappingContext(assigneesByTaskId, reviewsByTaskId, dependenciesByTaskId, usersById);
+        return new TaskMappingContext(assigneesByTaskId, reviewsByTaskId, dependenciesByTaskId, usersById, projectsById);
     }
 
     private record TaskMappingContext(
             Map<UUID, List<TaskAssigneeEntity>> assigneesByTaskId,
             Map<UUID, List<TaskReviewEntity>> reviewsByTaskId,
             Map<UUID, List<TaskDependencyEntity>> dependenciesByTaskId,
-            Map<UUID, AppUserEntity> usersById
+            Map<UUID, AppUserEntity> usersById,
+            Map<UUID, ProjectEntity> projectsById
     ) {
     }
 
     private TaskDetailResponse toTaskDetailResponse(TaskEntity task, AppUserEntity currentUser, UUID tenantId) {
+        ProjectEntity project = projectRepository.findByIdAndTenantId(task.getProjectId(), tenantId).orElse(null);
         List<TaskAssigneeEntity> taskAssignees = taskAssigneeRepository.findByIdTaskId(task.getId());
         List<TaskReviewEntity> reviewEntities = taskReviewRepository
                 .findByTenantIdAndTaskIdOrderByCreatedAtAsc(tenantId, task.getId());
@@ -1288,6 +1395,9 @@ public class ProjectModuleService {
         }
         for (TaskCommentEntity commentEntity : commentEntities) {
             userIds.add(commentEntity.getAuthorId());
+        }
+        if (task.getReporterId() != null) {
+            userIds.add(task.getReporterId());
         }
         for (TaskActivityEntity activityEntity : activityEntities) {
             if (activityEntity.getActorId() != null) {
@@ -1362,6 +1472,7 @@ public class ProjectModuleService {
                             actor == null ? "System" : fullName(actor),
                             a.getAction(),
                             a.getValue(),
+                            formatActivityDescription(a.getAction(), a.getValue()),
                             asOffset(a.getCreatedAt())
                     );
                 })
@@ -1375,22 +1486,26 @@ public class ProjectModuleService {
         return new TaskDetailResponse(
                 task.getId(),
                 task.getProjectId(),
+                project == null ? "Project" : project.getName(),
+                project == null ? null : project.getSlug(),
                 task.getTitle(),
                 task.getDescription(),
             safeTaskPriority(task).name().toLowerCase(),
             safeTaskStatus(task).name(),
                 task.getProgress() == null ? 0 : task.getProgress(),
+                task.getStartDate(),
                 task.getDueDate(),
                 assignees,
             safeTags(task.getTags()),
                 task.getReporterId(),
+                task.getReporterId() == null ? null : usersById.containsKey(task.getReporterId()) ? fullName(usersById.get(task.getReporterId())) : null,
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
             blockedBy,
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),
-                task.getTaskKey() == null ? "TASK-" + task.getId().toString().substring(0, 8).toUpperCase() : task.getTaskKey(),
+                resolveTaskKey(task, project),
                 canEdit,
                 canReview,
                 subtasks,
@@ -1429,6 +1544,9 @@ public class ProjectModuleService {
         task.setPriority(parseTaskPriority(request.priority(), task.getPriority()));
         task.setProgress(request.progress() == null ? 0 : request.progress());
         task.setDueDate(request.dueDate());
+        if (task.getStartDate() == null) {
+            task.setStartDate(LocalDate.now());
+        }
         if (request.reporterId() != null) {
             task.setReporterId(request.reporterId());
         }
@@ -1563,6 +1681,80 @@ public class ProjectModuleService {
         return normalizeTags(raw);
     }
 
+    private CompanyTagResponse toCompanyTagResponse(CompanyTagEntity entity) {
+        return new CompanyTagResponse(
+                entity.getId(),
+                entity.getName(),
+                asOffset(entity.getCreatedAt()),
+                asOffset(entity.getUpdatedAt())
+        );
+    }
+
+    private String normalizeCompanyTagName(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new BadRequestException("Tag name is required");
+        }
+        return raw.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+
+    private String resolveTaskKey(TaskEntity task, ProjectEntity project) {
+        if (task.getTaskKey() != null && !task.getTaskKey().isBlank()) {
+            return task.getTaskKey();
+        }
+
+        String prefix = normalizeTaskKeyPrefix(project == null ? null : project.getSlug());
+        int fallbackSequence = Math.abs(task.getId().hashCode()) % 900 + 100;
+        return prefix + "-" + String.format("%03d", fallbackSequence);
+    }
+
+    private String generateTaskKey(UUID tenantId, UUID projectId) {
+        ProjectEntity project = requireProject(projectId, tenantId);
+        String prefix = normalizeTaskKeyPrefix(project.getSlug());
+
+        int sequence = 1;
+        String candidate = prefix + "-" + String.format("%03d", sequence);
+        while (taskRepository.existsByTenantIdAndProjectIdAndTaskKey(tenantId, projectId, candidate)) {
+            sequence++;
+            candidate = prefix + "-" + String.format("%03d", sequence);
+        }
+        return candidate;
+    }
+
+    private String normalizeTaskKeyPrefix(String rawSlug) {
+        String source = rawSlug == null || rawSlug.isBlank() ? "project" : rawSlug;
+        String normalized = source
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "-")
+                .replaceAll("(^-+|-+$)", "")
+                .replaceAll("-{2,}", "-");
+        return normalized.isBlank() ? "PROJECT" : normalized;
+    }
+
+    private String formatActivityDescription(String action, String value) {
+        return switch (action) {
+            case "created" -> "Created task" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "status_changed" -> "Updated status " + (value == null ? "" : "(" + value + ")");
+            case "priority_changed" -> "Updated priority " + (value == null ? "" : "(" + value + ")");
+            case "progress_changed" -> "Updated progress " + (value == null ? "" : "(" + value + ")");
+            case "due_date_changed" -> "Updated due date " + (value == null ? "" : "(" + value + ")");
+            case "stage_changed" -> "Moved task stage " + (value == null ? "" : "(" + value + ")");
+            case "assignees_added" -> "Assigned: " + (value == null ? "" : value);
+            case "assignees_removed" -> "Unassigned: " + (value == null ? "" : value);
+            case "dependency_added" -> "Added dependency" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "dependency_removed" -> "Removed dependency" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "reviewed" -> "Review update" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "subtask_added" -> "Added subtask" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "subtask_updated" -> "Updated subtask" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "subtask_deleted" -> "Deleted subtask" + (value == null || value.isBlank() ? "" : ": " + value);
+            default -> {
+                if (value == null || value.isBlank()) {
+                    yield action;
+                }
+                yield action + ": " + value;
+            }
+        };
+    }
+
     private String normalizeMilestoneStatus(String raw) {
         if (raw == null || raw.isBlank()) {
             return "UPCOMING";
@@ -1673,13 +1865,13 @@ public class ProjectModuleService {
         Set<UUID> added = new HashSet<>(after);
         added.removeAll(before);
         if (!added.isEmpty()) {
-            logActivity(tenantId, taskId, actorId, "assignees_added", joinIds(added));
+            logActivity(tenantId, taskId, actorId, "assignees_added", joinUserNames(tenantId, added));
         }
 
         Set<UUID> removed = new HashSet<>(before);
         removed.removeAll(after);
         if (!removed.isEmpty()) {
-            logActivity(tenantId, taskId, actorId, "assignees_removed", joinIds(removed));
+            logActivity(tenantId, taskId, actorId, "assignees_removed", joinUserNames(tenantId, removed));
         }
     }
 
@@ -1693,8 +1885,19 @@ public class ProjectModuleService {
         taskActivityRepository.save(activity);
     }
 
-    private String joinIds(Set<UUID> ids) {
-        return ids.stream().map(UUID::toString).collect(Collectors.joining(", "));
+    private String joinUserNames(UUID tenantId, Set<UUID> ids) {
+        if (ids.isEmpty()) {
+            return "";
+        }
+
+        Map<UUID, AppUserEntity> users = appUserRepository.findAllById(ids)
+                .stream()
+                .filter(user -> tenantId.equals(user.getTenantId()))
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
+        return ids.stream()
+                .map(id -> users.containsKey(id) ? fullName(users.get(id)) : id.toString())
+                .collect(Collectors.joining(", "));
     }
 
     private String formatChange(Object from, Object to) {

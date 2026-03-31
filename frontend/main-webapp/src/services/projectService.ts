@@ -69,6 +69,13 @@ export interface ApiProjectMember {
   taskCount: number;
 }
 
+export interface ApiCompanyTag {
+  id: string;
+  name: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface CreateProjectPayload {
   title: string;
   description?: string;
@@ -85,6 +92,10 @@ export interface CreateProjectPayload {
 export interface UpsertProjectMemberPayload {
   userId: string;
   role: 'LEAD' | 'DEVELOPER' | 'DESIGNER' | 'QA' | 'ANALYST' | 'MEMBER';
+}
+
+export interface UpsertCompanyTagPayload {
+  name: string;
 }
 
 // ── Workflow Stages ─────────────────────────────────────────────────────
@@ -124,6 +135,27 @@ export async function getCurrentProjectUser(): Promise<ApiCurrentUser> {
 export async function searchProjectUsers(query: string): Promise<ApiUserSummary[]> {
   const { data } = await api.get<ApiUserSummary[]>('/projects/users/search', { params: { q: query } });
   return data;
+}
+
+// ── Settings: Company tags ─────────────────────────────────────────────
+
+export async function listCompanyTags(): Promise<ApiCompanyTag[]> {
+  const { data } = await api.get<ApiCompanyTag[]>('/projects/settings/tags');
+  return data;
+}
+
+export async function createCompanyTag(payload: UpsertCompanyTagPayload): Promise<ApiCompanyTag> {
+  const { data } = await api.post<ApiCompanyTag>('/projects/settings/tags', payload);
+  return data;
+}
+
+export async function updateCompanyTag(tagId: string, payload: UpsertCompanyTagPayload): Promise<ApiCompanyTag> {
+  const { data } = await api.put<ApiCompanyTag>(`/projects/settings/tags/${tagId}`, payload);
+  return data;
+}
+
+export async function deleteCompanyTag(tagId: string): Promise<void> {
+  await api.delete(`/projects/settings/tags/${tagId}`);
 }
 
 // ── Projects ────────────────────────────────────────────────────────────

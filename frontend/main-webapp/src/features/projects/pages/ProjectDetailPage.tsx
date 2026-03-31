@@ -321,28 +321,50 @@ export default function ProjectDetailPage() {
       </nav>
 
       {/* Project Tab Navigation */}
-      <div className="flex items-center gap-0.5 mt-2 border-b border-neutral-200 bg-white px-2 rounded-t-lg shadow-sm">
-        {tabs.map((tab) => (
+      <div className="flex items-center justify-between gap-3 mt-2 border-b border-neutral-200 bg-white px-2 rounded-t-lg shadow-sm">
+        <div className="flex items-center gap-0.5">
+          {tabs.map((tab) => (
+            <Link
+              key={tab.to}
+              to={tab.to}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                isTabActive(tab.to)
+                  ? "text-primary border-primary"
+                  : "text-neutral-500 border-transparent hover:text-neutral-800 hover:border-neutral-300"
+              }`}
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{tab.icon}</span>
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 pb-1">
           <Link
-            key={tab.to}
-            to={tab.to}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              isTabActive(tab.to)
-                ? "text-primary border-primary"
-                : "text-neutral-500 border-transparent hover:text-neutral-800 hover:border-neutral-300"
-            }`}
+            to={withTenant(`/projects/${id}/tasks`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
           >
-            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>{tab.icon}</span>
-            {tab.label}
+            <KanbanIcon />
+            Manage Tasks
           </Link>
-        ))}
+          {isManager && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: 14 }}>delete</span>
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Headline Card */}
       <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-2">
         {/* Title Row with Progress */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between">
-          {/* Title + Star + Manage Tasks */}
+          {/* Title + Star */}
           <div className="flex items-center gap-2 shrink-0">
             <p className="header-h6 leading-snug text-neutral-900">
               {project.title}
@@ -350,23 +372,6 @@ export default function ProjectDetailPage() {
             <button type="button" onClick={handleToggleStar} className="shrink-0 hover:scale-110 transition-transform" aria-label="Toggle star">
               <StarIcon filled={isStarred} />
             </button>
-            <Link
-              to={withTenant(`/projects/${id}/tasks`)}
-              className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
-            >
-              <KanbanIcon />
-              Manage Tasks
-            </Link>
-            {isManager && (
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors border border-red-200"
-              >
-                <span className="material-symbols-rounded" style={{ fontSize: 14 }}>delete</span>
-                Delete
-              </button>
-            )}
           </div>
 
           {/* Progress Section */}

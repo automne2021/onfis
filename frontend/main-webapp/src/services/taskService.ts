@@ -32,21 +32,26 @@ export interface ApiTaskActivity {
   actorName: string;
   action: string;
   value: string | null;
+  description: string;
   createdAt: string;
 }
 
 export interface ApiTask {
   id: string;
   projectId?: string;
+  projectTitle?: string;
+  projectSlug?: string;
   title: string;
   description: string;
   priority: 'urgent' | 'high' | 'medium' | 'low';
   status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'IN_REVIEW' | 'DONE';
   progress: number;
+  startDate: string | null;
   dueDate: string | null;
   assignees: ApiUserSummary[];
   tags: string;
   reporterId?: string;
+  reporterName?: string;
   estimatedEffort?: number;
   actualEffort?: number;
   blockedBy: string[];

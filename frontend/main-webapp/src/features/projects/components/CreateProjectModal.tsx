@@ -15,6 +15,7 @@ interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   managers?: Array<{ id: string; name: string }>;
+  availableTags?: string[];
   onSubmit?: (data: ProjectFormData) => void;
 }
 
@@ -23,6 +24,7 @@ export interface ProjectFormData {
   startDate: Date | null;
   endDate: Date | null;
   managerId: string;
+  tags: string[];
   description: string;
   milestones: Milestone[];
 }
@@ -31,6 +33,7 @@ export default function CreateProjectModal({
   isOpen,
   onClose,
   managers = [],
+  availableTags = [],
   onSubmit,
 }: CreateProjectModalProps) {
   const [formData, setFormData] = useState<ProjectFormData>({
@@ -38,6 +41,7 @@ export default function CreateProjectModal({
     startDate: null,
     endDate: null,
     managerId: "",
+    tags: [],
     description: "",
     milestones: [{ id: "1", name: "", targetDate: "" }],
   });
@@ -52,6 +56,16 @@ export default function CreateProjectModal({
 
   const handleManagerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, managerId: e.target.value }));
+  };
+
+  const handleToggleTag = (tagName: string) => {
+    setFormData((prev) => {
+      const exists = prev.tags.includes(tagName);
+      return {
+        ...prev,
+        tags: exists ? prev.tags.filter((tag) => tag !== tagName) : [...prev.tags, tagName],
+      };
+    });
   };
 
   const handleMilestoneChange = (
@@ -101,6 +115,7 @@ export default function CreateProjectModal({
       startDate: null,
       endDate: null,
       managerId: "",
+      tags: [],
       description: "",
       milestones: [{ id: "1", name: "", targetDate: "" }],
     });
@@ -207,6 +222,38 @@ export default function CreateProjectModal({
               <ExpandMoreIcon />
             </div>
           </div>
+        </div>
+
+        {/* Shared Tags */}
+        <div>
+          <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
+            Tags (Shared In Settings)
+          </label>
+          {availableTags.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-neutral-500 bg-neutral-50 border border-dashed border-neutral-200 rounded-lg">
+              No shared tags found. Add tags in Settings first.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tagName) => {
+                const active = formData.tags.includes(tagName);
+                return (
+                  <button
+                    key={tagName}
+                    type="button"
+                    onClick={() => handleToggleTag(tagName)}
+                    className={`px-2.5 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      active
+                        ? "bg-primary/10 text-primary border-primary/30"
+                        : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+                    }`}
+                  >
+                    {tagName}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Tabs */}

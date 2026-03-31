@@ -287,9 +287,10 @@ export default function TaskDetailModal({
     [task, taskReviews, currentUser, onSave, onClose, showToast]
   );
 
-  // Resolve reporter name from mock assignees
+  // Resolve reporter display from task payload first, then fall back to assignee list.
   const reporterAssignee = task.reporterId
-    ? mockAssignees.find((a) => a.id === task.reporterId) || { id: task.reporterId, name: `User ${task.reporterId}` }
+    ? task.assignees.find((a) => a.id === task.reporterId)
+      || (task.reporterName ? { id: task.reporterId, name: task.reporterName } : { id: task.reporterId, name: "Reviewer" })
     : null;
 
   if (!isOpen) return null;

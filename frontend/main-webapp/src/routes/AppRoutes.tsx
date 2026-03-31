@@ -29,6 +29,7 @@ import ReviewQueuePage from '../features/tasks/pages/ReviewQueuePage';
 
 // Positions (new from frontend-projects)
 import { PositionTreePage } from '../features/positions';
+import SettingsPage from '../features/settings/pages/SettingsPage';
 
 // Placeholder component for pages not yet implemented
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -81,7 +82,7 @@ export const router = createBrowserRouter(
             <Route path=":projectId/reviews" element={<ReviewQueuePage />} />
           </Route>
 
-          <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Route>
     </>

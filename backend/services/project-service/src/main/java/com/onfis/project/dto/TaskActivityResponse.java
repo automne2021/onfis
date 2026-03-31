@@ -9,6 +9,7 @@ public record TaskActivityResponse(
         String actorName,
         String action,
         String value,
+        String description,
         OffsetDateTime createdAt
 ) {
 }

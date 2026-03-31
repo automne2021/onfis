@@ -18,15 +18,21 @@ export interface Assignee {
 
 export interface Task {
   id: string;
+  key?: string;
+  projectTitle?: string;
+  projectSlug?: string;
   title: string;
   description: string;
   priority: TaskPriority;
   status: TaskStatus;
   progress: number;
+  startDateRaw?: string | null;
+  dueDateRaw?: string | null;
   dueDate: string;
   assignees: Assignee[];
   tags?: Tag[];
   reporterId?: string;
+  reporterName?: string;
   estimatedEffort?: number;
   actualEffort?: number;
   blockedBy?: string[];

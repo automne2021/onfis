@@ -59,7 +59,7 @@ export default function GanttTaskDetailPanel({
             </span>
           </div>
           <p className="text-sm text-neutral-500">
-            #WEB-{task.id.slice(-4)} • Created on {formatDate(task.startDate)}
+            {task.taskKey || "TASK"} • Start {formatDate(task.startDate)}
           </p>
         </div>
         <button
@@ -80,7 +80,7 @@ export default function GanttTaskDetailPanel({
               Project
             </label>
             <p className="mt-1 text-sm font-medium text-neutral-900">
-              {task.projectName || "Website Redesign"}
+              {task.projectName || "Project"}
             </p>
           </div>
           <div>
@@ -138,22 +138,8 @@ export default function GanttTaskDetailPanel({
             Description
           </label>
           <p className="mt-2 text-sm text-neutral-700 leading-relaxed">
-            {task.description || "Implement the main frontend architecture using Vue.js and Tailwind CSS. This task includes setting up the router, state management (Pinia), and the base layout components."}
+            {task.description || "No description available."}
           </p>
-          <ul className="mt-3 space-y-1.5 text-sm text-neutral-700">
-            <li className="flex items-start gap-2">
-              <span className="text-neutral-400 mt-0.5">•</span>
-              Setup Vue 3 project with Vite
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-neutral-400 mt-0.5">•</span>
-              Configure Tailwind CSS with custom theme
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-neutral-400 mt-0.5">•</span>
-              Implement responsive navigation drawer
-            </li>
-          </ul>
         </div>
 
         {/* Sub-tasks */}

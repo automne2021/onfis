@@ -11,6 +11,7 @@ export interface ActivityItem {
   user: string;
   action: string;
   value?: string;
+  description?: string;
   timestamp: string;
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProjectToolbar from "../components/ProjectToolbar";
+import type { ActiveFilters } from "../../../components/common/FilterDropdown";
 import KanbanBoard from "../components/KanbanBoard";
 import CreateProjectModal from "../components/CreateProjectModal";
 import { ProjectListView } from "../components/list";
@@ -8,7 +9,7 @@ import { ProjectTimelineView } from "../components/timeline";
 import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
 import type { ProjectFormData } from "../components/CreateProjectModal";
-import { createProject, getCurrentProjectUser, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
+import { createProject, getCurrentProjectUser, listCompanyTags, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useToast } from "../../../contexts/useToast";
 
@@ -36,16 +37,41 @@ const toProjectViewModel = (apiProject: Awaited<ReturnType<typeof listProjects>>
   assignees: apiProject.assignees,
 });
 
+function ProjectsLoadingSkeleton() {
+  return (
+    <div className="px-3 py-3 space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-28 rounded-xl border border-neutral-100 bg-white p-3 shadow-sm animate-pulse">
+            <div className="h-4 w-24 rounded bg-neutral-200" />
+            <div className="h-3 w-3/4 rounded bg-neutral-100 mt-2" />
+            <div className="h-3 w-1/2 rounded bg-neutral-100 mt-1.5" />
+            <div className="h-2 w-full rounded bg-neutral-100 mt-4" />
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-neutral-100 bg-white p-3 shadow-sm space-y-2 animate-pulse">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-10 rounded-lg bg-neutral-100" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [managerOptions, setManagerOptions] = useState<ApiUserSummary[]>([]);
+  const [companyTags, setCompanyTags] = useState<string[]>([]);
   const [canCreateProject, setCanCreateProject] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -59,9 +85,11 @@ export default function ProjectsPage() {
           getCurrentProjectUser(),
           searchProjectUsers(""),
         ]);
+        const sharedTags = await listCompanyTags();
         setProjects(apiProjects.map(toProjectViewModel));
         setCanCreateProject(me.permissions.includes("PROJECT_CREATE"));
         setManagerOptions(users);
+        setCompanyTags(sharedTags.map((tag) => tag.name));
       } catch {
         setError("Failed to load projects.");
       } finally {
@@ -74,10 +102,25 @@ export default function ProjectsPage() {
 
   // Filter projects by search query
   const filteredProjects = useMemo(() => projects.filter(
-    (project) =>
-      project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchQuery.toLowerCase())
-  ), [projects, searchQuery]);
+    (project) => {
+      const query = searchQuery.trim().toLowerCase();
+      if (query && !project.title.toLowerCase().includes(query) && !project.description.toLowerCase().includes(query)) {
+        return false;
+      }
+
+      const statusFilters = activeFilters.status ?? [];
+      if (statusFilters.length > 0 && !statusFilters.includes(project.status)) {
+        return false;
+      }
+
+      const priorityFilters = activeFilters.priority ?? [];
+      if (priorityFilters.length > 0 && !priorityFilters.includes(project.priority)) {
+        return false;
+      }
+
+      return true;
+    }
+  ), [projects, searchQuery, activeFilters]);
 
   // Group projects by status for Kanban view
   const projectsByStatus = {
@@ -97,6 +140,10 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async (data: ProjectFormData) => {
     try {
+      const serializedTags = JSON.stringify(
+        data.tags.map((label) => ({ label, type: "scope" as const })),
+      );
+
       const created = await createProject({
         title: data.name,
         description: data.description,
@@ -105,7 +152,7 @@ export default function ProjectsPage() {
         progress: 0,
         startDate: data.startDate ? data.startDate.toISOString().slice(0, 10) : undefined,
         dueDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : undefined,
-        tags: "[]",
+        tags: serializedTags,
         managerId: data.managerId || undefined,
       });
       setProjects((prev) => [toProjectViewModel(created), ...prev]);
@@ -122,13 +169,15 @@ export default function ProjectsPage() {
         onNewProject={canCreateProject ? handleNewProject : undefined}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
 
       {/* Content with view switch animation */}
       <div className="flex-1 overflow-hidden px-3 pb-3">
-        {loading && <div className="text-sm text-neutral-500 px-3 py-4">Loading projects...</div>}
+        {loading && <ProjectsLoadingSkeleton />}
         {error && !loading && <div className="text-sm text-red-500 px-3 py-4">{error}</div>}
         {!loading && !error && (
           <div key={viewMode} className="animate-viewSwitch h-full">
@@ -153,6 +202,7 @@ export default function ProjectsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         managers={managerOptions}
+        availableTags={companyTags}
         onSubmit={(data) => {
           void handleCreateProject(data);
           setIsCreateModalOpen(false);

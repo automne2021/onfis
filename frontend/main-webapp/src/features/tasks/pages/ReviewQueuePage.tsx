@@ -8,7 +8,6 @@ import { TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
 import type { Task, ReviewComment } from "../types";
 import { STATUS_CONFIG } from "../workflowUtils";
-import { listProjects } from "../../../services/projectService";
 import { getReviewQueue, reviewTask, updateTask, type ApiTask, type ReviewQueueQuery } from "../../../services/taskService";
 
 type ManagerFilter = "all" | "pending" | "approved" | "changes";
@@ -51,21 +50,27 @@ const PRIORITY_LABEL: Record<string, string> = {
   low: "Low",
 };
 
-const toReviewTask = (task: ApiTask, projectName: string): ReviewTask => ({
+const toReviewTask = (task: ApiTask): ReviewTask => ({
   id: task.id,
+  key: task.key,
+  projectTitle: task.projectTitle,
+  projectSlug: task.projectSlug,
   title: task.title,
   description: task.description || "",
   priority: task.priority,
   status: task.status,
   progress: task.progress,
-  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "",
+  startDateRaw: task.startDate,
+  dueDateRaw: task.dueDate,
+  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-",
   assignees: task.assignees,
   tags: [],
   reporterId: task.reporterId,
+  reporterName: task.reporterName,
   estimatedEffort: task.estimatedEffort,
   actualEffort: task.actualEffort,
   blockedBy: task.blockedBy,
-  projectName,
+  projectName: task.projectTitle || "Project",
   submittedAt: task.status === "IN_REVIEW" ? "Recently" : "-",
   reviews: task.reviews,
 });
@@ -87,11 +92,11 @@ function convertToTaskDetail(task: ReviewTask): TaskDetail {
   return {
     ...task,
     subTasks: [],
-    activities: [{ id: "a1", user: "System", action: "synced from API", timestamp: "Recently" }],
+    activities: [{ id: "a1", user: "System", action: "synced", description: "Synced from API", timestamp: "Recently" }],
     comments: [],
     createdAt: "",
     updatedAt: "",
-    key: `TASK-${task.id.toUpperCase()}`,
+    key: task.key || "TASK-000",
   };
 }
 
@@ -247,13 +252,8 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
           sortDir: "desc",
         };
 
-        const [reviewQueue, projects] = await Promise.all([getReviewQueue(query), listProjects()]);
-        const projectMap = new Map(projects.map((p) => [p.id, p.title]));
-
-        setTasks(reviewQueue.content.map((task) => {
-          const name = task.projectId ? projectMap.get(task.projectId) : null;
-          return toReviewTask(task, name || "Project");
-        }));
+        const reviewQueue = await getReviewQueue(query);
+        setTasks(reviewQueue.content.map((task) => toReviewTask(task)));
         setTotalPages(reviewQueue.totalPages);
       } catch {
         showToast("Failed to load review queue", "error");
@@ -271,7 +271,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
     try {
       const updated = await reviewTask(taskId, { action: "APPROVED" });
       setTasks((prev) => prev
-        .map((task) => (task.id === taskId ? toReviewTask(updated, task.projectName) : task))
+        .map((task) => (task.id === taskId ? toReviewTask(updated) : task))
         .filter((task) => (filter === "pending" ? task.id !== taskId : true))
       );
       showToast("Task approved and marked as DONE.", "success");
@@ -284,7 +284,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
     try {
       const updated = await reviewTask(taskId, { action: "CHANGES_REQUESTED", content: reason });
       setTasks((prev) => prev
-        .map((task) => (task.id === taskId ? toReviewTask(updated, task.projectName) : task))
+        .map((task) => (task.id === taskId ? toReviewTask(updated) : task))
         .filter((task) => (filter === "pending" ? task.id !== taskId : true))
       );
       showToast("Changes requested.", "warning");
@@ -309,7 +309,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
           assigneeIds: updated.assignees.map((a) => a.id),
           tags: "[]",
         });
-        setTasks((prev) => prev.map((task) => (task.id === saved.id ? toReviewTask(saved, task.projectName) : task)));
+        setTasks((prev) => prev.map((task) => (task.id === saved.id ? toReviewTask(saved) : task)));
       } catch {
         showToast("Unable to update task", "error");
       }
@@ -340,7 +340,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         </Link>
       </div>
 
-      <div className="flex gap-1 mt-3 bg-neutral-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1 border-b border-neutral-200 mt-3">
         {filterOptions.map((opt) => (
           <button
             key={opt.key}
@@ -349,8 +349,10 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                 setFilter(opt.key);
                 setPage(0);
               }}
-            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              filter === opt.key ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-800"
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              filter === opt.key
+                ? "text-primary border-primary"
+                : "text-neutral-500 border-transparent hover:text-neutral-800"
             }`}
           >
             {opt.label}
@@ -358,7 +360,13 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         ))}
       </div>
 
-      {loading && <div className="mt-4 text-sm text-neutral-500">Loading review tasks...</div>}
+      {loading && (
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-28 rounded-xl bg-neutral-100 animate-pulse" />
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-3">
         {!loading && tasks.length === 0 ? (
@@ -490,13 +498,8 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
           sortDir: "desc",
         };
 
-        const [reviewQueue, projects] = await Promise.all([getReviewQueue(query), listProjects()]);
-        const projectMap = new Map(projects.map((p) => [p.id, p.title]));
-
-        setTasks(reviewQueue.content.map((task) => {
-          const name = task.projectId ? projectMap.get(task.projectId) : null;
-          return toReviewTask(task, name || "Project");
-        }));
+        const reviewQueue = await getReviewQueue(query);
+        setTasks(reviewQueue.content.map((task) => toReviewTask(task)));
         setTotalPages(reviewQueue.totalPages);
       } catch {
         showToast("Failed to load your submissions", "error");
@@ -530,7 +533,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         </Link>
       </div>
 
-      <div className="flex gap-1 mt-3 bg-neutral-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1 border-b border-neutral-200 mt-3">
         {filterOptions.map((opt) => (
           <button
             key={opt.key}
@@ -539,8 +542,10 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
               setFilter(opt.key);
               setPage(0);
             }}
-            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              filter === opt.key ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-800"
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              filter === opt.key
+                ? "text-primary border-primary"
+                : "text-neutral-500 border-transparent hover:text-neutral-800"
             }`}
           >
             {opt.label}
@@ -548,7 +553,13 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         ))}
       </div>
 
-      {loading && <div className="mt-4 text-sm text-neutral-500">Loading submissions...</div>}
+      {loading && (
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-24 rounded-xl bg-neutral-100 animate-pulse" />
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-3">
         {!loading && tasks.length === 0 ? (
@@ -665,7 +676,11 @@ export default function ReviewQueuePage() {
   const { currentUser } = useAuth();
 
   if (!currentUser.id) {
-    return <div className="onfis-section"><div className="text-sm text-neutral-500">Loading user context...</div></div>;
+    return (
+      <div className="onfis-section">
+        <div className="mt-4 h-24 rounded-xl bg-neutral-100 animate-pulse" />
+      </div>
+    );
   }
 
   return isManager ? <ManagerReviewQueue projectId={projectId} /> : <EmployeeSubmissions projectId={projectId} />;
