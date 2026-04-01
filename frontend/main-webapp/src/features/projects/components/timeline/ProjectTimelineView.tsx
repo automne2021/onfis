@@ -34,40 +34,30 @@ export default function ProjectTimelineView({ projects, onProjectClick }: Projec
     }
   };
 
-  const handleFilter = () => {
-    // TODO: Implement filter modal
-    console.log("Open filter modal");
-  };
-
-  const handleGroupBy = () => {
-    // TODO: Implement group by functionality
-    console.log("Group by selected");
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden">
+    <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto">
       {/* Toolbar */}
       <TimelineToolbar
         currentDate={currentDate}
         onDateChange={setCurrentDate}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onFilter={handleFilter}
-        onGroupBy={handleGroupBy}
       />
 
       {/* Timeline Grid */}
-      {timelineProjects.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-neutral-400">
-          No projects to display
+      <div className="flex-1 mt-2 overflow-hidden bg-white border border-neutral-200 rounded-lg">
+        {timelineProjects.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-neutral-500">
+            No projects to display
+          </div>
+        ) : (
+          <ProjectTimelineGrid
+            projects={timelineProjects}
+            config={timelineConfig}
+            onProjectClick={handleProjectClick}
+          />
+        )}
         </div>
-      ) : (
-        <ProjectTimelineGrid
-          projects={timelineProjects}
-          config={timelineConfig}
-          onProjectClick={handleProjectClick}
-        />
-      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import com.onfis.project.dto.TaskDependencyRequest;
 import com.onfis.project.dto.TaskCommentRequest;
 import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
+import com.onfis.project.dto.TaskPageResponse;
 import com.onfis.project.dto.TaskResponse;
 import com.onfis.project.dto.TaskStageUpdateRequest;
 import com.onfis.project.dto.TaskSubtaskRequest;
@@ -326,10 +327,30 @@ public class ProjectController {
     }
 
     @GetMapping("/tasks/me")
-    public ResponseEntity<List<TaskResponse>> listMyTasks(
-            @RequestHeader(USER_HEADER) String userId
+    public ResponseEntity<TaskPageResponse> listMyTasks(
+            @RequestHeader(USER_HEADER) String userId,
+            @RequestParam(defaultValue = "assigned") String tab,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) UUID stageId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "updatedAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir
     ) {
-        return ResponseEntity.ok(projectModuleService.listMyTasks(userId));
+        return ResponseEntity.ok(projectModuleService.listMyTasks(
+                userId,
+                tab,
+                search,
+                status,
+                priority,
+                stageId,
+                page,
+                size,
+                sortBy,
+                sortDir
+        ));
     }
 
     @PostMapping("/{projectId}/tasks")

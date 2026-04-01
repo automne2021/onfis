@@ -9,6 +9,8 @@ import java.util.UUID;
 public record TaskDetailResponse(
         UUID id,
         UUID projectId,
+        UUID stageId,
+        UUID milestoneId,
         String projectTitle,
         String projectSlug,
         String title,

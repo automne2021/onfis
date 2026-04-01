@@ -42,6 +42,9 @@ public class TaskEntity {
     @Column(name = "stage_id")
     private UUID stageId;
 
+    @Column(name = "milestone_id")
+    private UUID milestoneId;
+
     @Column(name = "title", nullable = false)
     private String title;
 

@@ -33,6 +33,9 @@ public class CompanyTagEntity {
     @Column(name = "normalized_name", nullable = false)
     private String normalizedName;
 
+    @Column(name = "color")
+    private String color;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

@@ -430,7 +430,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                 </div>
 
                 {task.status === "IN_REVIEW" && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-neutral-100">
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-100">
                     <button
                       type="button"
                       onClick={() => void handleApprove(task.id)}

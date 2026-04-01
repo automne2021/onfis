@@ -39,6 +39,8 @@ export interface ApiTaskActivity {
 export interface ApiTask {
   id: string;
   projectId?: string;
+  stageId?: string | null;
+  milestoneId?: string | null;
   projectTitle?: string;
   projectSlug?: string;
   title: string;
@@ -79,6 +81,7 @@ export interface UpsertTaskPayload {
   actualEffort?: number;
   parentTaskId?: string;
   stageId?: string;
+  milestoneId?: string;
   tags?: string;
   assigneeIds: string[];
 }
@@ -94,6 +97,18 @@ export interface ReviewQueueQuery {
   page?: number;
   size?: number;
   sortBy?: 'updatedAt' | 'createdAt' | 'dueDate' | 'priority' | 'status' | 'title';
+  sortDir?: 'asc' | 'desc';
+}
+
+export interface MyTasksQuery {
+  tab?: 'assigned' | 'created' | 'reviewing' | 'all';
+  search?: string;
+  status?: string;
+  priority?: string;
+  stageId?: string;
+  page?: number;
+  size?: number;
+  sortBy?: 'updatedAt' | 'createdAt' | 'dueDate' | 'startDate' | 'priority' | 'status' | 'title';
   sortDir?: 'asc' | 'desc';
 }
 
@@ -134,8 +149,29 @@ export async function listProjectTasks(projectId: string): Promise<ApiTask[]> {
   return data;
 }
 
-export async function listMyTasks(): Promise<ApiTask[]> {
-  const { data } = await api.get<ApiTask[]>('/projects/tasks/me');
+export async function listMyTasks(query: MyTasksQuery = {}): Promise<PagedApiResponse<ApiTask>> {
+  const params: Record<string, string | number> = {
+    tab: query.tab ?? 'assigned',
+    page: query.page ?? 0,
+    size: query.size ?? 10,
+    sortBy: query.sortBy ?? 'updatedAt',
+    sortDir: query.sortDir ?? 'desc',
+  };
+
+  if (query.search) {
+    params.search = query.search;
+  }
+  if (query.status) {
+    params.status = query.status;
+  }
+  if (query.priority) {
+    params.priority = query.priority;
+  }
+  if (query.stageId) {
+    params.stageId = query.stageId;
+  }
+
+  const { data } = await api.get<PagedApiResponse<ApiTask>>('/projects/tasks/me', { params });
   return data;
 }
 

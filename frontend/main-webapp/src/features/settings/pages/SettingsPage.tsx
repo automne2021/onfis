@@ -9,6 +9,16 @@ import {
   type ApiCompanyTag,
 } from "../../../services/projectService";
 
+const DEFAULT_TAG_COLOR = "#64748B";
+
+const normalizeTagColor = (rawColor: string): string => {
+  const normalized = rawColor.trim().toUpperCase();
+  if (/^#[0-9A-F]{6}$/.test(normalized)) {
+    return normalized;
+  }
+  return DEFAULT_TAG_COLOR;
+};
+
 function SettingsSkeleton() {
   return (
     <div className="onfis-section">
@@ -32,8 +42,10 @@ export default function SettingsPage() {
   const [tags, setTags] = useState<ApiCompanyTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [draftName, setDraftName] = useState("");
+  const [draftColor, setDraftColor] = useState(DEFAULT_TAG_COLOR);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingColor, setEditingColor] = useState(DEFAULT_TAG_COLOR);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -62,9 +74,13 @@ export default function SettingsPage() {
     }
 
     try {
-      const created = await createCompanyTag({ name });
+      const created = await createCompanyTag({
+        name,
+        color: normalizeTagColor(draftColor),
+      });
       setTags((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
       setDraftName("");
+      setDraftColor(DEFAULT_TAG_COLOR);
       showToast("Tag created", "success");
     } catch {
       showToast("Unable to create tag", "error");
@@ -74,11 +90,13 @@ export default function SettingsPage() {
   const handleStartEdit = (tag: ApiCompanyTag) => {
     setEditingId(tag.id);
     setEditingName(tag.name);
+    setEditingColor(normalizeTagColor(tag.color || DEFAULT_TAG_COLOR));
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditingName("");
+    setEditingColor(DEFAULT_TAG_COLOR);
   };
 
   const handleSaveEdit = async () => {
@@ -92,7 +110,10 @@ export default function SettingsPage() {
     }
 
     try {
-      const updated = await updateCompanyTag(editingId, { name: nextName });
+      const updated = await updateCompanyTag(editingId, {
+        name: nextName,
+        color: normalizeTagColor(editingColor),
+      });
       setTags((prev) => prev.map((tag) => (tag.id === updated.id ? updated : tag)));
       handleCancelEdit();
       showToast("Tag updated", "success");
@@ -146,6 +167,13 @@ export default function SettingsPage() {
               className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
               maxLength={80}
             />
+            <input
+              type="color"
+              value={draftColor}
+              onChange={(event) => setDraftColor(normalizeTagColor(event.target.value))}
+              aria-label="Tag color"
+              className="h-10 w-10 p-1 rounded-lg border border-neutral-200 bg-white cursor-pointer"
+            />
             <button
               type="button"
               onClick={() => void handleCreate()}
@@ -167,15 +195,32 @@ export default function SettingsPage() {
             const isEditing = editingId === tag.id;
             return (
               <div key={tag.id} className="flex items-center gap-2 p-3 border border-neutral-200 rounded-lg bg-neutral-50">
+                <span
+                  className="inline-block size-4 rounded-full border border-neutral-200"
+                  style={{ backgroundColor: normalizeTagColor(tag.color || DEFAULT_TAG_COLOR) }}
+                />
+
                 {isEditing ? (
-                  <input
-                    value={editingName}
-                    onChange={(event) => setEditingName(event.target.value)}
-                    className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
-                    maxLength={80}
-                  />
+                  <div className="flex-1 flex items-center gap-2">
+                    <input
+                      value={editingName}
+                      onChange={(event) => setEditingName(event.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
+                      maxLength={80}
+                    />
+                    <input
+                      type="color"
+                      value={editingColor}
+                      onChange={(event) => setEditingColor(normalizeTagColor(event.target.value))}
+                      aria-label="Edit tag color"
+                      className="h-10 w-10 p-1 rounded-lg border border-neutral-200 bg-white cursor-pointer"
+                    />
+                  </div>
                 ) : (
-                  <span className="flex-1 text-sm font-medium text-neutral-800">{tag.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-neutral-800 truncate">{tag.name}</p>
+                    <p className="text-xs text-neutral-400 uppercase tracking-wide">{normalizeTagColor(tag.color || DEFAULT_TAG_COLOR)}</p>
+                  </div>
                 )}
 
                 {isEditing ? (

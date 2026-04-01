@@ -22,6 +22,7 @@ public record TaskUpsertRequest(
         BigDecimal actualEffort,
         UUID parentTaskId,
         UUID stageId,
+        UUID milestoneId,
         String tags,
         @NotNull List<UUID> assigneeIds
 ) {

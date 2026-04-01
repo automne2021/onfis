@@ -97,37 +97,40 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
   };
 
   return (
-    <div className="flex gap-3 h-full">
-      {/* Main Calendar */}
-      <div className="flex-1 bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden flex flex-col">
-        <CalendarHeader
-          year={currentYear}
-          month={currentMonth}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onToday={handleToday}
-        />
-        <CalendarGrid
-          days={calendarDays}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          onEventClick={handleEventClick}
-        />
-      </div>
+    <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto">
+      <CalendarHeader
+        year={currentYear}
+        month={currentMonth}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+        onToday={handleToday}
+      />
 
-      {/* Right Sidebar */}
-      <div className="w-[240px] shrink-0 flex flex-col gap-3">
-        <MiniCalendar
-          year={currentYear}
-          month={currentMonth}
-          days={calendarDays}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-        />
-        <UpcomingDeadlines deadlines={upcomingDeadlines} onDeadlineClick={handleDeadlineClick} />
-        <StatusOverview counts={statusCounts} />
+      <div className="flex-1 flex gap-3 min-h-0 mt-2">
+        {/* Main Calendar */}
+        <div className="flex-1 min-w-0 bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden flex flex-col">
+          <CalendarGrid
+            days={calendarDays}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onEventClick={handleEventClick}
+          />
+        </div>
+
+        {/* Right Sidebar */}
+        <aside className="hidden lg:flex w-[240px] xl:w-[260px] shrink-0 flex-col gap-3 overflow-y-auto">
+          <MiniCalendar
+            year={currentYear}
+            month={currentMonth}
+            days={calendarDays}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+          />
+          <UpcomingDeadlines deadlines={upcomingDeadlines} onDeadlineClick={handleDeadlineClick} />
+          <StatusOverview counts={statusCounts} />
+        </aside>
       </div>
     </div>
   );

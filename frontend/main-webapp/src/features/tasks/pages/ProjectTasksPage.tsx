@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { TaskToolbar, TaskKanbanBoard, TaskListView, GanttView, TaskCalendarView, TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
@@ -8,18 +8,12 @@ import type { GanttTask } from "../components/gantt/types";
 import CreateTaskModal from "../../projects/components/CreateTaskModal";
 import type { Stage, ViewMode, Task } from "../types";
 import type { TaskFormData } from "../../projects/components/CreateTaskModal";
-import { getCurrentProjectUser, createProjectStage, updateProjectStage, deleteProjectStage, getProjectMembers, getProject, listCompanyTags } from "../../../services/projectService";
+import { getCurrentProjectUser, createProjectStage, updateProjectStage, deleteProjectStage, getProjectMembers, getProject, listCompanyTags, getProjectStages, type ApiWorkflowStage } from "../../../services/projectService";
 import { createTask, listProjectTasks, reviewTask, updateTask, getTaskDetail, type ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
-const STAGE_BY_STATUS: Record<Task["status"], string> = {
-  TODO: "To Do",
-  IN_PROGRESS: "In Progress",
-  BLOCKED: "Blocked",
-  IN_REVIEW: "In Review",
-  DONE: "Done",
-};
+const UNASSIGNED_STAGE_ID = "__unassigned__";
 
 const parseTaskTags = (raw?: string | null): Task["tags"] => {
   if (!raw) {
@@ -78,6 +72,8 @@ const toTaskView = (task: ApiTask): Task => ({
   key: task.key,
   projectTitle: task.projectTitle,
   projectSlug: task.projectSlug,
+  stageId: task.stageId ?? null,
+  milestoneId: task.milestoneId ?? null,
   title: task.title,
   description: task.description || "",
   priority: task.priority,
@@ -135,22 +131,41 @@ const toGanttTask = (task: Task, defaultProjectName: string): GanttTask => {
   };
 };
 
-const toStageList = (tasks: Task[]): Stage[] => {
-  const byStatus: Record<Task["status"], Task[]> = {
-    TODO: [],
-    IN_PROGRESS: [],
-    BLOCKED: [],
-    IN_REVIEW: [],
-    DONE: [],
-  };
+const toStageList = (tasks: Task[], workflowStages: ApiWorkflowStage[]): Stage[] => {
+  const orderedStages = [...workflowStages].sort((a, b) => a.stageOrder - b.stageOrder);
+
+  if (orderedStages.length === 0) {
+    return [{ id: UNASSIGNED_STAGE_ID, title: "Unassigned", tasks }];
+  }
+
+  const tasksByStage = new Map<string, Task[]>(
+    orderedStages.map((stage) => [stage.id, [] as Task[]]),
+  );
+  const unassignedTasks: Task[] = [];
+
   tasks.forEach((task) => {
-    byStatus[task.status].push(task);
+    if (task.stageId && tasksByStage.has(task.stageId)) {
+      tasksByStage.get(task.stageId)?.push(task);
+      return;
+    }
+    unassignedTasks.push(task);
   });
-  return Object.entries(STAGE_BY_STATUS).map(([status, title]) => ({
-    id: status,
-    title,
-    tasks: byStatus[status as Task["status"]],
+
+  const mappedStages = orderedStages.map((stage) => ({
+    id: stage.id,
+    title: stage.name,
+    tasks: tasksByStage.get(stage.id) ?? [],
   }));
+
+  if (unassignedTasks.length > 0) {
+    mappedStages.unshift({
+      id: UNASSIGNED_STAGE_ID,
+      title: "Unassigned",
+      tasks: unassignedTasks,
+    });
+  }
+
+  return mappedStages;
 };
 
 const toApiPriority = (priority: Task["priority"]): "URGENT" | "HIGH" | "MEDIUM" | "LOW" => {
@@ -194,7 +209,8 @@ export default function ProjectTasksPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
-  const [stages, setStages] = useState<Stage[]>([]);
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
+  const [workflowStages, setWorkflowStages] = useState<ApiWorkflowStage[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [projectName, setProjectName] = useState("Project Tasks");
@@ -207,7 +223,7 @@ export default function ProjectTasksPage() {
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [stageDeleteId, setStageDeleteId] = useState<string | null>(null);
 
-  const allTasks = useMemo(() => stages.flatMap((stage) => stage.tasks), [stages]);
+  const allTasks = projectTasks;
 
   const filteredTasks = useMemo(() => {
     return allTasks.filter((task) => {
@@ -242,23 +258,34 @@ export default function ProjectTasksPage() {
     });
   }, [allTasks, searchQuery, activeFilters]);
 
-  const filteredStages = useMemo(() => toStageList(filteredTasks), [filteredTasks]);
+  const filteredStages = useMemo(
+    () => toStageList(filteredTasks, workflowStages),
+    [filteredTasks, workflowStages],
+  );
   const ganttTasks = useMemo(() => filteredTasks.map((task) => toGanttTask(task, projectName)), [filteredTasks, projectName]);
+
+  const refreshTaskBoard = useCallback(async (projectId: string) => {
+    const [tasks, projectStages] = await Promise.all([
+      listProjectTasks(projectId),
+      getProjectStages(projectId),
+    ]);
+
+    setProjectTasks(tasks.map(toTaskView));
+    setWorkflowStages(projectStages);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
       if (!projectIdentifier) return;
       try {
         setLoading(true);
-        const [tasks, me, members, project, sharedTags] = await Promise.all([
-          listProjectTasks(projectIdentifier),
+        const [me, members, project, sharedTags] = await Promise.all([
           getCurrentProjectUser(),
           getProjectMembers(projectIdentifier),
           getProject(projectIdentifier),
           listCompanyTags(),
         ]);
-        const mappedTasks = tasks.map(toTaskView);
-        setStages(toStageList(mappedTasks));
+        await refreshTaskBoard(projectIdentifier);
         setCanManage(me.permissions.includes("PROJECT_MANAGE"));
         setTaskUsers(members.map((member) => ({ id: member.id, name: member.name, avatar: member.avatar })));
         setProjectName(project.title || "Project Tasks");
@@ -271,7 +298,7 @@ export default function ProjectTasksPage() {
     };
 
     void load();
-  }, [projectIdentifier, showToast]);
+  }, [projectIdentifier, refreshTaskBoard, showToast]);
 
   const handleTaskClick = (task: Task) => {
     const loadDetail = async () => {
@@ -279,6 +306,8 @@ export default function ProjectTasksPage() {
         const detail = await getTaskDetail(task.id);
         const taskDetail: TaskDetail = {
           ...task,
+          stageId: detail.stageId ?? task.stageId ?? null,
+          milestoneId: detail.milestoneId ?? task.milestoneId ?? null,
           subTasks: (detail.subtasks || []).map((st) => ({
             id: st.id,
             title: st.title,
@@ -309,6 +338,8 @@ export default function ProjectTasksPage() {
         // Fallback: open modal with minimal data
         setSelectedTask({
           ...task,
+          stageId: task.stageId ?? null,
+          milestoneId: task.milestoneId ?? null,
           subTasks: [],
           activities: [],
           comments: [],
@@ -336,6 +367,8 @@ export default function ProjectTasksPage() {
           reporterId: updatedTask.reporterId,
           estimatedEffort: updatedTask.estimatedEffort,
           actualEffort: updatedTask.actualEffort,
+          stageId: updatedTask.stageId ?? undefined,
+          milestoneId: updatedTask.milestoneId ?? undefined,
           assigneeIds: updatedTask.assignees.map((a) => a.id),
           tags: serializeTaskTags(updatedTask.tags),
         });
@@ -351,8 +384,7 @@ export default function ProjectTasksPage() {
         }
 
         if (projectIdentifier) {
-          const refreshed = await listProjectTasks(projectIdentifier);
-          setStages(toStageList(refreshed.map(toTaskView)));
+          await refreshTaskBoard(projectIdentifier);
         }
       } catch {
         showToast("Unable to update task", "error");
@@ -368,8 +400,7 @@ export default function ProjectTasksPage() {
     if (!name?.trim()) return;
     try {
       await createProjectStage(projectIdentifier, { name: name.trim() });
-      const refreshed = await listProjectTasks(projectIdentifier);
-      setStages(toStageList(refreshed.map(toTaskView)));
+      await refreshTaskBoard(projectIdentifier);
       showToast("Stage created", "success");
     } catch {
       showToast("Unable to create stage", "error");
@@ -382,6 +413,7 @@ export default function ProjectTasksPage() {
     if (!newName?.trim() || newName.trim() === currentName) return;
     try {
       await updateProjectStage(projectIdentifier, stageId, { name: newName.trim() });
+      await refreshTaskBoard(projectIdentifier);
       showToast("Stage renamed", "success");
     } catch {
       showToast("Unable to rename stage", "error");
@@ -393,16 +425,15 @@ export default function ProjectTasksPage() {
     setStageDeleteId(null);
     try {
       await deleteProjectStage(projectIdentifier, stageDeleteId);
-      const refreshed = await listProjectTasks(projectIdentifier);
-      setStages(toStageList(refreshed.map(toTaskView)));
+      await refreshTaskBoard(projectIdentifier);
       showToast("Stage deleted", "success");
     } catch {
-      showToast("Unable to delete stage", "error");
+      showToast("Unable to delete stage. Move tasks out of this stage first.", "error");
     }
   };
 
   const handleAddTask = (stageId: string) => {
-    setSelectedStageId(stageId);
+    setSelectedStageId(stageId === UNASSIGNED_STAGE_ID ? null : stageId);
     setIsCreateTaskModalOpen(true);
   };
 
@@ -434,8 +465,16 @@ export default function ProjectTasksPage() {
               onAddStage={canManage ? (() => void handleAddStage()) : undefined}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
-              onDeleteStage={canManage ? ((stageId) => setStageDeleteId(stageId)) : undefined}
-              onRenameStage={canManage ? ((stageId, currentName) => void handleRenameStage(stageId, currentName)) : undefined}
+              onDeleteStage={canManage ? ((stageId) => {
+                if (stageId !== UNASSIGNED_STAGE_ID) {
+                  setStageDeleteId(stageId);
+                }
+              }) : undefined}
+              onRenameStage={canManage ? ((stageId, currentName) => {
+                if (stageId !== UNASSIGNED_STAGE_ID) {
+                  void handleRenameStage(stageId, currentName);
+                }
+              }) : undefined}
             />
           )}
 
@@ -489,23 +528,20 @@ export default function ProjectTasksPage() {
           const submit = async (formData: TaskFormData) => {
             if (!projectIdentifier) return;
             try {
-              const status = selectedStageId && selectedStageId in STAGE_BY_STATUS
-                ? selectedStageId as Task["status"]
-                : "TODO";
               await createTask(projectIdentifier, {
                 title: formData.name,
                 description: formData.description,
-                status,
+                status: "TODO",
                 priority: toApiPriority(formData.priority),
                 progress: 0,
                 dueDate: formData.endDate ? formData.endDate.toISOString().slice(0, 10) : undefined,
                 reporterId: formData.reporterId || undefined,
                 estimatedEffort: formData.estimatedEffort,
+                stageId: selectedStageId ?? workflowStages[0]?.id,
                 assigneeIds: formData.assigneeId ? [formData.assigneeId] : [],
                 tags: JSON.stringify(formData.tags.map((label) => ({ label, type: "scope" as const }))),
               });
-              const refreshed = await listProjectTasks(projectIdentifier);
-              setStages(toStageList(refreshed.map(toTaskView)));
+              await refreshTaskBoard(projectIdentifier);
               showToast("Task created", "success");
             } catch {
               showToast("Unable to create task", "error");
@@ -522,7 +558,7 @@ export default function ProjectTasksPage() {
       <ConfirmDialog
         isOpen={!!stageDeleteId}
         title="Delete Workflow Stage"
-        message="Are you sure you want to delete this workflow stage? Tasks in this stage will be unassigned. This action cannot be undone."
+        message="Are you sure you want to delete this workflow stage? You cannot delete a stage that still has tasks."
         confirmLabel="Delete Stage"
         cancelLabel="Cancel"
         variant="danger"

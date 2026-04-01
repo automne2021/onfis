@@ -23,6 +23,7 @@ import com.onfis.project.dto.TaskActivityResponse;
 import com.onfis.project.dto.TaskCommentRequest;
 import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
+import com.onfis.project.dto.TaskPageResponse;
 import com.onfis.project.dto.TaskResponse;
 import com.onfis.project.dto.TaskStageUpdateRequest;
 import com.onfis.project.dto.TaskReviewResponse;
@@ -42,6 +43,8 @@ import com.onfis.project.entity.ProjectFavoriteId;
 import com.onfis.project.entity.ProjectMemberEntity;
 import com.onfis.project.entity.ProjectMemberId;
 import com.onfis.project.entity.ProjectMilestoneEntity;
+import com.onfis.project.entity.ProjectTagLinkEntity;
+import com.onfis.project.entity.ProjectTagLinkId;
 import com.onfis.project.entity.TaskAssigneeEntity;
 import com.onfis.project.entity.TaskAssigneeId;
 import com.onfis.project.entity.TaskActivityEntity;
@@ -49,6 +52,8 @@ import com.onfis.project.entity.TaskCommentEntity;
 import com.onfis.project.entity.TaskDependencyEntity;
 import com.onfis.project.entity.TaskDependencyId;
 import com.onfis.project.entity.TaskEntity;
+import com.onfis.project.entity.TaskTagLinkEntity;
+import com.onfis.project.entity.TaskTagLinkId;
 import com.onfis.project.entity.TaskSubtaskEntity;
 import com.onfis.project.entity.TaskReviewEntity;
 import com.onfis.project.entity.WorkflowStageEntity;
@@ -62,14 +67,17 @@ import com.onfis.project.repository.ProjectFavoriteRepository;
 import com.onfis.project.repository.ProjectMemberRepository;
 import com.onfis.project.repository.ProjectMilestoneRepository;
 import com.onfis.project.repository.ProjectRepository;
+import com.onfis.project.repository.ProjectTagLinkRepository;
 import com.onfis.project.repository.TaskActivityRepository;
 import com.onfis.project.repository.TaskAssigneeRepository;
 import com.onfis.project.repository.TaskCommentRepository;
 import com.onfis.project.repository.TaskRepository;
 import com.onfis.project.repository.TaskReviewRepository;
+import com.onfis.project.repository.TaskTagLinkRepository;
 import com.onfis.project.repository.TaskSubtaskRepository;
 import com.onfis.project.repository.WorkflowStageRepository;
 import com.onfis.shared.security.TenantContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
@@ -85,6 +93,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -100,6 +109,8 @@ public class ProjectModuleService {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final int DEFAULT_REVIEW_PAGE_SIZE = 20;
     private static final int MAX_REVIEW_PAGE_SIZE = 100;
+    private static final int DEFAULT_MY_TASKS_PAGE_SIZE = 10;
+    private static final int MAX_MY_TASKS_PAGE_SIZE = 100;
     private static final Map<TaskStatus, Set<TaskStatus>> TASK_TRANSITIONS = Map.of(
             TaskStatus.TODO, Set.of(TaskStatus.IN_PROGRESS),
             TaskStatus.IN_PROGRESS, Set.of(TaskStatus.IN_REVIEW, TaskStatus.BLOCKED),
@@ -123,6 +134,8 @@ public class ProjectModuleService {
     private final TaskSubtaskRepository taskSubtaskRepository;
     private final TaskActivityRepository taskActivityRepository;
     private final TaskDependencyRepository taskDependencyRepository;
+    private final ProjectTagLinkRepository projectTagLinkRepository;
+    private final TaskTagLinkRepository taskTagLinkRepository;
 
     public ProjectModuleService(
             TenantContext tenantContext,
@@ -139,7 +152,9 @@ public class ProjectModuleService {
             TaskCommentRepository taskCommentRepository,
             TaskSubtaskRepository taskSubtaskRepository,
                 TaskActivityRepository taskActivityRepository,
-                TaskDependencyRepository taskDependencyRepository
+                TaskDependencyRepository taskDependencyRepository,
+                ProjectTagLinkRepository projectTagLinkRepository,
+                TaskTagLinkRepository taskTagLinkRepository
     ) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
@@ -156,6 +171,8 @@ public class ProjectModuleService {
         this.taskSubtaskRepository = taskSubtaskRepository;
         this.taskActivityRepository = taskActivityRepository;
         this.taskDependencyRepository = taskDependencyRepository;
+        this.projectTagLinkRepository = projectTagLinkRepository;
+        this.taskTagLinkRepository = taskTagLinkRepository;
     }
 
     // ── Current user ──────────────────────────────────────────────────────────
@@ -239,8 +256,7 @@ public class ProjectModuleService {
                 .findByProjectIdOrderBySortOrderAsc(projectId)
                 .stream()
                 .limit(6)
-                .map(m -> new MilestoneResponse(m.getId().toString(), m.getTitle(), m.getTargetDate(),
-                        m.getStatus() != null ? m.getStatus().toLowerCase() : "upcoming"))
+            .map(this::toMilestoneResponse)
                 .collect(Collectors.toList());
 
         List<TaskEntity> recentTaskEntities = taskRepository
@@ -295,6 +311,7 @@ public class ProjectModuleService {
         project.setCreatedBy(currentUser.getId());
         applyProjectUpsert(project, request);
         ProjectEntity saved = projectRepository.save(project);
+        syncProjectTagLinks(tenantId, saved.getId(), saved.getTags());
 
         ProjectMemberEntity creatorMembership = new ProjectMemberEntity();
         creatorMembership.setId(new ProjectMemberId(saved.getId(), currentUser.getId()));
@@ -313,6 +330,7 @@ public class ProjectModuleService {
         enforceProjectManage(currentUser, projectId);
         applyProjectUpsert(project, request);
         ProjectEntity saved = projectRepository.save(project);
+        syncProjectTagLinks(tenantId, saved.getId(), saved.getTags());
         return toProjectResponse(saved, currentUser);
     }
 
@@ -552,8 +570,7 @@ public class ProjectModuleService {
 
         return projectMilestoneRepository.findByProjectIdOrderBySortOrderAsc(projectId)
                 .stream()
-                .map(m -> new MilestoneResponse(m.getId().toString(), m.getTitle(), m.getTargetDate(),
-                        m.getStatus() != null ? m.getStatus().toLowerCase() : "upcoming"))
+            .map(this::toMilestoneResponse)
                 .collect(Collectors.toList());
     }
 
@@ -575,6 +592,7 @@ public class ProjectModuleService {
         milestone.setTargetDate(request.targetDate());
         milestone.setStatus(normalizeMilestoneStatus(request.status()));
         milestone.setSortOrder(nextMilestoneOrder(projectId, request.sortOrder()));
+        milestone.setProgressOverride(normalizeMilestoneProgress(request.progress()));
         ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
         return toMilestoneResponse(saved);
     }
@@ -606,6 +624,9 @@ public class ProjectModuleService {
         }
         if (request.sortOrder() != null) {
             milestone.setSortOrder(request.sortOrder());
+        }
+        if (request.progress() != null) {
+            milestone.setProgressOverride(normalizeMilestoneProgress(request.progress()));
         }
 
         ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
@@ -639,20 +660,93 @@ public class ProjectModuleService {
         return toTaskResponses(tasks, currentUser, tenantId);
     }
 
-    public List<TaskResponse> listMyTasks(String userIdHeader) {
+        public TaskPageResponse listMyTasks(
+            String userIdHeader,
+            String tab,
+            String search,
+            String status,
+            String priority,
+            UUID stageId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+        ) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
 
+        int normalizedPage = Math.max(page, 0);
+        int normalizedSize = normalizeMyTasksPageSize(size);
+        String normalizedTab = normalizeMyTasksTab(tab);
+        Set<TaskStatus> statusFilter = parseTaskStatusFilter(status);
+        Set<TaskPriority> priorityFilter = parseTaskPriorityFilter(priority);
+
         List<TaskEntity> tasks = taskRepository.findAssignedOrReportedToUser(tenantId, currentUser.getId());
-        List<TaskEntity> visibleTasks = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            if (!isManager(currentUser)
-                    && !projectMemberRepository.existsByIdProjectIdAndIdUserId(task.getProjectId(), currentUser.getId())) {
-                continue;
-            }
-            visibleTasks.add(task);
+        if (tasks.isEmpty()) {
+            return new TaskPageResponse(List.of(), normalizedPage, normalizedSize, 0, 0, false);
         }
-        return toTaskResponses(visibleTasks, currentUser, tenantId);
+
+        List<UUID> projectIds = tasks.stream().map(TaskEntity::getProjectId).distinct().toList();
+        Set<UUID> visibleProjectIds;
+        if (isManager(currentUser)) {
+            visibleProjectIds = new HashSet<>(projectIds);
+        } else {
+            visibleProjectIds = projectMemberRepository.findByIdProjectIdIn(projectIds)
+                .stream()
+                .filter(member -> member.getId().getUserId().equals(currentUser.getId()))
+                .map(member -> member.getId().getProjectId())
+                .collect(Collectors.toSet());
+        }
+
+        List<UUID> taskIds = tasks.stream().map(TaskEntity::getId).toList();
+        Map<UUID, Set<UUID>> assigneesByTaskId = taskAssigneeRepository.findByIdTaskIdIn(taskIds)
+            .stream()
+            .collect(Collectors.groupingBy(
+                assignee -> assignee.getId().getTaskId(),
+                Collectors.mapping(assignee -> assignee.getId().getUserId(), Collectors.toSet())
+            ));
+
+        Map<UUID, ProjectEntity> projectsById = projectRepository.findAllById(projectIds)
+            .stream()
+            .filter(project -> tenantId.equals(project.getTenantId()))
+            .collect(Collectors.toMap(ProjectEntity::getId, p -> p));
+
+        List<TaskEntity> filteredTasks = tasks.stream()
+            .filter(task -> visibleProjectIds.contains(task.getProjectId()))
+            .filter(task -> matchesMyTaskTab(
+                task,
+                normalizedTab,
+                currentUser.getId(),
+                assigneesByTaskId.getOrDefault(task.getId(), Set.of())
+            ))
+            .filter(task -> matchesTaskSearch(task, projectsById.get(task.getProjectId()), search))
+            .filter(task -> statusFilter == null || statusFilter.contains(safeTaskStatus(task)))
+            .filter(task -> priorityFilter == null || priorityFilter.contains(safeTaskPriority(task)))
+            .filter(task -> stageId == null || Objects.equals(task.getStageId(), stageId))
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        filteredTasks.sort(buildMyTasksComparator(sortBy, sortDir));
+
+        long totalElements = filteredTasks.size();
+        int fromIndex = Math.min(normalizedPage * normalizedSize, filteredTasks.size());
+        int toIndex = Math.min(fromIndex + normalizedSize, filteredTasks.size());
+        List<TaskEntity> pageTasks = fromIndex >= toIndex
+            ? List.of()
+            : filteredTasks.subList(fromIndex, toIndex);
+
+        int totalPages = totalElements == 0
+            ? 0
+            : (int) Math.ceil((double) totalElements / normalizedSize);
+        boolean hasNext = normalizedPage + 1 < totalPages;
+
+        return new TaskPageResponse(
+            toTaskResponses(pageTasks, currentUser, tenantId),
+            normalizedPage,
+            normalizedSize,
+            totalElements,
+            totalPages,
+            hasNext
+        );
     }
 
     public TaskResponse getTask(String userIdHeader, UUID taskId) {
@@ -700,6 +794,7 @@ public class ProjectModuleService {
 
         TaskEntity saved = taskRepository.save(task);
         saveAssignees(tenantId, saved.getId(), request.assigneeIds());
+        syncTaskTagLinks(tenantId, saved.getId(), saved.getTags());
         logActivity(tenantId, saved.getId(), currentUser.getId(), "created", saved.getTitle());
         logAssigneeChanges(tenantId, saved.getId(), currentUser.getId(), List.of(), request.assigneeIds());
         return toTaskResponse(saved, currentUser);
@@ -734,6 +829,7 @@ public class ProjectModuleService {
         applyTaskUpsert(task, request, currentUser);
         TaskEntity saved = taskRepository.save(task);
         saveAssignees(tenantId, saved.getId(), request.assigneeIds());
+        syncTaskTagLinks(tenantId, saved.getId(), saved.getTags());
         logTaskChanges(
             tenantId,
             saved,
@@ -1114,6 +1210,7 @@ public class ProjectModuleService {
         entity.setTenantId(tenantId);
         entity.setName(request.name().trim());
         entity.setNormalizedName(normalizedName);
+        entity.setColor(normalizeCompanyTagColor(request.color()));
         entity.setCreatedBy(currentUser.getId());
         entity.setUpdatedBy(currentUser.getId());
 
@@ -1137,6 +1234,7 @@ public class ProjectModuleService {
 
         entity.setName(request.name().trim());
         entity.setNormalizedName(normalizedName);
+        entity.setColor(normalizeCompanyTagColor(request.color()));
         entity.setUpdatedBy(currentUser.getId());
 
         CompanyTagEntity saved = companyTagRepository.save(entity);
@@ -1296,6 +1394,8 @@ public class ProjectModuleService {
         return new TaskResponse(
                 task.getId(),
                 task.getProjectId(),
+                task.getStageId(),
+                task.getMilestoneId(),
             project == null ? "Project" : project.getName(),
             project == null ? null : project.getSlug(),
                 task.getTitle(),
@@ -1486,6 +1586,8 @@ public class ProjectModuleService {
         return new TaskDetailResponse(
                 task.getId(),
                 task.getProjectId(),
+            task.getStageId(),
+            task.getMilestoneId(),
                 project == null ? "Project" : project.getName(),
                 project == null ? null : project.getSlug(),
                 task.getTitle(),
@@ -1559,8 +1661,19 @@ public class ProjectModuleService {
             if (!stage.getProjectId().equals(task.getProjectId())) {
                 throw new BadRequestException("Stage does not belong to the task's project");
             }
+            task.setStageId(request.stageId());
         }
-        task.setStageId(request.stageId());
+        if (request.milestoneId() != null) {
+            ProjectMilestoneEntity milestone = projectMilestoneRepository.findById(request.milestoneId())
+                    .orElseThrow(() -> new NotFoundException("Milestone not found"));
+            if (!milestone.getProjectId().equals(task.getProjectId())) {
+                throw new BadRequestException("Milestone does not belong to the task's project");
+            }
+            if (!Objects.equals(milestone.getTenantId(), task.getTenantId())) {
+                throw new BadRequestException("Milestone does not belong to your tenant");
+            }
+            task.setMilestoneId(request.milestoneId());
+        }
         // Normalize jsonb tags to a valid JSON string to prevent casting errors.
         task.setTags(normalizeTags(request.tags()));
         task.setUpdatedBy(currentUser.getId());
@@ -1611,6 +1724,161 @@ public class ProjectModuleService {
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException("Invalid task priority: " + raw);
         }
+    }
+
+    private int normalizeMyTasksPageSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_MY_TASKS_PAGE_SIZE;
+        }
+        return Math.min(size, MAX_MY_TASKS_PAGE_SIZE);
+    }
+
+    private String normalizeMyTasksTab(String rawTab) {
+        if (rawTab == null || rawTab.isBlank()) {
+            return "assigned";
+        }
+
+        String normalized = rawTab.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "assigned", "created", "reviewing", "all" -> normalized;
+            default -> throw new BadRequestException("Invalid my tasks tab: " + rawTab);
+        };
+    }
+
+    private Set<TaskStatus> parseTaskStatusFilter(String rawStatuses) {
+        if (rawStatuses == null || rawStatuses.isBlank()) {
+            return null;
+        }
+
+        Set<TaskStatus> parsed = new HashSet<>();
+        for (String token : rawStatuses.split(",")) {
+            String value = token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                parsed.add(TaskStatus.valueOf(value.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ex) {
+                throw new BadRequestException("Invalid task status filter: " + value);
+            }
+        }
+
+        return parsed.isEmpty() ? null : parsed;
+    }
+
+    private Set<TaskPriority> parseTaskPriorityFilter(String rawPriorities) {
+        if (rawPriorities == null || rawPriorities.isBlank()) {
+            return null;
+        }
+
+        Set<TaskPriority> parsed = new HashSet<>();
+        for (String token : rawPriorities.split(",")) {
+            String value = token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                parsed.add(TaskPriority.valueOf(value.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ex) {
+                throw new BadRequestException("Invalid task priority filter: " + value);
+            }
+        }
+
+        return parsed.isEmpty() ? null : parsed;
+    }
+
+    private boolean matchesMyTaskTab(TaskEntity task, String tab, UUID currentUserId, Set<UUID> assigneeIds) {
+        return switch (tab) {
+            case "assigned" -> assigneeIds.contains(currentUserId);
+            case "created" -> Objects.equals(task.getReporterId(), currentUserId);
+            case "reviewing" -> Objects.equals(task.getReporterId(), currentUserId)
+                    && safeTaskStatus(task) == TaskStatus.IN_REVIEW;
+            case "all" -> true;
+            default -> true;
+        };
+    }
+
+    private boolean matchesTaskSearch(TaskEntity task, ProjectEntity project, String rawSearch) {
+        if (rawSearch == null || rawSearch.isBlank()) {
+            return true;
+        }
+
+        String keyword = rawSearch.trim().toLowerCase(Locale.ROOT);
+        String title = task.getTitle() == null ? "" : task.getTitle().toLowerCase(Locale.ROOT);
+        String description = task.getDescription() == null ? "" : task.getDescription().toLowerCase(Locale.ROOT);
+        String taskKey = task.getTaskKey() == null ? "" : task.getTaskKey().toLowerCase(Locale.ROOT);
+        String projectName = project == null || project.getName() == null
+                ? ""
+                : project.getName().toLowerCase(Locale.ROOT);
+
+        return title.contains(keyword)
+                || description.contains(keyword)
+                || taskKey.contains(keyword)
+                || projectName.contains(keyword);
+    }
+
+    private Comparator<TaskEntity> buildMyTasksComparator(String sortBy, String sortDir) {
+        String normalizedSortBy = sortBy == null || sortBy.isBlank()
+                ? "updatedat"
+                : sortBy.trim().toLowerCase(Locale.ROOT);
+
+        Comparator<TaskEntity> comparator = switch (normalizedSortBy) {
+            case "createdat" -> Comparator.comparing(
+                    TaskEntity::getCreatedAt,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            case "duedate" -> Comparator.comparing(
+                    TaskEntity::getDueDate,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            case "startdate" -> Comparator.comparing(
+                    TaskEntity::getStartDate,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            case "priority" -> Comparator.comparingInt(task -> taskPrioritySortRank(safeTaskPriority(task)));
+            case "status" -> Comparator.comparingInt(task -> safeTaskStatus(task).ordinal());
+            case "title" -> Comparator.comparing(
+                    task -> task.getTitle() == null ? "" : task.getTitle().toLowerCase(Locale.ROOT)
+            );
+            case "updatedat" -> Comparator.comparing(
+                    TaskEntity::getUpdatedAt,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            default -> throw new BadRequestException("Invalid sortBy value: " + sortBy);
+        };
+
+        comparator = comparator.thenComparing(TaskEntity::getId);
+        String normalizedSortDir = sortDir == null || sortDir.isBlank()
+                ? "desc"
+                : sortDir.trim().toLowerCase(Locale.ROOT);
+        return switch (normalizedSortDir) {
+            case "asc" -> comparator;
+            case "desc" -> comparator.reversed();
+            default -> throw new BadRequestException("Invalid sortDir value: " + sortDir);
+        };
+    }
+
+    private int taskPrioritySortRank(TaskPriority priority) {
+        return switch (priority) {
+            case URGENT -> 0;
+            case HIGH -> 1;
+            case MEDIUM -> 2;
+            case LOW -> 3;
+        };
+    }
+
+    private Integer normalizeMilestoneProgress(Integer rawProgress) {
+        if (rawProgress == null) {
+            return null;
+        }
+        if (rawProgress < 0 || rawProgress > 100) {
+            throw new BadRequestException("Milestone progress must be between 0 and 100");
+        }
+        return rawProgress;
+    }
+
+    private int clampProgress(int rawProgress) {
+        return Math.max(0, Math.min(100, rawProgress));
     }
 
     private ReviewAction parseReviewAction(String raw) {
@@ -1681,10 +1949,92 @@ public class ProjectModuleService {
         return normalizeTags(raw);
     }
 
+    private void syncProjectTagLinks(UUID tenantId, UUID projectId, String rawTags) {
+        projectTagLinkRepository.deleteByIdProjectId(projectId);
+
+        Set<String> normalizedTagNames = extractNormalizedTagNames(rawTags);
+        if (normalizedTagNames.isEmpty()) {
+            return;
+        }
+
+        List<CompanyTagEntity> tags = companyTagRepository.findByTenantIdAndNormalizedNameIn(tenantId, normalizedTagNames);
+        if (tags.isEmpty()) {
+            return;
+        }
+
+        List<ProjectTagLinkEntity> links = new ArrayList<>(tags.size());
+        for (CompanyTagEntity tag : tags) {
+            ProjectTagLinkEntity link = new ProjectTagLinkEntity();
+            link.setId(new ProjectTagLinkId(projectId, tag.getId()));
+            link.setTenantId(tenantId);
+            links.add(link);
+        }
+
+        projectTagLinkRepository.saveAll(links);
+    }
+
+    private void syncTaskTagLinks(UUID tenantId, UUID taskId, String rawTags) {
+        taskTagLinkRepository.deleteByIdTaskId(taskId);
+
+        Set<String> normalizedTagNames = extractNormalizedTagNames(rawTags);
+        if (normalizedTagNames.isEmpty()) {
+            return;
+        }
+
+        List<CompanyTagEntity> tags = companyTagRepository.findByTenantIdAndNormalizedNameIn(tenantId, normalizedTagNames);
+        if (tags.isEmpty()) {
+            return;
+        }
+
+        List<TaskTagLinkEntity> links = new ArrayList<>(tags.size());
+        for (CompanyTagEntity tag : tags) {
+            TaskTagLinkEntity link = new TaskTagLinkEntity();
+            link.setId(new TaskTagLinkId(taskId, tag.getId()));
+            link.setTenantId(tenantId);
+            links.add(link);
+        }
+
+        taskTagLinkRepository.saveAll(links);
+    }
+
+    private Set<String> extractNormalizedTagNames(String rawTags) {
+        String normalizedJson = normalizeTags(rawTags);
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(normalizedJson);
+            if (!root.isArray()) {
+                return Set.of();
+            }
+
+            Set<String> normalizedNames = new HashSet<>();
+            for (JsonNode node : root) {
+                String label = null;
+                if (node.isTextual()) {
+                    label = node.asText();
+                } else if (node.isObject()) {
+                    if (node.hasNonNull("label")) {
+                        label = node.get("label").asText();
+                    } else if (node.hasNonNull("name")) {
+                        label = node.get("name").asText();
+                    } else if (node.hasNonNull("value")) {
+                        label = node.get("value").asText();
+                    }
+                }
+
+                if (label != null && !label.isBlank()) {
+                    normalizedNames.add(normalizeCompanyTagName(label));
+                }
+            }
+            return normalizedNames;
+        } catch (Exception ex) {
+            return Set.of();
+        }
+    }
+
     private CompanyTagResponse toCompanyTagResponse(CompanyTagEntity entity) {
         return new CompanyTagResponse(
                 entity.getId(),
                 entity.getName(),
+                entity.getColor(),
                 asOffset(entity.getCreatedAt()),
                 asOffset(entity.getUpdatedAt())
         );
@@ -1695,6 +2045,17 @@ public class ProjectModuleService {
             throw new BadRequestException("Tag name is required");
         }
         return raw.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+
+    private String normalizeCompanyTagColor(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "#64748B";
+        }
+        String normalized = raw.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.matches("^#[0-9A-F]{6}$")) {
+            throw new BadRequestException("Tag color must be a valid hex value like #22C55E");
+        }
+        return normalized;
     }
 
     private String resolveTaskKey(TaskEntity task, ProjectEntity project) {
@@ -1797,13 +2158,39 @@ public class ProjectModuleService {
     }
 
     private MilestoneResponse toMilestoneResponse(ProjectMilestoneEntity milestone) {
+        int suggestedProgress = calculateSuggestedMilestoneProgress(milestone);
+        boolean progressOverridden = milestone.getProgressOverride() != null;
+        int progress = progressOverridden
+            ? clampProgress(milestone.getProgressOverride())
+            : suggestedProgress;
+
         return new MilestoneResponse(
                 milestone.getId().toString(),
                 milestone.getTitle(),
                 milestone.getTargetDate(),
-                milestone.getStatus() != null ? milestone.getStatus().toLowerCase() : "upcoming"
+            milestone.getStatus() != null ? milestone.getStatus().toLowerCase() : "upcoming",
+            progress,
+            suggestedProgress,
+            progressOverridden
         );
     }
+
+        private int calculateSuggestedMilestoneProgress(ProjectMilestoneEntity milestone) {
+        List<TaskEntity> milestoneTasks = taskRepository.findByTenantIdAndMilestoneId(
+            milestone.getTenantId(),
+            milestone.getId()
+        );
+        if (milestoneTasks.isEmpty()) {
+            return 0;
+        }
+
+        int totalProgress = milestoneTasks.stream()
+            .map(TaskEntity::getProgress)
+            .map(progress -> progress == null ? 0 : clampProgress(progress))
+            .reduce(0, Integer::sum);
+
+        return Math.round((float) totalProgress / milestoneTasks.size());
+        }
 
     private boolean hasDependencyPath(UUID fromTaskId, UUID targetTaskId) {
         return hasDependencyPath(fromTaskId, targetTaskId, new HashSet<>());

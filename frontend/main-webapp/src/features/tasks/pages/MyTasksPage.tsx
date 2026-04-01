@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useRole } from "../../../hooks/useRole";
 import { STATUS_CONFIG } from "../workflowUtils";
@@ -9,6 +9,15 @@ import { listMyTasks, reviewTask, updateTask, type ApiTask } from "../../../serv
 import { useToast } from "../../../contexts/useToast";
 
 type Tab = "assigned" | "created" | "reviewing";
+type SortBy = "updatedAt" | "createdAt" | "dueDate" | "startDate" | "priority" | "status" | "title";
+type SortDir = "asc" | "desc";
+
+interface TaskPageMeta {
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  hasNext: boolean;
+}
 
 const TAB_CONFIG: Record<Tab, { label: string; emptyIcon: string; emptyMsg: string }> = {
   assigned: {
@@ -40,6 +49,8 @@ const toTaskView = (task: ApiTask): Task => ({
   key: task.key,
   projectTitle: task.projectTitle,
   projectSlug: task.projectSlug,
+  stageId: task.stageId ?? null,
+  milestoneId: task.milestoneId ?? null,
   title: task.title,
   description: task.description || "",
   priority: task.priority,
@@ -136,48 +147,80 @@ export default function MyTasksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("updatedAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [page, setPage] = useState(0);
+  const [pageMeta, setPageMeta] = useState<TaskPageMeta>({
+    totalElements: 0,
+    totalPages: 0,
+    size: 10,
+    hasNext: false,
+  });
 
   useEffect(() => {
     if (isAuthLoading) {
       return;
     }
     setActiveTab(isManager ? "created" : "assigned");
+    setPage(0);
   }, [isAuthLoading, isManager]);
 
-  useEffect(() => {
+  const loadTasks = useCallback(async () => {
     if (isAuthLoading || !currentUser.id) {
       return;
     }
 
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const tasks = await listMyTasks();
-        setAllTasks(tasks.map(toTaskView));
-      } catch {
-        setError("Failed to load tasks from server.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await listMyTasks({
+        tab: activeTab,
+        search: searchQuery || undefined,
+        status: statusFilter || undefined,
+        priority: priorityFilter || undefined,
+        page,
+        size: 10,
+        sortBy,
+        sortDir,
+      });
 
-    void load();
-  }, [currentUser.id, isAuthLoading]);
-
-  const visibleTasks = useMemo(() => {
-    switch (activeTab) {
-      case "assigned":
-        return allTasks.filter((task) => task.assignees.some((assignee) => assignee.id === currentUser.id));
-      case "created":
-        return allTasks.filter((task) => task.reporterId === currentUser.id);
-      case "reviewing":
-        return allTasks.filter((task) => task.reporterId === currentUser.id && task.status === "IN_REVIEW");
-      default:
-        return allTasks;
+      setTasks(response.content.map(toTaskView));
+      setPageMeta({
+        totalElements: response.totalElements,
+        totalPages: response.totalPages,
+        size: response.size,
+        hasNext: response.hasNext,
+      });
+    } catch {
+      setError("Failed to load tasks from server.");
+      setTasks([]);
+      setPageMeta({ totalElements: 0, totalPages: 0, size: 10, hasNext: false });
+    } finally {
+      setLoading(false);
     }
-  }, [activeTab, allTasks, currentUser.id]);
+  }, [activeTab, currentUser.id, isAuthLoading, page, priorityFilter, searchQuery, sortBy, sortDir, statusFilter]);
+
+  useEffect(() => {
+    void loadTasks();
+  }, [loadTasks]);
+
+  const paginationSummary = useMemo(() => {
+    if (pageMeta.totalElements === 0) {
+      return "0-0 of 0";
+    }
+    const start = page * pageMeta.size + 1;
+    const end = Math.min((page + 1) * pageMeta.size, pageMeta.totalElements);
+    return `${start}-${end} of ${pageMeta.totalElements}`;
+  }, [page, pageMeta]);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    setPage(0);
+  };
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(convertToTaskDetail(task));
@@ -210,28 +253,7 @@ export default function MyTasksPage() {
             });
           }
         }
-
-        setAllTasks((prev) =>
-          prev.map((item) =>
-            item.id === updated.id
-              ? {
-                  ...item,
-                  title: updated.title,
-                  description: updated.description,
-                  status: updated.status,
-                  priority: updated.priority,
-                  progress: updated.progress,
-                  dueDate: updated.dueDate,
-                  assignees: updated.assignees,
-                  reporterId: updated.reporterId,
-                  reporterName: updated.reporterName,
-                  estimatedEffort: updated.estimatedEffort,
-                  actualEffort: updated.actualEffort,
-                  blockedBy: updated.blockedBy,
-                }
-              : item,
-          ),
-        );
+        await loadTasks();
         showToast("Task updated", "success");
       } catch {
         showToast("Unable to update task", "error");
@@ -256,19 +278,94 @@ export default function MyTasksPage() {
             <button
               key={tab}
               type="button"
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab ? "text-primary border-primary" : "text-neutral-500 border-transparent hover:text-neutral-800"
               }`}
             >
               {TAB_CONFIG[tab].label}
-              {activeTab === tab && visibleTasks.length > 0 && (
+              {activeTab === tab && pageMeta.totalElements > 0 && (
                 <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-primary/10 text-primary">
-                  {visibleTasks.length}
+                  {pageMeta.totalElements}
                 </span>
               )}
             </button>
           ))}
+        </div>
+
+        <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/60">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setPage(0);
+              }}
+              placeholder="Search by title, key, project"
+              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setPage(0);
+              }}
+              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">All Statuses</option>
+              <option value="TODO">To Do</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="BLOCKED">Blocked</option>
+              <option value="IN_REVIEW">In Review</option>
+              <option value="DONE">Done</option>
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(event) => {
+                setPriorityFilter(event.target.value);
+                setPage(0);
+              }}
+              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">All Priorities</option>
+              <option value="URGENT">Urgent</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(event) => {
+                setSortBy(event.target.value as SortBy);
+                setPage(0);
+              }}
+              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="updatedAt">Sort: Updated</option>
+              <option value="createdAt">Sort: Created</option>
+              <option value="dueDate">Sort: Due Date</option>
+              <option value="startDate">Sort: Start Date</option>
+              <option value="priority">Sort: Priority</option>
+              <option value="status">Sort: Status</option>
+              <option value="title">Sort: Title</option>
+            </select>
+
+            <select
+              value={sortDir}
+              onChange={(event) => {
+                setSortDir(event.target.value as SortDir);
+                setPage(0);
+              }}
+              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
         </div>
 
         {loading && (
@@ -280,7 +377,7 @@ export default function MyTasksPage() {
         )}
         {error && !loading && <div className="px-4 py-8 text-sm text-red-500">{error}</div>}
 
-        {!loading && !error && visibleTasks.length > 0 && (
+        {!loading && !error && tasks.length > 0 && (
           <div className="grid grid-cols-[2fr_0.9fr_1fr_1fr_1fr] gap-3 px-4 py-2 bg-neutral-50 border-b border-neutral-100">
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Task</span>
             <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Priority</span>
@@ -291,10 +388,10 @@ export default function MyTasksPage() {
         )}
 
         <div>
-          {!loading && !error && visibleTasks.length === 0 ? (
+          {!loading && !error && tasks.length === 0 ? (
             <EmptyState icon={TAB_CONFIG[activeTab].emptyIcon} message={TAB_CONFIG[activeTab].emptyMsg} />
           ) : (
-            visibleTasks.map((task) => (
+            tasks.map((task) => (
               <TaskItemRow
                 key={task.id}
                 task={task}
@@ -303,6 +400,36 @@ export default function MyTasksPage() {
             ))
           )}
         </div>
+
+        {!loading && !error && pageMeta.totalPages > 0 && (
+          <div className="px-4 py-3 border-t border-neutral-100 bg-white flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-neutral-500">Showing {paginationSummary}</span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                disabled={page === 0}
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+
+              <span className="text-xs text-neutral-500">
+                Page {page + 1} / {Math.max(pageMeta.totalPages, 1)}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setPage((prev) => prev + 1)}
+                disabled={!pageMeta.hasNext}
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedTask && (

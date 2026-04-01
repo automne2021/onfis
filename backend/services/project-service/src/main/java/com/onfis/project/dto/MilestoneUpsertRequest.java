@@ -6,6 +6,7 @@ public record MilestoneUpsertRequest(
         String title,
         LocalDate targetDate,
         String status,
-        Integer sortOrder
+        Integer sortOrder,
+        Integer progress
 ) {
 }

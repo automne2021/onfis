@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, ChevronRightIcon, FilterIcon, CalendarDateIcon as CalendarIcon, GridViewIcon as GroupByIcon, TodayIcon } from "../../../../components/common/Icons";
+import { ChevronLeftIcon, ChevronRightIcon, CalendarDateIcon as CalendarIcon, TodayIcon } from "../../../../components/common/Icons";
 import type { TimelineViewMode } from "./types";
 import { getMonthName } from "./timelineUtils";
 
@@ -7,8 +7,6 @@ interface TimelineToolbarProps {
   onDateChange: (date: Date) => void;
   viewMode: TimelineViewMode;
   onViewModeChange: (mode: TimelineViewMode) => void;
-  onFilter?: () => void;
-  onGroupBy?: () => void;
 }
 
 export default function TimelineToolbar({
@@ -16,8 +14,6 @@ export default function TimelineToolbar({
   onDateChange,
   viewMode,
   onViewModeChange,
-  onFilter,
-  onGroupBy,
 }: TimelineToolbarProps) {
   const handlePrev = () => {
     const newDate = new Date(currentDate);
@@ -54,7 +50,7 @@ export default function TimelineToolbar({
   ];
 
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 bg-white border-b border-neutral-200">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 bg-white border-b border-neutral-200">
       {/* Left: Navigation */}
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
@@ -90,24 +86,6 @@ export default function TimelineToolbar({
 
       {/* Right: Controls */}
       <div className="flex items-center gap-2">
-        {/* Filter */}
-        <button
-          onClick={onFilter}
-          className="flex items-center gap-1.5 px-2 py-1 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors border border-neutral-200"
-        >
-          <FilterIcon />
-          <span className="text-xs">Filter</span>
-        </button>
-
-        {/* Group By */}
-        <button
-          onClick={onGroupBy}
-          className="flex items-center gap-1.5 px-2 py-1 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors border border-neutral-200"
-        >
-          <GroupByIcon />
-          <span className="text-xs">Group by</span>
-        </button>
-
         {/* View Mode Toggle */}
         <div className="flex items-center rounded-lg overflow-hidden border border-neutral-200">
           {viewModes.map(({ mode, label }) => (

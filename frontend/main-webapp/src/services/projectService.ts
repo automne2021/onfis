@@ -10,7 +10,10 @@ export interface ApiMilestone {
   id: string;
   title: string;
   targetDate: string | null;
-  status: 'completed' | 'upcoming' | 'at_risk' | 'in_progress';
+  status: 'completed' | 'upcoming' | 'at_risk' | 'in_progress' | 'late';
+  progress: number;
+  suggestedProgress: number;
+  progressOverridden: boolean;
 }
 
 export interface ApiProjectDetail {
@@ -72,6 +75,7 @@ export interface ApiProjectMember {
 export interface ApiCompanyTag {
   id: string;
   name: string;
+  color: string;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -96,6 +100,7 @@ export interface UpsertProjectMemberPayload {
 
 export interface UpsertCompanyTagPayload {
   name: string;
+  color?: string;
 }
 
 // ── Workflow Stages ─────────────────────────────────────────────────────
@@ -119,8 +124,9 @@ export interface WorkflowStageReorderPayload {
 export interface MilestonePayload {
   title: string;
   targetDate?: string;
-  status: 'completed' | 'upcoming' | 'at_risk' | 'in_progress';
+  status: 'completed' | 'upcoming' | 'at_risk' | 'in_progress' | 'late';
   sortOrder?: number;
+  progress?: number;
 }
 
 // ── Current user ────────────────────────────────────────────────────────

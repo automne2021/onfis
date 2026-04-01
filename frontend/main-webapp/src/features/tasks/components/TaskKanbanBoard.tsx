@@ -24,10 +24,9 @@ export default function TaskKanbanBoard({
   const [newStageId, setNewStageId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync from parent when stages change
-  if (stages !== localStages && stages.length !== localStages.length) {
+  useEffect(() => {
     setLocalStages(stages);
-  }
+  }, [stages]);
 
   // Detect newly added stage and scroll to it
   useEffect(() => {
@@ -100,15 +99,17 @@ export default function TaskKanbanBoard({
       ))}
 
       {/* Add Stage Button */}
-      <div className="flex flex-col items-center p-2 min-w-[240px] lg:min-w-[280px] flex-shrink-0">
-        <button
-          onClick={handleAddStage}
-          className="w-full bg-white border border-neutral-200 rounded-[12px] flex items-center justify-center gap-2 px-3 py-2 text-neutral-400 hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-600 transition-all duration-200"
-        >
-          <AddIcon />
-          <span className="font-medium text-sm leading-5">Stage</span>
-        </button>
-      </div>
+      {onAddStage && (
+        <div className="flex flex-col items-center p-2 min-w-[240px] lg:min-w-[280px] flex-shrink-0">
+          <button
+            onClick={handleAddStage}
+            className="w-full bg-white border border-neutral-200 rounded-[12px] flex items-center justify-center gap-2 px-3 py-2 text-neutral-400 hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-600 transition-all duration-200"
+          >
+            <AddIcon />
+            <span className="font-medium text-sm leading-5">Stage</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

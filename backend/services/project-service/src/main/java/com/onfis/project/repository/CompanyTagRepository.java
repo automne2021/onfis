@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface CompanyTagRepository extends JpaRepository<CompanyTagEntity, UUID> {
@@ -16,4 +17,6 @@ public interface CompanyTagRepository extends JpaRepository<CompanyTagEntity, UU
     boolean existsByTenantIdAndNormalizedName(UUID tenantId, String normalizedName);
 
     boolean existsByTenantIdAndNormalizedNameAndIdNot(UUID tenantId, String normalizedName, UUID id);
+
+    List<CompanyTagEntity> findByTenantIdAndNormalizedNameIn(UUID tenantId, Set<String> normalizedNames);
 }

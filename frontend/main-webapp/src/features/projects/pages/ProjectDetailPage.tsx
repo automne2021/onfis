@@ -4,7 +4,19 @@ import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, Upcomi
 import { ArrowRightAltOutlined } from '@mui/icons-material';
 import { useRole } from "../../../hooks/useRole";
 import { useTenantPath } from "../../../hooks/useTenantPath";
-import { getProjectDetail, toggleProjectFavorite, deleteProject, updateProject, type ApiProjectDetail, type ApiMilestone, type ApiUserSummary } from "../../../services/projectService";
+import {
+  createMilestone,
+  deleteMilestone,
+  deleteProject,
+  getProjectDetail,
+  getProjectMilestones,
+  toggleProjectFavorite,
+  updateMilestone,
+  updateProject,
+  type ApiMilestone,
+  type ApiProjectDetail,
+  type ApiUserSummary,
+} from "../../../services/projectService";
 import type { ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
@@ -109,7 +121,7 @@ const PriorityBadge = ({ priority }: { priority: Priority }) => {
 };
 
 // Milestone Status Badge
-const MilestoneStatusBadge = ({ status }: { status: ApiMilestone['status'] | 'late' }) => {
+const MilestoneStatusBadge = ({ status }: { status: ApiMilestone['status'] }) => {
   const styles: Record<string, string> = {
     completed: "bg-status-done/15 text-status-done",
     late: "bg-status-off_track/15 text-status-off_track",
@@ -183,6 +195,18 @@ const MilestoneItem = ({ milestone }: { milestone: ApiMilestone }) => {
         {milestone.targetDate ? new Date(milestone.targetDate).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
       </p>
       <MilestoneStatusBadge status={milestone.status} />
+
+      <div className="w-full mt-1">
+        <div className="h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-status-on_track rounded-full transition-all"
+            style={{ width: `${milestone.progress}%` }}
+          />
+        </div>
+        <p className="text-[10px] text-neutral-500 mt-1 text-center">
+          {milestone.progress}% {milestone.progressOverridden ? "(manual)" : "(auto)"}
+        </p>
+      </div>
     </div>
   );
 };
@@ -202,6 +226,20 @@ export default function ProjectDetailPage() {
   const [status, setStatus] = useState<ProjectStatus>('planning');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMilestoneForm, setShowMilestoneForm] = useState(false);
+  const [milestoneEditingId, setMilestoneEditingId] = useState<string | null>(null);
+  const [milestoneDeleteId, setMilestoneDeleteId] = useState<string | null>(null);
+  const [milestoneDraft, setMilestoneDraft] = useState<{
+    title: string;
+    targetDate: string;
+    status: ApiMilestone["status"];
+    progress: string;
+  }>({
+    title: "",
+    targetDate: "",
+    status: "upcoming",
+    progress: "",
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -265,6 +303,107 @@ export default function ProjectDetailPage() {
       navigate(withTenant('/projects'));
     } catch {
       showToast('Failed to delete project', 'error');
+    }
+  };
+
+  const refreshMilestones = async () => {
+    if (!projectIdentifier) {
+      return;
+    }
+    const latestMilestones = await getProjectMilestones(projectIdentifier);
+    setProject((prev) => (prev ? { ...prev, milestones: latestMilestones } : prev));
+  };
+
+  const resetMilestoneDraft = () => {
+    setMilestoneDraft({
+      title: "",
+      targetDate: "",
+      status: "upcoming",
+      progress: "",
+    });
+    setMilestoneEditingId(null);
+    setShowMilestoneForm(false);
+  };
+
+  const handleStartCreateMilestone = () => {
+    resetMilestoneDraft();
+    setShowMilestoneForm(true);
+  };
+
+  const handleStartEditMilestone = (milestone: ApiMilestone) => {
+    setMilestoneEditingId(milestone.id);
+    setMilestoneDraft({
+      title: milestone.title,
+      targetDate: milestone.targetDate ?? "",
+      status: milestone.status,
+      progress: milestone.progressOverridden ? String(milestone.progress) : "",
+    });
+    setShowMilestoneForm(true);
+  };
+
+  const handleSaveMilestone = async () => {
+    if (!projectIdentifier) {
+      return;
+    }
+
+    const title = milestoneDraft.title.trim();
+    if (!title) {
+      showToast("Milestone title is required", "error");
+      return;
+    }
+
+    const progressOverride = milestoneDraft.progress.trim() === ""
+      ? undefined
+      : Number(milestoneDraft.progress);
+    if (progressOverride !== undefined && Number.isNaN(progressOverride)) {
+      showToast("Progress override must be a number", "error");
+      return;
+    }
+    if (progressOverride !== undefined && (progressOverride < 0 || progressOverride > 100)) {
+      showToast("Progress override must be between 0 and 100", "error");
+      return;
+    }
+
+    try {
+      if (milestoneEditingId) {
+        await updateMilestone(projectIdentifier, milestoneEditingId, {
+          title,
+          targetDate: milestoneDraft.targetDate || undefined,
+          status: milestoneDraft.status,
+          progress: progressOverride,
+        });
+        showToast("Milestone updated", "success");
+      } else {
+        await createMilestone(projectIdentifier, {
+          title,
+          targetDate: milestoneDraft.targetDate || undefined,
+          status: milestoneDraft.status,
+          progress: progressOverride,
+        });
+        showToast("Milestone created", "success");
+      }
+
+      await refreshMilestones();
+      resetMilestoneDraft();
+    } catch {
+      showToast("Unable to save milestone", "error");
+    }
+  };
+
+  const handleDeleteMilestone = async () => {
+    if (!projectIdentifier || !milestoneDeleteId) {
+      return;
+    }
+
+    const deletingId = milestoneDeleteId;
+    setMilestoneDeleteId(null);
+
+    try {
+      await deleteMilestone(projectIdentifier, deletingId);
+      await refreshMilestones();
+      showToast("Milestone deleted", "success");
+    } catch {
+      showToast("Unable to delete milestone", "error");
     }
   };
 
@@ -487,9 +626,15 @@ export default function ProjectDetailPage() {
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
             Project Milestones
           </h2>
-          <button type="button" className="body-4-regular text-primary hover:underline">
-            View all
-          </button>
+          {isManager && (
+            <button
+              type="button"
+              onClick={handleStartCreateMilestone}
+              className="body-4-regular text-primary hover:underline"
+            >
+              Add Milestone
+            </button>
+          )}
         </div>
 
         {/* Milestones Grid with centered line */}
@@ -500,10 +645,100 @@ export default function ProjectDetailPage() {
           {project.milestones.length === 0 ? (
             <div className="text-xs text-neutral-400 py-3 text-center">No milestones yet</div>
           ) : project.milestones.map((milestone) => (
-            <MilestoneItem key={milestone.id} milestone={milestone} />
+            <div key={milestone.id} className="flex flex-col items-center gap-2">
+              <MilestoneItem milestone={milestone} />
+
+              {isManager && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleStartEditMilestone(milestone)}
+                    className="px-2 py-1 text-[10px] font-medium text-neutral-700 border border-neutral-200 rounded hover:bg-neutral-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMilestoneDeleteId(milestone.id)}
+                    className="px-2 py-1 text-[10px] font-medium text-red-600 border border-red-200 rounded hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
           </div>
         </div>
+
+        {isManager && showMilestoneForm && (
+          <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50">
+            <h3 className="text-sm font-semibold text-neutral-900 mb-3">
+              {milestoneEditingId ? "Edit Milestone" : "New Milestone"}
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+              <input
+                type="text"
+                value={milestoneDraft.title}
+                onChange={(event) => setMilestoneDraft((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="Milestone title"
+                className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
+                maxLength={120}
+              />
+
+              <input
+                type="date"
+                value={milestoneDraft.targetDate}
+                onChange={(event) => setMilestoneDraft((prev) => ({ ...prev, targetDate: event.target.value }))}
+                className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
+              />
+
+              <select
+                value={milestoneDraft.status}
+                onChange={(event) => setMilestoneDraft((prev) => ({ ...prev, status: event.target.value as ApiMilestone["status"] }))}
+                className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary bg-white"
+              >
+                <option value="upcoming">Upcoming</option>
+                <option value="in_progress">In Progress</option>
+                <option value="at_risk">At Risk</option>
+                <option value="completed">Completed</option>
+                <option value="late">Late</option>
+              </select>
+
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={milestoneDraft.progress}
+                onChange={(event) => setMilestoneDraft((prev) => ({ ...prev, progress: event.target.value }))}
+                placeholder="Progress override (0-100)"
+                className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
+              />
+            </div>
+
+            <p className="text-[11px] text-neutral-500 mt-2">
+              Leave progress override empty to use automatic progress from linked tasks.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 mt-3">
+              <button
+                type="button"
+                onClick={resetMilestoneDraft}
+                className="px-3 py-1.5 text-xs font-medium text-neutral-700 border border-neutral-200 rounded-md hover:bg-neutral-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveMilestone()}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
+              >
+                {milestoneEditingId ? "Save Milestone" : "Create Milestone"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Recent Tasks Card */}
@@ -555,6 +790,17 @@ export default function ProjectDetailPage() {
         variant="danger"
         onConfirm={() => void handleDeleteProject()}
         onCancel={() => setShowDeleteConfirm(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!milestoneDeleteId}
+        title="Delete Milestone"
+        message="Are you sure you want to delete this milestone?"
+        confirmLabel="Delete Milestone"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleDeleteMilestone()}
+        onCancel={() => setMilestoneDeleteId(null)}
       />
     </div>
   );

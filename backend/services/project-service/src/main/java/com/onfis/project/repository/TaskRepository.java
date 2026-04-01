@@ -67,5 +67,7 @@ public interface TaskRepository extends JpaRepository<TaskEntity, UUID> {
     """)
     List<TaskEntity> findAssignedOrReportedToUser(UUID tenantId, UUID userId);
 
+    List<TaskEntity> findByTenantIdAndMilestoneId(UUID tenantId, UUID milestoneId);
+
     long countByProjectIdAndStageId(UUID projectId, UUID stageId);
 }

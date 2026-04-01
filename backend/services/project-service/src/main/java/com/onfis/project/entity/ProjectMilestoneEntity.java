@@ -43,6 +43,9 @@ public class ProjectMilestoneEntity {
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 0;
 
+    @Column(name = "progress_override")
+    private Integer progressOverride;
+
     @Column(name = "created_at")
     private Instant createdAt;
 

@@ -21,6 +21,8 @@ export interface Task {
   key?: string;
   projectTitle?: string;
   projectSlug?: string;
+  stageId?: string | null;
+  milestoneId?: string | null;
   title: string;
   description: string;
   priority: TaskPriority;
