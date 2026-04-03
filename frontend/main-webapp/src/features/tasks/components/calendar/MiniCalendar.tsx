@@ -1,19 +1,26 @@
-import { useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "../../../../components/common/Icons";
 import { getDayNames, getCalendarDays } from "./calendarUtils";
 
 interface MiniCalendarProps {
+  year: number;
+  month: number;
   selectedDate?: Date;
   onDateSelect?: (date: Date) => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
 }
 
-export default function MiniCalendar({ selectedDate, onDateSelect }: MiniCalendarProps) {
-  const today = new Date();
-  const [viewMonth, setViewMonth] = useState(selectedDate?.getMonth() ?? today.getMonth());
-  const [viewYear, setViewYear] = useState(selectedDate?.getFullYear() ?? today.getFullYear());
+export default function MiniCalendar({
+  year,
+  month,
+  selectedDate,
+  onDateSelect,
+  onPrevMonth,
+  onNextMonth,
+}: MiniCalendarProps) {
 
   const dayNames = getDayNames();
-  const days = getCalendarDays(viewYear, viewMonth, []);
+  const days = getCalendarDays(year, month, []);
 
   // Split into weeks
   const weeks: typeof days[] = [];
@@ -26,24 +33,6 @@ export default function MiniCalendar({ selectedDate, onDateSelect }: MiniCalenda
     "July", "August", "September", "October", "November", "December"
   ];
 
-  const handlePrevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear(viewYear - 1);
-    } else {
-      setViewMonth(viewMonth - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear(viewYear + 1);
-    } else {
-      setViewMonth(viewMonth + 1);
-    }
-  };
-
   const isSelectedDate = (date: Date) => {
     if (!selectedDate) return false;
     return date.toDateString() === selectedDate.toDateString();
@@ -54,18 +43,18 @@ export default function MiniCalendar({ selectedDate, onDateSelect }: MiniCalenda
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-neutral-900">
-          {monthNames[viewMonth]} {viewYear}
+          {monthNames[month]} {year}
         </h3>
         <div className="flex items-center gap-1">
           <button
-            onClick={handlePrevMonth}
+            onClick={onPrevMonth}
             className="p-1 hover:bg-neutral-100 rounded transition-colors text-neutral-500"
             aria-label="Previous month"
           >
             <ChevronLeftIcon />
           </button>
           <button
-            onClick={handleNextMonth}
+            onClick={onNextMonth}
             className="p-1 hover:bg-neutral-100 rounded transition-colors text-neutral-500"
             aria-label="Next month"
           >

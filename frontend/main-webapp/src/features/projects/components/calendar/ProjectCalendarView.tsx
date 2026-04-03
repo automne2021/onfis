@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Project } from "../../types";
 import type { ProjectCalendarEvent, UpcomingDeadline, StatusCount } from "./types";
 import { getCalendarDays } from "./calendarUtils";
@@ -11,13 +11,30 @@ import StatusOverview from "./StatusOverview";
 interface ProjectCalendarViewProps {
   projects: Project[];
   onProjectClick?: (project: Project) => void;
+  currentDate?: Date;
+  onCurrentDateChange?: (date: Date) => void;
 }
 
-export default function ProjectCalendarView({ projects, onProjectClick }: ProjectCalendarViewProps) {
+export default function ProjectCalendarView({
+  projects,
+  onProjectClick,
+  currentDate,
+  onCurrentDateChange,
+}: ProjectCalendarViewProps) {
   const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const seedDate = currentDate ?? today;
+  const [currentMonth, setCurrentMonth] = useState(seedDate.getMonth());
+  const [currentYear, setCurrentYear] = useState(seedDate.getFullYear());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(seedDate);
+
+  useEffect(() => {
+    if (!currentDate) {
+      return;
+    }
+    setCurrentMonth(currentDate.getMonth());
+    setCurrentYear(currentDate.getFullYear());
+    setSelectedDate(currentDate);
+  }, [currentDate]);
 
   // Calculate calendar days
   const calendarDays = useMemo(
@@ -51,36 +68,40 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
   // Calculate status counts
   const statusCounts: StatusCount = useMemo(
     () => ({
-      planning: projects.filter((p) => p.status === "planning").length,
-      inProgress: projects.filter((p) => p.status === "in_progress").length,
-      onHold: projects.filter((p) => p.status === "on_hold").length,
       completed: projects.filter((p) => p.status === "completed").length,
+      inProgress: projects.filter((p) => p.status === "in_progress").length,
+      toDo: projects.filter((p) => p.status === "planning" || p.status === "on_hold").length,
     }),
     [projects]
   );
 
+  const shiftMonth = (offset: number) => {
+    const baseDate = new Date(currentYear, currentMonth, 1);
+    baseDate.setMonth(baseDate.getMonth() + offset);
+    setCurrentMonth(baseDate.getMonth());
+    setCurrentYear(baseDate.getFullYear());
+    onCurrentDateChange?.(baseDate);
+  };
+
   const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+    shiftMonth(-1);
   };
 
   const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    shiftMonth(1);
   };
 
   const handleToday = () => {
-    setCurrentMonth(today.getMonth());
-    setCurrentYear(today.getFullYear());
-    setSelectedDate(today);
+    const nextDate = new Date();
+    setCurrentMonth(nextDate.getMonth());
+    setCurrentYear(nextDate.getFullYear());
+    setSelectedDate(nextDate);
+    onCurrentDateChange?.(nextDate);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    onCurrentDateChange?.(date);
   };
 
   const handleEventClick = (event: ProjectCalendarEvent) => {
@@ -89,8 +110,8 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
     }
   };
 
-  const handleDeadlineClick = (deadline: UpcomingDeadline) => {
-    const project = projects.find((p) => p.id === deadline.id);
+  const handleDeadlineClick = (id: string) => {
+    const project = projects.find((p) => p.id === id);
     if (project && onProjectClick) {
       onProjectClick(project);
     }
@@ -112,7 +133,7 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
           <CalendarGrid
             days={calendarDays}
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleDateSelect}
             onEventClick={handleEventClick}
           />
         </div>
@@ -124,12 +145,12 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
             month={currentMonth}
             days={calendarDays}
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleDateSelect}
             onPrevMonth={handlePrevMonth}
             onNextMonth={handleNextMonth}
           />
-          <UpcomingDeadlines deadlines={upcomingDeadlines} onDeadlineClick={handleDeadlineClick} />
-          <StatusOverview counts={statusCounts} />
+          <UpcomingDeadlines deadlines={upcomingDeadlines} onViewAll={() => {}} onDeadlineClick={handleDeadlineClick} />
+          <StatusOverview status={statusCounts} />
         </aside>
       </div>
     </div>

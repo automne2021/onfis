@@ -7,10 +7,12 @@ import { generateTimelineConfig } from "./ganttUtils";
 
 interface GanttViewProps {
   tasks: GanttTask[];
+  currentDate?: Date;
+  onCurrentDateChange?: (date: Date) => void;
 }
 
-export default function GanttView({ tasks }: GanttViewProps) {
-  const [currentDate, setCurrentDate] = useState<Date>(() => {
+export default function GanttView({ tasks, currentDate, onCurrentDateChange }: GanttViewProps) {
+  const [internalCurrentDate, setInternalCurrentDate] = useState<Date>(() => {
     const firstTaskDate = tasks[0]?.startDate;
     return firstTaskDate ?? new Date();
   });
@@ -18,9 +20,20 @@ export default function GanttView({ tasks }: GanttViewProps) {
   const [selectedTask, setSelectedTask] = useState<GanttTask | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
+  const effectiveCurrentDate = currentDate ?? internalCurrentDate;
+
+  const handleDateChange = (nextDate: Date) => {
+    if (currentDate) {
+      onCurrentDateChange?.(nextDate);
+      return;
+    }
+    setInternalCurrentDate(nextDate);
+    onCurrentDateChange?.(nextDate);
+  };
+
   const timelineConfig = useMemo(
-    () => generateTimelineConfig(currentDate, viewMode, tasks),
-    [currentDate, viewMode, tasks]
+    () => generateTimelineConfig(effectiveCurrentDate, viewMode, tasks),
+    [effectiveCurrentDate, viewMode, tasks]
   );
 
   const handleTaskSelect = (task: GanttTask) => {
@@ -47,8 +60,8 @@ export default function GanttView({ tasks }: GanttViewProps) {
   return (
     <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto">
       <GanttToolbar
-        currentDate={currentDate}
-        onDateChange={setCurrentDate}
+        currentDate={effectiveCurrentDate}
+        onDateChange={handleDateChange}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />

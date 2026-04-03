@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "../../../components/common/Modal";
 import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
@@ -9,6 +9,11 @@ interface SubTask {
   name: string;
   completed: boolean;
   assigneeId?: string;
+}
+
+interface FormErrors {
+  name?: string;
+  dateRange?: string;
 }
 
 interface CreateTaskModalProps {
@@ -66,12 +71,26 @@ export default function CreateTaskModal({
   });
   const [showReporterDropdown, setShowReporterDropdown] = useState(false);
   const selectedReporter = users.find((a) => a.id === formData.reporterId);
-  const [errors, setErrors] = useState<{ name?: string }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [openSubtaskAssigneeId, setOpenSubtaskAssigneeId] = useState<string | null>(null);
 
   const selectedAssignee = users.find((a) => a.id === formData.assigneeId);
   const selectedPriority = PRIORITIES.find((p) => p.value === formData.priority);
+  const subtaskAssigneeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (subtaskAssigneeRef.current && !subtaskAssigneeRef.current.contains(event.target as Node)) {
+        setOpenSubtaskAssigneeId(null);
+      }
+    };
+    if (openSubtaskAssigneeId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openSubtaskAssigneeId]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -128,6 +147,16 @@ export default function CreateTaskModal({
     }));
   };
 
+  const handleSubtaskAssigneeChange = (subtaskId: string, userId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      subtasks: prev.subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, assigneeId: userId } : s
+      ),
+    }));
+    setOpenSubtaskAssigneeId(null);
+  };
+
   const handleToggleTag = (tagName: string) => {
     setFormData((prev) => {
       const exists = prev.tags.includes(tagName);
@@ -139,12 +168,26 @@ export default function CreateTaskModal({
   };
 
   const handleSubmit = () => {
-    // Validate
+    const nextErrors: FormErrors = {};
+
     if (!formData.name.trim()) {
-      setErrors({ name: "Task name is required" });
+      nextErrors.name = "Task name is required";
+    }
+
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      formData.endDate.getTime() < formData.startDate.getTime()
+    ) {
+      nextErrors.dateRange = "Task end date must be the same as or after start date.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
 
+    setErrors({});
     onSubmit?.(formData);
     onClose();
   };
@@ -231,14 +274,22 @@ export default function CreateTaskModal({
         <DateRangePicker
           startDate={formData.startDate}
           endDate={formData.endDate}
-          onStartDateChange={(date: Date | null) =>
-            setFormData((prev) => ({ ...prev, startDate: date }))
-          }
-          onEndDateChange={(date: Date | null) =>
-            setFormData((prev) => ({ ...prev, endDate: date }))
-          }
+          onStartDateChange={(date: Date | null) => {
+            setFormData((prev) => ({ ...prev, startDate: date }));
+            setErrors((prev) => ({ ...prev, dateRange: undefined }));
+          }}
+          onEndDateChange={(date: Date | null) => {
+            setFormData((prev) => ({ ...prev, endDate: date }));
+            setErrors((prev) => ({ ...prev, dateRange: undefined }));
+          }}
           label="Select Task Duration"
+          disablePast
+          allowClear
+          showLunarDay
         />
+        {errors.dateRange && (
+          <p className="text-xs text-red-500 -mt-4">{errors.dateRange}</p>
+        )}
 
         {/* Assignee, Priority, Project */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -550,11 +601,53 @@ export default function CreateTaskModal({
                   />
                 </div>
                 <div className="flex items-center gap-2 pr-2">
+                  {/* Subtask Assignee */}
                   <div
-                    className="size-6 rounded-full bg-neutral-200 text-[10px] flex items-center justify-center text-neutral-500 font-bold border border-white cursor-pointer hover:bg-neutral-300"
-                    title="Assign"
+                    className="relative"
+                    ref={openSubtaskAssigneeId === subtask.id ? subtaskAssigneeRef : undefined}
                   >
-                    <PersonAddIcon />
+                    {subtask.assigneeId ? (
+                      <div
+                        className="size-6 rounded-full bg-primary text-[10px] flex items-center justify-center text-white font-bold border border-white cursor-pointer hover:opacity-80"
+                        title={users.find((u) => u.id === subtask.assigneeId)?.name ?? "Assigned"}
+                        onClick={() =>
+                          setOpenSubtaskAssigneeId(
+                            openSubtaskAssigneeId === subtask.id ? null : subtask.id
+                          )
+                        }
+                      >
+                        {getInitials(users.find((u) => u.id === subtask.assigneeId)?.name ?? "?")}
+                      </div>
+                    ) : (
+                      <div
+                        className="size-6 rounded-full bg-neutral-200 text-[10px] flex items-center justify-center text-neutral-500 font-bold border border-white cursor-pointer hover:bg-neutral-300"
+                        title="Assign"
+                        onClick={() =>
+                          setOpenSubtaskAssigneeId(
+                            openSubtaskAssigneeId === subtask.id ? null : subtask.id
+                          )
+                        }
+                      >
+                        <PersonAddIcon />
+                      </div>
+                    )}
+                    {openSubtaskAssigneeId === subtask.id && users.length > 0 && (
+                      <div className="absolute right-0 bottom-full mb-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 min-w-[160px] py-1">
+                        {users.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => handleSubtaskAssigneeChange(subtask.id, user.id)}
+                            className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-neutral-50"
+                          >
+                            <div className="size-5 rounded-full bg-neutral-300 text-[9px] flex items-center justify-center text-neutral-600 font-bold shrink-0">
+                              {getInitials(user.name)}
+                            </div>
+                            <span className="text-neutral-700">{user.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"

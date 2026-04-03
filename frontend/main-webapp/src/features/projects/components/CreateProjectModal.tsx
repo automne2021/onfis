@@ -11,6 +11,13 @@ interface Milestone {
   targetDate: string;
 }
 
+interface FormErrors {
+  name?: string;
+  dateRange?: string;
+  milestone?: string;
+  milestoneById?: Record<string, string>;
+}
+
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,6 +36,41 @@ export interface ProjectFormData {
   milestones: Milestone[];
 }
 
+function toDateOnly(value: Date) {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function toIsoDate(value: Date) {
+  const normalized = toDateOnly(value);
+  const year = normalized.getFullYear();
+  const month = String(normalized.getMonth() + 1).padStart(2, "0");
+  const day = String(normalized.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseIsoDate(value: string): Date | null {
+  if (!value) {
+    return null;
+  }
+  const parts = value.split("-");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (!year || !month || !day) {
+    return null;
+  }
+  const parsed = new Date(year, month - 1, day);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return toDateOnly(parsed);
+}
+
 export default function CreateProjectModal({
   isOpen,
   onClose,
@@ -45,7 +87,7 @@ export default function CreateProjectModal({
     description: "",
     milestones: [{ id: "1", name: "", targetDate: "" }],
   });
-  const [errors, setErrors] = useState<{ name?: string }>({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, name: e.target.value }));
@@ -79,6 +121,18 @@ export default function CreateProjectModal({
         m.id === id ? { ...m, [field]: value } : m
       ),
     }));
+    setErrors((prev) => {
+      const nextMilestoneErrors = { ...(prev.milestoneById ?? {}) };
+      delete nextMilestoneErrors[id];
+      return {
+        ...prev,
+        milestone: undefined,
+        milestoneById:
+          Object.keys(nextMilestoneErrors).length > 0
+            ? nextMilestoneErrors
+            : undefined,
+      };
+    });
   };
 
   const addMilestone = () => {
@@ -96,15 +150,92 @@ export default function CreateProjectModal({
       ...prev,
       milestones: prev.milestones.filter((m) => m.id !== id),
     }));
+    setErrors((prev) => {
+      const nextMilestoneErrors = { ...(prev.milestoneById ?? {}) };
+      delete nextMilestoneErrors[id];
+      return {
+        ...prev,
+        milestoneById:
+          Object.keys(nextMilestoneErrors).length > 0
+            ? nextMilestoneErrors
+            : undefined,
+      };
+    });
   };
 
   const handleSubmit = () => {
-    // Validate
+    const nextErrors: FormErrors = {};
+
     if (!formData.name.trim()) {
-      setErrors({ name: "Project name is required" });
+      nextErrors.name = "Project name is required";
+    }
+
+    const normalizedStart = formData.startDate ? toDateOnly(formData.startDate) : null;
+    const normalizedEnd = formData.endDate ? toDateOnly(formData.endDate) : null;
+
+    if (normalizedStart && normalizedEnd && normalizedEnd < normalizedStart) {
+      nextErrors.dateRange = "Project end date must be the same as or after start date.";
+    }
+
+    const hasAnyMilestoneDate = formData.milestones.some(
+      (milestone) => milestone.targetDate.trim() !== "",
+    );
+    if (hasAnyMilestoneDate && (!normalizedStart || !normalizedEnd)) {
+      nextErrors.milestone = "Please choose project start and end dates before assigning milestone dates.";
+    }
+
+    const milestoneById: Record<string, string> = {};
+    let previousMilestoneDate: Date | null = null;
+
+    for (const milestone of formData.milestones) {
+      const hasAnyValue =
+        milestone.name.trim() !== "" || milestone.targetDate.trim() !== "";
+      if (!hasAnyValue) {
+        continue;
+      }
+
+      if (!milestone.targetDate.trim()) {
+        milestoneById[milestone.id] = "Please choose a target date for this milestone.";
+        continue;
+      }
+
+      const parsedTargetDate = parseIsoDate(milestone.targetDate);
+      if (!parsedTargetDate) {
+        milestoneById[milestone.id] = "Invalid milestone date.";
+        continue;
+      }
+
+      if (normalizedStart && parsedTargetDate < normalizedStart) {
+        milestoneById[milestone.id] = "Milestone date must be on or after project start date.";
+        continue;
+      }
+
+      if (normalizedEnd && parsedTargetDate > normalizedEnd) {
+        milestoneById[milestone.id] = "Milestone date must be on or before project end date.";
+        continue;
+      }
+
+      if (previousMilestoneDate && parsedTargetDate < previousMilestoneDate) {
+        milestoneById[milestone.id] = "Milestone date cannot be earlier than the previous milestone.";
+        continue;
+      }
+
+      previousMilestoneDate = parsedTargetDate;
+    }
+
+    if (Object.keys(milestoneById).length > 0) {
+      nextErrors.milestoneById = milestoneById;
+      if (!nextErrors.milestone) {
+        nextErrors.milestone = "Please fix milestone date errors.";
+      }
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
 
+    setErrors({});
     onSubmit?.(formData);
     onClose();
   };
@@ -124,6 +255,11 @@ export default function CreateProjectModal({
   };
 
   const activeMilestones = formData.milestones.filter((m) => m.name.trim());
+  const todayIso = toIsoDate(new Date());
+  const startDateIso = formData.startDate ? toIsoDate(formData.startDate) : "";
+  const endDateIso = formData.endDate ? toIsoDate(formData.endDate) : "";
+  const milestoneMinDate =
+    startDateIso && startDateIso > todayIso ? startDateIso : todayIso;
 
   return (
     <Modal
@@ -187,14 +323,32 @@ export default function CreateProjectModal({
         <DateRangePicker
           startDate={formData.startDate}
           endDate={formData.endDate}
-          onStartDateChange={(date: Date | null) =>
-            setFormData((prev) => ({ ...prev, startDate: date }))
-          }
-          onEndDateChange={(date: Date | null) =>
-            setFormData((prev) => ({ ...prev, endDate: date }))
-          }
+          onStartDateChange={(date: Date | null) => {
+            setFormData((prev) => ({ ...prev, startDate: date }));
+            setErrors((prev) => ({
+              ...prev,
+              dateRange: undefined,
+              milestone: undefined,
+              milestoneById: undefined,
+            }));
+          }}
+          onEndDateChange={(date: Date | null) => {
+            setFormData((prev) => ({ ...prev, endDate: date }));
+            setErrors((prev) => ({
+              ...prev,
+              dateRange: undefined,
+              milestone: undefined,
+              milestoneById: undefined,
+            }));
+          }}
           label="Select Project Duration"
+          disablePast
+          allowClear
+          showLunarDay
         />
+        {errors.dateRange && (
+          <p className="text-xs text-red-500 -mt-2">{errors.dateRange}</p>
+        )}
 
         {/* Project Manager */}
         <div>
@@ -299,6 +453,10 @@ export default function CreateProjectModal({
             <div className="col-span-1" />
           </div>
 
+          {errors.milestone && (
+            <p className="text-xs text-red-500 mb-2 px-2">{errors.milestone}</p>
+          )}
+
           {/* Milestone Rows */}
           <div className="flex flex-col gap-2">
             {formData.milestones.map((milestone) => (
@@ -321,6 +479,8 @@ export default function CreateProjectModal({
                   <input
                     type="date"
                     value={milestone.targetDate}
+                    min={milestoneMinDate}
+                    max={endDateIso || undefined}
                     onChange={(e) =>
                       handleMilestoneChange(
                         milestone.id,
@@ -328,8 +488,17 @@ export default function CreateProjectModal({
                         e.target.value
                       )
                     }
-                    className="w-full px-2 py-1.5 rounded-md border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-white text-neutral-900 text-sm focus:outline-none"
+                    className={`w-full px-2 py-1.5 rounded-md border bg-white text-neutral-900 text-sm focus:outline-none ${
+                      errors.milestoneById?.[milestone.id]
+                        ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        : "border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary"
+                    }`}
                   />
+                  {errors.milestoneById?.[milestone.id] && (
+                    <p className="mt-1 text-[11px] text-red-500">
+                      {errors.milestoneById[milestone.id]}
+                    </p>
+                  )}
                 </div>
                 <div className="col-span-1 flex justify-center">
                   <button

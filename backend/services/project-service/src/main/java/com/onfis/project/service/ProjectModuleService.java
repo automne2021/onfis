@@ -578,20 +578,25 @@ public class ProjectModuleService {
     public MilestoneResponse createMilestone(String userIdHeader, UUID projectId, MilestoneUpsertRequest request) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
-        requireProject(projectId, tenantId);
+        ProjectEntity project = requireProject(projectId, tenantId);
         enforceProjectManage(currentUser, projectId);
 
         if (request.title() == null || request.title().isBlank()) {
             throw new BadRequestException("Milestone title is required");
         }
 
+        int sortOrder = nextMilestoneOrder(projectId, request.sortOrder());
+        LocalDate targetDate = request.targetDate();
+        validateMilestoneDateWithinProject(project, targetDate);
+        validateMilestoneChronology(projectId, null, sortOrder, targetDate);
+
         ProjectMilestoneEntity milestone = new ProjectMilestoneEntity();
         milestone.setTenantId(tenantId);
         milestone.setProjectId(projectId);
         milestone.setTitle(request.title().trim());
-        milestone.setTargetDate(request.targetDate());
+        milestone.setTargetDate(targetDate);
         milestone.setStatus(normalizeMilestoneStatus(request.status()));
-        milestone.setSortOrder(nextMilestoneOrder(projectId, request.sortOrder()));
+        milestone.setSortOrder(sortOrder);
         milestone.setProgressOverride(normalizeMilestoneProgress(request.progress()));
         ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
         return toMilestoneResponse(saved);
@@ -601,7 +606,7 @@ public class ProjectModuleService {
     public MilestoneResponse updateMilestone(String userIdHeader, UUID projectId, UUID milestoneId, MilestoneUpsertRequest request) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
-        requireProject(projectId, tenantId);
+        ProjectEntity project = requireProject(projectId, tenantId);
         enforceProjectManage(currentUser, projectId);
 
         ProjectMilestoneEntity milestone = projectMilestoneRepository.findById(milestoneId)
@@ -609,6 +614,16 @@ public class ProjectModuleService {
         if (!milestone.getProjectId().equals(projectId)) {
             throw new BadRequestException("Milestone does not belong to this project");
         }
+
+        LocalDate candidateTargetDate = request.targetDate() != null
+                ? request.targetDate()
+                : milestone.getTargetDate();
+        Integer candidateSortOrder = request.sortOrder() != null
+                ? request.sortOrder()
+                : milestone.getSortOrder();
+
+        validateMilestoneDateWithinProject(project, candidateTargetDate);
+        validateMilestoneChronology(projectId, milestoneId, candidateSortOrder, candidateTargetDate);
 
         if (request.title() != null) {
             if (request.title().isBlank()) {
@@ -1625,7 +1640,10 @@ public class ProjectModuleService {
         project.setStatus(parseProjectStatus(request.status(), project.getStatus()));
         project.setPriority(parseTaskPriority(request.priority(), project.getPriority()));
         project.setProgress(request.progress() == null ? 0 : request.progress());
+        validateProjectDateRange(request.startDate(), request.dueDate());
         project.setStartDate(request.startDate());
+        // Keep legacy end_date aligned with due_date until old consumers are removed.
+        project.setEndDate(request.dueDate());
         project.setDueDate(request.dueDate());
         // Normalize jsonb tags to a valid JSON string to prevent casting errors.
         project.setTags(normalizeTags(request.tags()));
@@ -2121,6 +2139,51 @@ public class ProjectModuleService {
             return "UPCOMING";
         }
         return raw.trim().toUpperCase();
+    }
+
+    private void validateProjectDateRange(LocalDate startDate, LocalDate dueDate) {
+        if (startDate != null && dueDate != null && dueDate.isBefore(startDate)) {
+            throw new BadRequestException("Project due date must be on or after start date");
+        }
+    }
+
+    private void validateMilestoneDateWithinProject(ProjectEntity project, LocalDate targetDate) {
+        if (targetDate == null) {
+            return;
+        }
+
+        LocalDate projectStart = project.getStartDate();
+        LocalDate projectEnd = project.getDueDate() != null ? project.getDueDate() : project.getEndDate();
+
+        if (projectStart != null && targetDate.isBefore(projectStart)) {
+            throw new BadRequestException("Milestone target date must be on or after project start date");
+        }
+        if (projectEnd != null && targetDate.isAfter(projectEnd)) {
+            throw new BadRequestException("Milestone target date must be on or before project end date");
+        }
+    }
+
+    private void validateMilestoneChronology(UUID projectId, UUID currentMilestoneId, Integer sortOrder, LocalDate targetDate) {
+        if (targetDate == null || sortOrder == null) {
+            return;
+        }
+
+        List<ProjectMilestoneEntity> milestones = projectMilestoneRepository.findByProjectIdOrderBySortOrderAsc(projectId);
+        for (ProjectMilestoneEntity existing : milestones) {
+            if (currentMilestoneId != null && existing.getId().equals(currentMilestoneId)) {
+                continue;
+            }
+            if (existing.getSortOrder() == null || existing.getTargetDate() == null) {
+                continue;
+            }
+
+            if (existing.getSortOrder() < sortOrder && existing.getTargetDate().isAfter(targetDate)) {
+                throw new BadRequestException("Milestone date cannot be earlier than previous milestones");
+            }
+            if (existing.getSortOrder() > sortOrder && existing.getTargetDate().isBefore(targetDate)) {
+                throw new BadRequestException("Milestone date cannot be later than next milestones");
+            }
+        }
     }
 
     private int nextStageOrder(UUID projectId) {

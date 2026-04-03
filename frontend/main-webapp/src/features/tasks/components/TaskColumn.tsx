@@ -9,14 +9,17 @@ interface TaskColumnProps {
   onSettings?: () => void;
   onTaskClick?: (task: Task) => void;
   onDeleteStage?: () => void;
-  onRenameStage?: () => void;
+  onRenameStage?: (newName: string) => void;
   onClearTasks?: () => void;
 }
 
 export default function TaskColumn({ stage, onAddTask, onTaskClick, onDeleteStage, onRenameStage, onClearTasks }: TaskColumnProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(stage.title);
   const menuRef = useRef<HTMLDivElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,6 +32,21 @@ export default function TaskColumn({ stage, onAddTask, onTaskClick, onDeleteStag
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (isEditing && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const confirmRename = () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== stage.title) {
+      onRenameStage?.(trimmed);
+    }
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -72,9 +90,24 @@ export default function TaskColumn({ stage, onAddTask, onTaskClick, onDeleteStag
             >
               <ChevronIcon collapsed={false} />
             </button>
-            <span className="font-medium text-sm leading-5 text-neutral-500 uppercase">
-              {stage.title}
-            </span>
+            {isEditing ? (
+              <input
+                ref={editInputRef}
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onBlur={confirmRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmRename();
+                  else if (e.key === "Escape") setIsEditing(false);
+                }}
+                className="font-medium text-sm leading-5 text-neutral-800 uppercase bg-white border border-primary rounded px-1.5 py-0.5 w-32 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            ) : (
+              <span className="font-medium text-sm leading-5 text-neutral-500 uppercase">
+                {stage.title}
+              </span>
+            )}
             {/* Count Badge */}
             <div className="relative">
               <div className="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center">
@@ -102,7 +135,8 @@ export default function TaskColumn({ stage, onAddTask, onTaskClick, onDeleteStag
                     className="w-full text-left px-3 py-2 text-xs text-neutral-700 hover:bg-neutral-50 transition-colors flex items-center gap-2"
                     onClick={() => {
                       setIsMenuOpen(false);
-                      onRenameStage?.();
+                      setEditName(stage.title);
+                      setIsEditing(true);
                     }}
                   >
                     <RenameIcon />

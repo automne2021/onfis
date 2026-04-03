@@ -209,6 +209,7 @@ export default function ProjectTasksPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [currentViewDate, setCurrentViewDate] = useState<Date>(new Date());
   const [projectTasks, setProjectTasks] = useState<Task[]>([]);
   const [workflowStages, setWorkflowStages] = useState<ApiWorkflowStage[]>([]);
   const [canManage, setCanManage] = useState(false);
@@ -394,10 +395,8 @@ export default function ProjectTasksPage() {
     void run();
   };
 
-  const handleAddStage = async () => {
-    if (!projectIdentifier) return;
-    const name = prompt("Enter stage name:");
-    if (!name?.trim()) return;
+  const handleAddStage = async (name: string) => {
+    if (!projectIdentifier || !name.trim()) return;
     try {
       await createProjectStage(projectIdentifier, { name: name.trim() });
       await refreshTaskBoard(projectIdentifier);
@@ -407,10 +406,8 @@ export default function ProjectTasksPage() {
     }
   };
 
-  const handleRenameStage = async (stageId: string, currentName: string) => {
-    if (!projectIdentifier) return;
-    const newName = prompt("Rename stage:", currentName);
-    if (!newName?.trim() || newName.trim() === currentName) return;
+  const handleRenameStage = async (stageId: string, newName: string) => {
+    if (!projectIdentifier || !newName.trim()) return;
     try {
       await updateProjectStage(projectIdentifier, stageId, { name: newName.trim() });
       await refreshTaskBoard(projectIdentifier);
@@ -462,7 +459,7 @@ export default function ProjectTasksPage() {
           {viewMode === "kanban" && (
             <TaskKanbanBoard
               stages={filteredStages}
-              onAddStage={canManage ? (() => void handleAddStage()) : undefined}
+              onAddStage={canManage ? ((name) => void handleAddStage(name)) : undefined}
               onAddTask={handleAddTask}
               onTaskClick={handleTaskClick}
               onDeleteStage={canManage ? ((stageId) => {
@@ -470,9 +467,9 @@ export default function ProjectTasksPage() {
                   setStageDeleteId(stageId);
                 }
               }) : undefined}
-              onRenameStage={canManage ? ((stageId, currentName) => {
+              onRenameStage={canManage ? ((stageId, newName) => {
                 if (stageId !== UNASSIGNED_STAGE_ID) {
-                  void handleRenameStage(stageId, currentName);
+                  void handleRenameStage(stageId, newName);
                 }
               }) : undefined}
             />
@@ -487,14 +484,18 @@ export default function ProjectTasksPage() {
           )}
 
           {viewMode === "timeline" && (
-            <GanttView tasks={ganttTasks} />
+            <GanttView
+              tasks={ganttTasks}
+              currentDate={currentViewDate}
+              onCurrentDateChange={setCurrentViewDate}
+            />
           )}
 
           {viewMode === "calendar" && (
             <TaskCalendarView
               tasks={filteredTasks}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
+              currentDate={currentViewDate}
+              onCurrentDateChange={setCurrentViewDate}
             />
           )}
             </>

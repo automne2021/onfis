@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import type { ViewMode } from "../../types";
+import { useEffect, useMemo, useState } from "react";
 import type { Task } from "../../types";
 import type { CalendarEvent, UpcomingDeadline, StatusCount } from "./types";
 import { getCalendarDays } from "./calendarUtils";
@@ -11,8 +10,8 @@ import StatusOverview from "./StatusOverview";
 
 interface TaskCalendarViewProps {
   tasks: Task[];
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
+  currentDate?: Date;
+  onCurrentDateChange?: (date: Date) => void;
 }
 
 const toDate = (raw?: string | null): Date | null => {
@@ -34,11 +33,25 @@ const STATUS_TO_COLOR: Record<Task["status"], CalendarEvent["color"]> = {
   DONE: "success",
 };
 
-export default function TaskCalendarView({ tasks, viewMode: _viewMode, onViewModeChange: _onViewModeChange }: TaskCalendarViewProps) {
+export default function TaskCalendarView({
+  tasks,
+  currentDate,
+  onCurrentDateChange,
+}: TaskCalendarViewProps) {
   const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const seedDate = currentDate ?? today;
+  const [currentMonth, setCurrentMonth] = useState(seedDate.getMonth());
+  const [currentYear, setCurrentYear] = useState(seedDate.getFullYear());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(seedDate);
+
+  useEffect(() => {
+    if (!currentDate) {
+      return;
+    }
+    setCurrentMonth(currentDate.getMonth());
+    setCurrentYear(currentDate.getFullYear());
+    setSelectedDate(currentDate);
+  }, [currentDate]);
 
   const events = useMemo<CalendarEvent[]>(() => {
     return tasks.reduce<CalendarEvent[]>((acc, task) => {
@@ -101,32 +114,38 @@ export default function TaskCalendarView({ tasks, viewMode: _viewMode, onViewMod
     [currentYear, currentMonth, events]
   );
 
+  const shiftMonth = (offset: number) => {
+    const baseDate = new Date(currentYear, currentMonth, 1);
+    baseDate.setMonth(baseDate.getMonth() + offset);
+    setCurrentMonth(baseDate.getMonth());
+    setCurrentYear(baseDate.getFullYear());
+    onCurrentDateChange?.(baseDate);
+  };
+
   const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+    shiftMonth(-1);
   };
 
   const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    shiftMonth(1);
   };
 
   const handleToday = () => {
-    setCurrentMonth(today.getMonth());
-    setCurrentYear(today.getFullYear());
-    setSelectedDate(today);
+    const nextDate = new Date();
+    setCurrentMonth(nextDate.getMonth());
+    setCurrentYear(nextDate.getFullYear());
+    setSelectedDate(nextDate);
+    onCurrentDateChange?.(nextDate);
   };
 
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
+    onCurrentDateChange?.(date);
+  };
+
+  const handleMiniDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    onCurrentDateChange?.(date);
   };
 
   const handleEventClick = (_eventId: string) => {};
@@ -158,8 +177,12 @@ export default function TaskCalendarView({ tasks, viewMode: _viewMode, onViewMod
         {/* Right Sidebar - Fixed width, scrollable on small heights */}
         <aside className="hidden lg:flex flex-col gap-3 w-[240px] xl:w-[260px] flex-shrink-0 overflow-y-auto">
           <MiniCalendar
+            year={currentYear}
+            month={currentMonth}
             selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
+            onDateSelect={handleMiniDateSelect}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
           />
           <UpcomingDeadlines
             deadlines={upcomingDeadlines}

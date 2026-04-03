@@ -9,7 +9,7 @@ import { ProjectTimelineView } from "../components/timeline";
 import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
 import type { ProjectFormData } from "../components/CreateProjectModal";
-import { createProject, getCurrentProjectUser, listCompanyTags, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
+import { createMilestone, createProject, getCurrentProjectUser, listCompanyTags, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useToast } from "../../../contexts/useToast";
 
@@ -73,6 +73,7 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [currentViewDate, setCurrentViewDate] = useState<Date>(new Date());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
@@ -155,8 +156,38 @@ export default function ProjectsPage() {
         tags: serializedTags,
         managerId: data.managerId || undefined,
       });
+
+      const milestoneInputs = data.milestones
+        .map((milestone) => ({
+          title: milestone.name.trim(),
+          targetDate: milestone.targetDate.trim(),
+        }))
+        .filter((milestone) => milestone.title && milestone.targetDate);
+
+      const failedMilestones: string[] = [];
+      for (const [index, milestone] of milestoneInputs.entries()) {
+        try {
+          await createMilestone(created.id, {
+            title: milestone.title,
+            targetDate: milestone.targetDate,
+            status: "upcoming",
+            sortOrder: index + 1,
+          });
+        } catch {
+          failedMilestones.push(milestone.title);
+        }
+      }
+
       setProjects((prev) => [toProjectViewModel(created), ...prev]);
-      showToast("Project created successfully", "success");
+
+      if (failedMilestones.length > 0) {
+        showToast(
+          `Project created, but ${failedMilestones.length} milestone(s) failed to save.`,
+          "warning",
+        );
+      } else {
+        showToast("Project created successfully", "success");
+      }
     } catch {
       showToast("Unable to create project", "error");
     }
@@ -188,10 +219,20 @@ export default function ProjectsPage() {
             <ProjectListView projects={filteredProjects} onProjectClick={handleProjectClick} />
           )}
           {viewMode === "timeline" && (
-            <ProjectTimelineView projects={filteredProjects} onProjectClick={handleProjectClick} />
+            <ProjectTimelineView
+              projects={filteredProjects}
+              onProjectClick={handleProjectClick}
+              currentDate={currentViewDate}
+              onCurrentDateChange={setCurrentViewDate}
+            />
           )}
           {viewMode === "calendar" && (
-            <ProjectCalendarView projects={filteredProjects} onProjectClick={handleProjectClick} />
+            <ProjectCalendarView
+              projects={filteredProjects}
+              onProjectClick={handleProjectClick}
+              currentDate={currentViewDate}
+              onCurrentDateChange={setCurrentViewDate}
+            />
           )}
           </div>
         )}

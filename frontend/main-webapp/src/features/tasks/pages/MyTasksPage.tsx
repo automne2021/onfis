@@ -7,6 +7,7 @@ import type { TaskDetail } from "../components";
 import type { Task } from "../types";
 import { listMyTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
+import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 
 type Tab = "assigned" | "created" | "reviewing";
 type SortBy = "updatedAt" | "createdAt" | "dueDate" | "startDate" | "priority" | "status" | "title";
@@ -43,6 +44,32 @@ const PRIORITY_BADGE: Record<string, string> = {
   medium: "bg-amber-50 text-amber-700 border border-amber-200",
   low: "bg-neutral-100 text-neutral-600 border border-neutral-200",
 };
+
+const FILTER_CATEGORIES: FilterCategory[] = [
+  {
+    key: "status",
+    label: "Status",
+    type: "single",
+    options: [
+      { value: "TODO", label: "To Do", color: "bg-neutral-400" },
+      { value: "IN_PROGRESS", label: "In Progress", color: "bg-primary" },
+      { value: "BLOCKED", label: "Blocked", color: "bg-status-off_track" },
+      { value: "IN_REVIEW", label: "In Review", color: "bg-status-on_track" },
+      { value: "DONE", label: "Done", color: "bg-status-done" },
+    ],
+  },
+  {
+    key: "priority",
+    label: "Priority",
+    type: "single",
+    options: [
+      { value: "URGENT", label: "Urgent", color: "bg-[#E7000B]" },
+      { value: "HIGH", label: "High", color: "bg-[#FF6900]" },
+      { value: "MEDIUM", label: "Medium", color: "bg-[#FFD230]" },
+      { value: "LOW", label: "Low", color: "bg-neutral-400" },
+    ],
+  },
+];
 
 const toTaskView = (task: ApiTask): Task => ({
   id: task.id,
@@ -149,8 +176,10 @@ export default function MyTasksPage() {
   const [error, setError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({
+    status: [],
+    priority: [],
+  });
   const [sortBy, setSortBy] = useState<SortBy>("updatedAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(0);
@@ -168,6 +197,9 @@ export default function MyTasksPage() {
     setActiveTab(isManager ? "created" : "assigned");
     setPage(0);
   }, [isAuthLoading, isManager]);
+
+  const statusFilter = activeFilters.status?.[0] ?? "";
+  const priorityFilter = activeFilters.priority?.[0] ?? "";
 
   const loadTasks = useCallback(async () => {
     if (isAuthLoading || !currentUser.id) {
@@ -294,7 +326,8 @@ export default function MyTasksPage() {
         </div>
 
         <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50/60">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 items-center gap-2">
             <input
               type="text"
               value={searchQuery}
@@ -303,40 +336,20 @@ export default function MyTasksPage() {
                 setPage(0);
               }}
               placeholder="Search by title, key, project"
-              className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
 
-            <select
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value);
-                setPage(0);
-              }}
-              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="">All Statuses</option>
-              <option value="TODO">To Do</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="BLOCKED">Blocked</option>
-              <option value="IN_REVIEW">In Review</option>
-              <option value="DONE">Done</option>
-            </select>
+              <FilterDropdown
+                categories={FILTER_CATEGORIES}
+                activeFilters={activeFilters}
+                onFiltersChange={(filters) => {
+                  setActiveFilters(filters);
+                  setPage(0);
+                }}
+              />
+            </div>
 
-            <select
-              value={priorityFilter}
-              onChange={(event) => {
-                setPriorityFilter(event.target.value);
-                setPage(0);
-              }}
-              className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="">All Priorities</option>
-              <option value="URGENT">Urgent</option>
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
-            </select>
-
+            <div className="flex items-center gap-2">
             <select
               value={sortBy}
               onChange={(event) => {
@@ -365,6 +378,7 @@ export default function MyTasksPage() {
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
             </select>
+            </div>
           </div>
         </div>
 

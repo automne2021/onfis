@@ -27,10 +27,9 @@ export interface UpcomingDeadline {
 }
 
 export interface StatusCount {
-  planning: number;
-  inProgress: number;
-  onHold: number;
   completed: number;
+  inProgress: number;
+  toDo: number;
 }
 
 export const eventColors: Record<ProjectStatus, { bg: string; border: string; text: string }> = {
