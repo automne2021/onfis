@@ -18,7 +18,10 @@ import { useRole } from "../../../../hooks/useRole";
 import { RichTextEditor } from "../../../../components/common";
 import ReviewPanel from "../ReviewPanel";
 import type { ReviewComment } from "../../types";
-import { addTaskComment } from "../../../../services/taskService";
+import { addTaskComment, getTaskDetail } from "../../../../services/taskService";
+import type { ApiTaskDetail } from "../../../../services/taskService";
+import { formatVNDate, formatVNDateTime } from "../../../../utils/getTime";
+import { getSubmitForReviewError } from "../../workflowUtils";
 
 // Mock assignee options - would come from API in real app
 const mockAssignees: Assignee[] = [
@@ -200,6 +203,57 @@ const RejectionPrompt = ({
   );
 };
 
+function apiDetailToTaskDetail(api: ApiTaskDetail): TaskDetail {
+  return {
+    id: api.id,
+    key: api.key ?? "",
+    projectTitle: api.projectTitle,
+    projectSlug: api.projectSlug,
+    stageId: api.stageId,
+    milestoneId: api.milestoneId,
+    title: api.title,
+    description: api.description,
+    priority: api.priority,
+    status: api.status,
+    progress: api.progress,
+    startDateRaw: api.startDate,
+    dueDateRaw: api.dueDate,
+    dueDate: api.dueDate ? formatVNDate(api.dueDate) : "",
+    assignees: api.assignees,
+    reporterId: api.reporterId,
+    reporterName: api.reporterName,
+    estimatedEffort: api.estimatedEffort,
+    actualEffort: api.actualEffort,
+    blockedBy: api.blockedBy,
+    subTasks: api.subtasks,
+    activities: api.activities.map((a) => ({
+      id: a.id,
+      user: a.actorName,
+      action: a.action,
+      value: a.value ?? undefined,
+      description: a.description,
+      timestamp: a.createdAt,
+    })),
+    comments: api.comments.map((c) => ({
+      id: c.id,
+      user: { id: c.authorId, name: c.authorName, avatar: c.authorAvatar },
+      content: c.content,
+      timestamp: c.createdAt,
+    })),
+    reviews: api.reviews.map((r) => ({
+      id: r.id,
+      authorId: r.authorId,
+      authorName: r.authorName,
+      authorAvatar: r.authorAvatar,
+      action: r.action,
+      content: r.content,
+      createdAt: r.createdAt,
+    })),
+    createdAt: api.createdAt ?? "",
+    updatedAt: api.updatedAt ?? "",
+  };
+}
+
 export default function TaskDetailModal({
   task: initialTask,
   isOpen,
@@ -223,6 +277,26 @@ export default function TaskDetailModal({
   // Get last rejection feedback
   const lastRejection = [...task.comments].reverse().find((c) => c.content.startsWith("[REJECTION]"));
   const lastRejectionReason = lastRejection?.content.replace("[REJECTION] ", "") ?? null;
+
+  // Re-sync local state whenever a different task is passed in
+  useEffect(() => {
+    if (!isOpen) return;
+    setTask(initialTask);
+    setTaskReviews(initialTask.reviews ?? []);
+    setShowRejectionPrompt(false);
+
+    // Fetch full detail including activities, comments, subtasks
+    getTaskDetail(initialTask.id)
+      .then((detail) => {
+        const full = apiDetailToTaskDetail(detail);
+        setTask(full);
+        setTaskReviews(full.reviews ?? []);
+      })
+      .catch(() => {
+        // Keep the initialTask data if the detail fetch fails
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTask.id, isOpen]);
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -357,6 +431,8 @@ export default function TaskDetailModal({
                     Description
                   </label>
                   <RichTextEditor
+                    key={task.id}
+                    initialContent={task.description}
                     onChange={(content) =>
                       setTask({ ...task, description: content })
                     }
@@ -376,17 +452,30 @@ export default function TaskDetailModal({
                     <p className="text-sm font-medium text-blue-800">
                       Ready to submit? Your manager will review and approve this task.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTask({ ...task, status: "IN_REVIEW" as const });
-                        showToast("Task submitted for review.", "info");
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors w-fit"
-                    >
-                      <span className="material-symbols-rounded" style={{ fontSize: 16 }}>upload</span>
-                      Submit for Review
-                    </button>
+                    {(() => {
+                      const submitError = getSubmitForReviewError(task);
+                      return (
+                        <>
+                          {submitError && (
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                              {submitError}
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            disabled={!!submitError}
+                            onClick={() => {
+                              setTask({ ...task, status: "IN_REVIEW" as const });
+                              showToast("Task submitted for review.", "info");
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors w-fit"
+                          >
+                            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>upload</span>
+                            Submit for Review
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -538,13 +627,13 @@ export default function TaskDetailModal({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-neutral-400">Created</span>
                     <span className="text-sm text-neutral-500">
-                      {task.createdAt}
+                      {task.createdAt ? formatVNDateTime(task.createdAt) : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-neutral-400">Updated</span>
                     <span className="text-sm text-neutral-500">
-                      {task.updatedAt}
+                      {task.updatedAt ? formatVNDateTime(task.updatedAt) : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">

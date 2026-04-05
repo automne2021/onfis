@@ -63,6 +63,10 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
   const [activeTab, setActiveTab] = useState<"activity" | "comments">("activity");
   const [commentText, setCommentText] = useState("");
 
+  const sortedActivities = [...activities].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
   const handleSubmitComment = () => {
     const trimmed = commentText.trim();
     if (!trimmed) return;
@@ -100,7 +104,7 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
             : "text-neutral-400 hover:text-neutral-500"
             }`}
         >
-          Comments ({comments.length})
+          Discussion ({comments.length})
           {activeTab === "comments" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
           )}
@@ -111,10 +115,10 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
       <div className="mt-4 max-h-[200px] overflow-y-auto">
         {activeTab === "activity" ? (
           <div className="flex flex-col divide-y divide-neutral-100">
-            {activities.map((activity) => (
+            {sortedActivities.map((activity) => (
               <ActivityEntry key={activity.id} activity={activity} />
             ))}
-            {activities.length === 0 && (
+            {sortedActivities.length === 0 && (
               <p className="text-sm text-neutral-400 py-4">No activity yet</p>
             )}
           </div>

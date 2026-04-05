@@ -9,6 +9,7 @@ import type { TaskDetail } from "../components";
 import type { Task, ReviewComment } from "../types";
 import { STATUS_CONFIG } from "../workflowUtils";
 import { getReviewQueue, reviewTask, updateTask, type ApiTask, type ReviewQueueQuery } from "../../../services/taskService";
+import { formatVNDate } from "../../../utils/getTime";
 
 type ManagerFilter = "all" | "pending" | "approved" | "changes";
 type EmployeeFilter = "all" | "under_review" | "approved" | "rework";
@@ -62,7 +63,7 @@ const toReviewTask = (task: ApiTask): ReviewTask => ({
   progress: task.progress,
   startDateRaw: task.startDate,
   dueDateRaw: task.dueDate,
-  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-",
+  dueDate: task.dueDate ? formatVNDate(task.dueDate) : "-",
   assignees: task.assignees,
   tags: [],
   reporterId: task.reporterId,
@@ -379,20 +380,17 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
             const statusCfg = STATUS_CONFIG[task.status];
             const lastReview = task.reviews[task.reviews.length - 1];
             return (
-              <div key={task.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-4 flex flex-col gap-3">
+              <div
+                key={task.id}
+                className="bg-white rounded-xl border border-neutral-200 shadow-sm p-4 flex flex-col gap-3 cursor-pointer hover:border-neutral-300 transition-colors"
+                onClick={() => {
+                  setSelectedTask(convertToTaskDetail(task));
+                  setIsModalOpen(true);
+                }}
+              >
                 <div className="flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${PRIORITY_COLOR[task.priority]}`} />
                   <div className="flex-1 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedTask(convertToTaskDetail(task));
-                        setIsModalOpen(true);
-                      }}
-                      className="text-left font-semibold text-sm text-neutral-900 hover:text-primary transition-colors"
-                    >
-                      {task.title}
-                    </button>
+                    <p className="font-semibold text-sm text-neutral-900">{task.title}</p>
                     <p className="text-xs text-neutral-400 mt-0.5 truncate">{task.description}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -430,7 +428,10 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                 </div>
 
                 {task.status === "IN_REVIEW" && (
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-100">
+                  <div
+                    className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       type="button"
                       onClick={() => void handleApprove(task.id)}

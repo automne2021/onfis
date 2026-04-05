@@ -61,6 +61,8 @@ export interface ApiTask {
   key: string;
   canEdit: boolean;
   canReview: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ApiTaskDetail extends ApiTask {

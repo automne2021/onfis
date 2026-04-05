@@ -262,7 +262,7 @@ export default function DateRangePicker({
       const lunarDay = getLunarDay(normalizedDate);
 
       let className =
-        "h-9 w-full inline-flex items-center justify-center gap-1 text-xs font-medium transition-colors ";
+        "relative h-9 w-full inline-flex items-center justify-center text-xs font-medium transition-colors ";
 
       if (isDisabled) {
         className += "rounded-md bg-neutral-50 text-neutral-300 cursor-not-allowed ";
@@ -286,7 +286,7 @@ export default function DateRangePicker({
         >
           <span>{day}</span>
           {showLunarDay && lunarDay && (
-            <span className={`text-[9px] font-semibold ${isStart || isEnd ? "text-red-100" : "text-red-500"}`}>
+            <span className={`absolute bottom-0.5 right-1 text-[7px] font-medium leading-none ${isStart || isEnd ? "text-red-100" : "text-red-400"}`}>
               {lunarDay}
             </span>
           )}

@@ -25,14 +25,19 @@ export function generateTimelineConfig(
   maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate() + 7);
 
   const weeks = generateWeeks(minDate, maxDate);
-  const totalDays = Math.ceil((maxDate.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  // The rendered cells start from the Monday of minDate's week — use that as the
+  // reference point so that getTodayPosition() and calculateBarPosition() align
+  // correctly with the cell grid.
+  const firstRenderedDay = weeks[0]?.days[0] ?? minDate;
+  const totalDays = Math.ceil((maxDate.getTime() - firstRenderedDay.getTime()) / (1000 * 60 * 60 * 24));
   
   // Day width based on view mode
   const dayWidth = viewMode === "day" ? 60 : viewMode === "week" ? 30 : 12;
 
   return {
     viewMode,
-    startDate: minDate,
+    startDate: firstRenderedDay,
     endDate: maxDate,
     weeks,
     totalDays,

@@ -28,6 +28,7 @@ interface CreateProjectModalProps {
 
 export interface ProjectFormData {
   name: string;
+  customer: string;
   startDate: Date | null;
   endDate: Date | null;
   managerId: string;
@@ -80,6 +81,7 @@ export default function CreateProjectModal({
 }: CreateProjectModalProps) {
   const [formData, setFormData] = useState<ProjectFormData>({
     name: "",
+    customer: "",
     startDate: null,
     endDate: null,
     managerId: "",
@@ -243,6 +245,7 @@ export default function CreateProjectModal({
   const handleCancel = () => {
     setFormData({
       name: "",
+      customer: "",
       startDate: null,
       endDate: null,
       managerId: "",
@@ -317,6 +320,20 @@ export default function CreateProjectModal({
               </>
             )}
           </div>
+        </div>
+
+        {/* Customer */}
+        <div>
+          <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
+            Customer / Client
+          </label>
+          <input
+            type="text"
+            value={formData.customer}
+            onChange={(e) => setFormData((prev) => ({ ...prev, customer: e.target.value }))}
+            placeholder="Enter customer or client name (optional)"
+            className="w-full px-3 py-2 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 text-sm transition-colors outline-none"
+          />
         </div>
 
         {/* Date Range Picker */}

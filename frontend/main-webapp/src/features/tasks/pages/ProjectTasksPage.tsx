@@ -95,6 +95,11 @@ const toDate = (value?: string | null): Date | null => {
   if (!value) {
     return null;
   }
+  // Parse YYYY-MM-DD as local date to avoid UTC-midnight → day-off-by-one in VN timezone
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return null;
