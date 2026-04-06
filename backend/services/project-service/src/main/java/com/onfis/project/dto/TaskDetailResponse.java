@@ -27,6 +27,7 @@ public record TaskDetailResponse(
         BigDecimal estimatedEffort,
         BigDecimal actualEffort,
         List<UUID> blockedBy,
+        String blockedReason,
         List<TaskReviewResponse> reviews,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,

@@ -309,12 +309,13 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
           status: updated.status,
           priority: toApiPriority(updated.priority),
           progress: updated.progress,
-          dueDate: updated.dueDate ? new Date(updated.dueDate).toISOString().slice(0, 10) : undefined,
+          dueDate: updated.dueDateRaw ?? undefined,
           reporterId: updated.reporterId,
           estimatedEffort: updated.estimatedEffort,
           actualEffort: updated.actualEffort,
           assigneeIds: updated.assignees.map((a) => a.id),
           tags: "[]",
+          blockedReason: updated.blockedReason,
         });
         setTasks((prev) => prev.map((task) => (task.id === saved.id ? toReviewTask(saved) : task)));
       } catch {
@@ -658,12 +659,13 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                   status: updated.status,
                   priority: toApiPriority(updated.priority),
                   progress: updated.progress,
-                  dueDate: updated.dueDate ? new Date(updated.dueDate).toISOString().slice(0, 10) : undefined,
+                  dueDate: updated.dueDateRaw ?? undefined,
                   reporterId: updated.reporterId,
                   estimatedEffort: updated.estimatedEffort,
                   actualEffort: updated.actualEffort,
                   assigneeIds: updated.assignees.map((a) => a.id),
                   tags: "[]",
+                  blockedReason: updated.blockedReason,
                 });
               } catch {
                 showToast("Unable to update task", "error");

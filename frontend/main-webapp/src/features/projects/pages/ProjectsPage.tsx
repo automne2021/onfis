@@ -10,6 +10,7 @@ import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
 import type { ProjectFormData } from "../components/CreateProjectModal";
 import { createMilestone, createProject, getCurrentProjectUser, listCompanyTags, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
+import { formatVNDate } from "../../../utils/getTime";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useToast } from "../../../contexts/useToast";
 
@@ -32,7 +33,7 @@ const toProjectViewModel = (apiProject: Awaited<ReturnType<typeof listProjects>>
   tags: parseTagJson(apiProject.tags || "[]"),
   priority: apiProject.priority,
   progress: apiProject.progress,
-  dueDate: apiProject.dueDate ? new Date(apiProject.dueDate).toLocaleDateString() : "",
+  dueDate: apiProject.dueDate ? formatVNDate(apiProject.dueDate) : "",
   status: apiProject.status,
   assignees: apiProject.assignees,
 });
@@ -151,8 +152,8 @@ export default function ProjectsPage() {
         status: "PLANNING",
         priority: "MEDIUM",
         progress: 0,
-        startDate: data.startDate ? data.startDate.toISOString().slice(0, 10) : undefined,
-        dueDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : undefined,
+        startDate: data.startDate ? `${data.startDate.getFullYear()}-${String(data.startDate.getMonth() + 1).padStart(2, '0')}-${String(data.startDate.getDate()).padStart(2, '0')}` : undefined,
+        dueDate: data.endDate ? `${data.endDate.getFullYear()}-${String(data.endDate.getMonth() + 1).padStart(2, '0')}-${String(data.endDate.getDate()).padStart(2, '0')}` : undefined,
         tags: serializedTags,
         managerId: data.managerId || undefined,
         customer: data.customer || undefined,

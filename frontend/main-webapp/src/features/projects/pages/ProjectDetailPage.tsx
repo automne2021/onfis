@@ -77,7 +77,7 @@ const RecentTaskItem = ({ task }: { task: ApiTask }) => {
         ) : '?'}
       </div>
       <span className="text-xs text-neutral-400 text-right">
-        {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : ''}
+        {task.dueDate ? (() => { const [y,m,d] = task.dueDate.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('en', { month: 'short', day: 'numeric' }); })() : ''}
       </span>
     </div>
   );
@@ -193,7 +193,7 @@ const MilestoneItem = ({ milestone }: { milestone: ApiMilestone }) => {
         {milestone.title}
       </h4>
       <p className="body-4-regular text-neutral-400 text-center">
-        {milestone.targetDate ? new Date(milestone.targetDate).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+        {milestone.targetDate ? (() => { const [y,m,d] = milestone.targetDate.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }); })() : ''}
       </p>
       <MilestoneStatusBadge status={milestone.status} />
 

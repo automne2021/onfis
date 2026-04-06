@@ -290,17 +290,26 @@ export default function TaskDetailModal({
     setTask(initialTask);
     setTaskReviews(initialTask.reviews ?? []);
     setShowRejectionPrompt(false);
+    setShowBlockedPrompt(false);
 
     // Fetch full detail including activities, comments, subtasks
+    let alive = true;
     getTaskDetail(initialTask.id)
       .then((detail) => {
+        if (!alive) return;
         const full = apiDetailToTaskDetail(detail);
-        setTask(full);
-        setTaskReviews(full.reviews ?? []);
+        // Only overwrite local state if the user hasn't changed anything yet
+        setTask((prev) => (prev === initialTask ? full : prev));
+        setTaskReviews((prev) =>
+          prev === (initialTask.reviews ?? []) ? (full.reviews ?? []) : prev
+        );
       })
       .catch(() => {
         // Keep the initialTask data if the detail fetch fails
       });
+    return () => {
+      alive = false;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTask.id, isOpen]);
 
@@ -632,6 +641,19 @@ export default function TaskDetailModal({
                     <p className="text-sm text-red-800">{task.blockedReason}</p>
                   </div>
                 )}
+
+                {/* Start Date */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-neutral-500">
+                    Start Date
+                  </label>
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl">
+                    <CalendarSmallIcon />
+                    <span className="flex-1 text-sm text-neutral-900">
+                      {task.startDateRaw ? formatVNDate(task.startDateRaw) : "—"}
+                    </span>
+                  </div>
+                </div>
 
                 {/* Due Date */}
                 <div className="flex flex-col gap-2">

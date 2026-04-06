@@ -1806,6 +1806,7 @@ public class ProjectModuleService {
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
             blockedBy,
+                task.getBlockedReason(),
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),

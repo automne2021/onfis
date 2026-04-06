@@ -484,6 +484,7 @@ export default function MyTasksPage() {
           actualEffort: updated.actualEffort,
           assigneeIds: updated.assignees.map((a) => a.id),
           tags: "[]",
+          blockedReason: updated.blockedReason,
         });
 
         if (updated.reviews && updated.reviews.length > 0) {

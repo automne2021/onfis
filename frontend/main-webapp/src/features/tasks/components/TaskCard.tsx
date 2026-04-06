@@ -134,23 +134,13 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
       className="bg-white rounded-xl shadow-sm border border-neutral-100 px-3 py-2.5 flex flex-col gap-2 cursor-pointer overflow-hidden min-w-0 card-hover hover:shadow-md transition-shadow"
       onClick={onClick}
     >
-      {/* Header: Key + Priority Flag */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {task.key && (
-            <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">
-              {task.key}
-            </span>
-          )}
-          <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.color}`} title={statusConfig.label} />
-        </div>
+      {/* Title + Priority Flag */}
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-medium text-sm leading-5 text-neutral-900 line-clamp-2">
+          {task.title}
+        </h3>
         <FlagIcon priority={task.priority} />
       </div>
-
-      {/* Title */}
-      <h3 className="font-medium text-sm leading-5 text-neutral-900 line-clamp-2">
-        {task.title}
-      </h3>
 
       {/* Description (if present) */}
       {description && (
@@ -179,6 +169,14 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
         </div>
       )}
 
+      {/* Blocked Reason Banner */}
+      {task.status === "BLOCKED" && task.blockedReason && (
+        <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-50 rounded-lg border border-red-100">
+          <Icon name="block" size={12} color="#DC2626" className="mt-0.5 shrink-0" />
+          <span className="text-[10px] leading-4 text-red-700 line-clamp-2">{task.blockedReason}</span>
+        </div>
+      )}
+
       {/* Progress */}
       <ProgressBar progress={task.progress} />
 
@@ -187,6 +185,7 @@ export default function TaskCard({ task, onClick }: TaskCardProps) {
         <AvatarStack assignees={task.assignees} />
 
         <div className="flex items-center gap-1.5">
+          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${statusConfig.color}`} title={statusConfig.label} />
           {task.dueDate && (
             <div className="flex items-center gap-1">
               <CalendarIcon />

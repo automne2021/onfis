@@ -10,6 +10,7 @@ import type { Stage, ViewMode, Task } from "../types";
 import type { TaskFormData } from "../../projects/components/CreateTaskModal";
 import { getCurrentProjectUser, createProjectStage, updateProjectStage, deleteProjectStage, getProjectMembers, getProject, listCompanyTags, getProjectStages, type ApiWorkflowStage } from "../../../services/projectService";
 import { createTask, createSubtask, deleteTask, listProjectTasks, reviewTask, updateTask, getTaskDetail, type ApiTask } from "../../../services/taskService";
+import { formatVNDate } from "../../../utils/getTime";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
@@ -81,7 +82,7 @@ const toTaskView = (task: ApiTask): Task => ({
   progress: task.progress,
   startDateRaw: task.startDate,
   dueDateRaw: task.dueDate,
-  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-",
+  dueDate: task.dueDate ? formatVNDate(task.dueDate) : "-",
   assignees: task.assignees,
   reporterId: task.reporterId,
   reporterName: task.reporterName,
@@ -370,7 +371,7 @@ export default function ProjectTasksPage() {
           status: updatedTask.status,
           priority: toApiPriority(updatedTask.priority),
           progress: updatedTask.progress,
-          dueDate: updatedTask.dueDate ? new Date(updatedTask.dueDate).toISOString().slice(0, 10) : undefined,
+          dueDate: updatedTask.dueDateRaw ?? undefined,
           reporterId: updatedTask.reporterId,
           estimatedEffort: updatedTask.estimatedEffort,
           actualEffort: updatedTask.actualEffort,
@@ -394,6 +395,7 @@ export default function ProjectTasksPage() {
         if (projectIdentifier) {
           await refreshTaskBoard(projectIdentifier);
         }
+        showToast("Task updated", "success");
       } catch {
         showToast("Unable to update task", "error");
       }
@@ -552,7 +554,7 @@ export default function ProjectTasksPage() {
                 status: "TODO",
                 priority: toApiPriority(formData.priority),
                 progress: 0,
-                dueDate: formData.endDate ? formData.endDate.toISOString().slice(0, 10) : undefined,
+                dueDate: formData.endDate ? `${formData.endDate.getFullYear()}-${String(formData.endDate.getMonth() + 1).padStart(2, '0')}-${String(formData.endDate.getDate()).padStart(2, '0')}` : undefined,
                 reporterId: formData.reporterId || undefined,
                 estimatedEffort: formData.estimatedEffort,
                 stageId: selectedStageId ?? workflowStages[0]?.id,
