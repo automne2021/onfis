@@ -2,6 +2,8 @@ package com.onfis.project.controller;
 
 import com.onfis.project.dto.CurrentUserResponse;
 import com.onfis.project.dto.CompanyTagResponse;
+import com.onfis.project.dto.ProjectCustomRoleRequest;
+import com.onfis.project.dto.ProjectCustomRoleResponse;
 import com.onfis.project.dto.CompanyTagUpsertRequest;
 import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
@@ -216,6 +218,73 @@ public class ProjectController {
     ) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.removeMember(userId, resolvedProjectId, memberId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Project custom roles ──────────────────────────────────────────────────
+
+    @GetMapping("/{projectId}/roles")
+    public ResponseEntity<List<ProjectCustomRoleResponse>> listProjectCustomRoles(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable String projectId
+    ) {
+        UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
+        return ResponseEntity.ok(projectModuleService.listProjectCustomRoles(userId, resolvedProjectId));
+    }
+
+    @PostMapping("/{projectId}/roles")
+    public ResponseEntity<ProjectCustomRoleResponse> createProjectCustomRole(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable String projectId,
+            @Valid @RequestBody ProjectCustomRoleRequest request
+    ) {
+        UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
+        return ResponseEntity.ok(projectModuleService.createProjectCustomRole(userId, resolvedProjectId, request));
+    }
+
+    @PutMapping("/{projectId}/roles/{roleId}")
+    public ResponseEntity<ProjectCustomRoleResponse> updateProjectCustomRole(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable String projectId,
+            @PathVariable UUID roleId,
+            @Valid @RequestBody ProjectCustomRoleRequest request
+    ) {
+        UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
+        return ResponseEntity.ok(projectModuleService.updateProjectCustomRole(userId, resolvedProjectId, roleId, request));
+    }
+
+    @DeleteMapping("/{projectId}/roles/{roleId}")
+    public ResponseEntity<Void> deleteProjectCustomRole(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable String projectId,
+            @PathVariable UUID roleId
+    ) {
+        UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
+        projectModuleService.deleteProjectCustomRole(userId, resolvedProjectId, roleId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{projectId}/members/{memberId}/roles/{roleId}")
+    public ResponseEntity<Void> assignMemberCustomRole(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable String projectId,
+            @PathVariable UUID memberId,
+            @PathVariable UUID roleId
+    ) {
+        UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
+        projectModuleService.assignMemberCustomRole(userId, resolvedProjectId, memberId, roleId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{projectId}/members/{memberId}/roles/{roleId}")
+    public ResponseEntity<Void> removeMemberCustomRole(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable String projectId,
+            @PathVariable UUID memberId,
+            @PathVariable UUID roleId
+    ) {
+        UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
+        projectModuleService.removeMemberCustomRole(userId, resolvedProjectId, memberId, roleId);
         return ResponseEntity.noContent().build();
     }
 

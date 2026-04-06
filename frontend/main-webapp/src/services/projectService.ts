@@ -63,6 +63,13 @@ export interface ApiProject {
   canManage: boolean;
 }
 
+export interface ApiProjectCustomRole {
+  id: string;
+  name: string;
+  color: string;
+  projectId: string;
+}
+
 export interface ApiProjectMember {
   id: string;
   name: string;
@@ -70,6 +77,7 @@ export interface ApiProjectMember {
   projectRole: 'Lead' | 'Developer' | 'Designer' | 'QA' | 'Analyst';
   joinedAt: string;
   taskCount: number;
+  customRoles: ApiProjectCustomRole[];
 }
 
 export interface ApiCompanyTag {
@@ -223,6 +231,55 @@ export async function updateProjectMemberRole(
 
 export async function removeProjectMember(projectId: string, memberId: string): Promise<void> {
   await api.delete(`/projects/${projectId}/members/${memberId}`);
+}
+
+// ── Project custom roles ───────────────────────────────────────────────
+
+export interface ProjectCustomRolePayload {
+  name: string;
+  color?: string;
+}
+
+export async function getProjectCustomRoles(projectId: string): Promise<ApiProjectCustomRole[]> {
+  const { data } = await api.get<ApiProjectCustomRole[]>(`/projects/${projectId}/roles`);
+  return data;
+}
+
+export async function createProjectCustomRole(
+  projectId: string,
+  payload: ProjectCustomRolePayload,
+): Promise<ApiProjectCustomRole> {
+  const { data } = await api.post<ApiProjectCustomRole>(`/projects/${projectId}/roles`, payload);
+  return data;
+}
+
+export async function updateProjectCustomRole(
+  projectId: string,
+  roleId: string,
+  payload: ProjectCustomRolePayload,
+): Promise<ApiProjectCustomRole> {
+  const { data } = await api.put<ApiProjectCustomRole>(`/projects/${projectId}/roles/${roleId}`, payload);
+  return data;
+}
+
+export async function deleteProjectCustomRole(projectId: string, roleId: string): Promise<void> {
+  await api.delete(`/projects/${projectId}/roles/${roleId}`);
+}
+
+export async function assignMemberCustomRole(
+  projectId: string,
+  memberId: string,
+  roleId: string,
+): Promise<void> {
+  await api.post(`/projects/${projectId}/members/${memberId}/roles/${roleId}`);
+}
+
+export async function removeMemberCustomRole(
+  projectId: string,
+  memberId: string,
+  roleId: string,
+): Promise<void> {
+  await api.delete(`/projects/${projectId}/members/${memberId}/roles/${roleId}`);
 }
 
 // ── Workflow Stages ─────────────────────────────────────────────────────

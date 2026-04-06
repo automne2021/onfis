@@ -1,6 +1,7 @@
 package com.onfis.project.dto;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ProjectMemberResponse(
@@ -9,6 +10,7 @@ public record ProjectMemberResponse(
         String avatar,
         String projectRole,
         OffsetDateTime joinedAt,
-        long taskCount
+        long taskCount,
+        List<ProjectCustomRoleResponse> customRoles
 ) {
 }

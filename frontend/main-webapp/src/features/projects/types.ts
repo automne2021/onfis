@@ -37,6 +37,13 @@ export interface ProjectsByStatus {
 
 export type ProjectRole = "Lead" | "Developer" | "Designer" | "QA" | "Analyst";
 
+export interface ProjectCustomRole {
+  id: string;
+  name: string;
+  color: string;
+  projectId: string;
+}
+
 export interface ProjectMember {
   id: string;
   name: string;
@@ -44,4 +51,5 @@ export interface ProjectMember {
   projectRole: ProjectRole;
   joinedAt: string;
   taskCount: number;
+  customRoles: ProjectCustomRole[];
 }

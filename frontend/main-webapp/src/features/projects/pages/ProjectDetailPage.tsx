@@ -4,6 +4,7 @@ import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, Upcomi
 import { ArrowRightAltOutlined } from '@mui/icons-material';
 import { useRole } from "../../../hooks/useRole";
 import { useTenantPath } from "../../../hooks/useTenantPath";
+import { RichTextEditor } from "../../../components/common/RichTextEditor/RichTextEditor";
 import {
   createMilestone,
   deleteMilestone,
@@ -293,19 +294,19 @@ export default function ProjectDetailPage() {
   // Inline editing state
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<string>("");
+  const [descEditorDraft, setDescEditorDraft] = useState<string>("");
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const descInputRef = useRef<HTMLTextAreaElement>(null);
   const customerInputRef = useRef<HTMLInputElement>(null);
 
   const startEditing = (field: string, currentValue: string) => {
     if (!isManager) return;
     setEditingField(field);
     setEditDraft(currentValue);
+    if (field === 'description') setDescEditorDraft(currentValue);
   };
 
   useEffect(() => {
     if (editingField === 'title') titleInputRef.current?.focus();
-    if (editingField === 'description') descInputRef.current?.focus();
     if (editingField === 'customer') customerInputRef.current?.focus();
   }, [editingField]);
 
@@ -1013,29 +1014,54 @@ export default function ProjectDetailPage() {
 
       {/* Description Card */}
       <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-3">
-        <h2 className="font-bold text-sm leading-5 text-neutral-900">
-          Description
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-sm leading-5 text-neutral-900">
+            Description
+          </h2>
+          {isManager && editingField !== 'description' && (
+            <button
+              type="button"
+              onClick={() => startEditing('description', project.description ?? '')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+            >
+              <span className="material-symbols-rounded" style={{ fontSize: 14 }}>edit</span>
+              Edit
+            </button>
+          )}
+        </div>
         {editingField === 'description' ? (
-          <textarea
-            ref={descInputRef}
-            value={editDraft}
-            onChange={(e) => setEditDraft(e.target.value)}
-            onBlur={() => void saveField('description', editDraft)}
-            onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null); }}
-            className="text-xs leading-5 text-neutral-900 border border-primary rounded-lg p-2 outline-none resize-y min-h-[80px]"
-            rows={4}
-          />
+          <div className="flex flex-col gap-2">
+            <RichTextEditor
+              initialContent={descEditorDraft}
+              onChange={(html) => setDescEditorDraft(html)}
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingField(null)}
+                className="px-3 py-1.5 text-xs font-medium text-neutral-600 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveField('description', descEditorDraft)}
+                className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         ) : (
-          <p
+          <div
             className={`text-xs leading-4 text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded p-1 -m-1 transition-colors' : ''}`}
             onClick={() => startEditing('description', project.description ?? '')}
             title={isManager ? 'Click to edit' : undefined}
           >
             {project.description
-              ? <span dangerouslySetInnerHTML={{ __html: project.description }} />
+              ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: project.description }} />
               : <span className="text-neutral-400">No description provided.</span>}
-          </p>
+          </div>
         )}
       </div>
 

@@ -12,6 +12,8 @@ import com.onfis.project.dto.CurrentUserResponse;
 import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
 import com.onfis.project.dto.ProjectDetailResponse;
+import com.onfis.project.dto.ProjectCustomRoleRequest;
+import com.onfis.project.dto.ProjectCustomRoleResponse;
 import com.onfis.project.dto.ProjectMemberRequest;
 import com.onfis.project.dto.ProjectMemberResponse;
 import com.onfis.project.dto.ProjectResponse;
@@ -45,6 +47,9 @@ import com.onfis.project.entity.ProjectMemberId;
 import com.onfis.project.entity.ProjectMilestoneEntity;
 import com.onfis.project.entity.ProjectTagLinkEntity;
 import com.onfis.project.entity.ProjectTagLinkId;
+import com.onfis.project.entity.ProjectCustomRoleEntity;
+import com.onfis.project.entity.ProjectMemberRoleEntity;
+import com.onfis.project.entity.ProjectMemberRoleId;
 import com.onfis.project.entity.TaskAssigneeEntity;
 import com.onfis.project.entity.TaskAssigneeId;
 import com.onfis.project.entity.TaskActivityEntity;
@@ -68,6 +73,8 @@ import com.onfis.project.repository.ProjectMemberRepository;
 import com.onfis.project.repository.ProjectMilestoneRepository;
 import com.onfis.project.repository.ProjectRepository;
 import com.onfis.project.repository.ProjectTagLinkRepository;
+import com.onfis.project.repository.ProjectCustomRoleRepository;
+import com.onfis.project.repository.ProjectMemberRoleRepository;
 import com.onfis.project.repository.TaskActivityRepository;
 import com.onfis.project.repository.TaskAssigneeRepository;
 import com.onfis.project.repository.TaskCommentRepository;
@@ -137,6 +144,8 @@ public class ProjectModuleService {
     private final TaskDependencyRepository taskDependencyRepository;
     private final ProjectTagLinkRepository projectTagLinkRepository;
     private final TaskTagLinkRepository taskTagLinkRepository;
+    private final ProjectCustomRoleRepository projectCustomRoleRepository;
+    private final ProjectMemberRoleRepository projectMemberRoleRepository;
 
     public ProjectModuleService(
             TenantContext tenantContext,
@@ -155,7 +164,9 @@ public class ProjectModuleService {
                 TaskActivityRepository taskActivityRepository,
                 TaskDependencyRepository taskDependencyRepository,
                 ProjectTagLinkRepository projectTagLinkRepository,
-                TaskTagLinkRepository taskTagLinkRepository
+                TaskTagLinkRepository taskTagLinkRepository,
+                ProjectCustomRoleRepository projectCustomRoleRepository,
+                ProjectMemberRoleRepository projectMemberRoleRepository
     ) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
@@ -174,6 +185,8 @@ public class ProjectModuleService {
         this.taskDependencyRepository = taskDependencyRepository;
         this.projectTagLinkRepository = projectTagLinkRepository;
         this.taskTagLinkRepository = taskTagLinkRepository;
+        this.projectCustomRoleRepository = projectCustomRoleRepository;
+        this.projectMemberRoleRepository = projectMemberRoleRepository;
     }
 
     // ── Current user ──────────────────────────────────────────────────────────
@@ -373,18 +386,34 @@ public class ProjectModuleService {
         requireProject(projectId, tenantId);
         enforceProjectVisible(currentUser, projectId);
 
+        List<ProjectCustomRoleEntity> allRoles = projectCustomRoleRepository.findByProjectIdOrderByCreatedAtAsc(projectId);
+        Map<UUID, ProjectCustomRoleResponse> roleMap = allRoles.stream()
+                .collect(Collectors.toMap(ProjectCustomRoleEntity::getId,
+                        r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId())));
+
+        List<ProjectMemberRoleEntity> allMemberRoles = projectMemberRoleRepository.findByProjectId(projectId);
+        Map<UUID, List<ProjectCustomRoleResponse>> memberCustomRoles = new java.util.HashMap<>();
+        for (ProjectMemberRoleEntity mr : allMemberRoles) {
+            ProjectCustomRoleResponse crResp = roleMap.get(mr.getId().getCustomRoleId());
+            if (crResp != null) {
+                memberCustomRoles.computeIfAbsent(mr.getId().getUserId(), k -> new ArrayList<>()).add(crResp);
+            }
+        }
+
         List<ProjectMemberEntity> members = projectMemberRepository.findByIdProjectId(projectId);
         List<ProjectMemberResponse> responses = new ArrayList<>();
         for (ProjectMemberEntity member : members) {
             AppUserEntity user = requireUser(member.getId().getUserId(), tenantId);
             long taskCount = taskAssigneeRepository.countAssignedInProject(projectId, user.getId());
+            List<ProjectCustomRoleResponse> customRoles = memberCustomRoles.getOrDefault(user.getId(), List.of());
             responses.add(new ProjectMemberResponse(
                     user.getId(),
                     fullName(user),
                     user.getAvatarUrl(),
                     toFrontendProjectRole(member.getRole()),
                     asOffset(member.getJoinedAt()),
-                    taskCount
+                    taskCount,
+                    customRoles
             ));
         }
         return responses;
@@ -408,13 +437,21 @@ public class ProjectModuleService {
         projectMemberRepository.save(member);
 
         long taskCount = taskAssigneeRepository.countAssignedInProject(projectId, memberUser.getId());
+        List<ProjectMemberRoleEntity> memberRoles = projectMemberRoleRepository.findByProjectIdAndUserId(projectId, memberUser.getId());
+        List<ProjectCustomRoleResponse> customRoles = memberRoles.stream()
+                .map(mr -> projectCustomRoleRepository.findById(mr.getId().getCustomRoleId())
+                        .map(r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId()))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         return new ProjectMemberResponse(
                 memberUser.getId(),
                 fullName(memberUser),
                 memberUser.getAvatarUrl(),
                 toFrontendProjectRole(member.getRole()),
                 asOffset(member.getJoinedAt()),
-                taskCount
+                taskCount,
+                customRoles
         );
     }
 
@@ -433,13 +470,21 @@ public class ProjectModuleService {
         AppUserEntity user = requireUser(memberId, tenantId);
 
         long taskCount = taskAssigneeRepository.countAssignedInProject(projectId, user.getId());
+        List<ProjectMemberRoleEntity> memberRoles = projectMemberRoleRepository.findByProjectIdAndUserId(projectId, memberId);
+        List<ProjectCustomRoleResponse> customRoles = memberRoles.stream()
+                .map(mr -> projectCustomRoleRepository.findById(mr.getId().getCustomRoleId())
+                        .map(r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId()))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         return new ProjectMemberResponse(
                 user.getId(),
                 fullName(user),
                 user.getAvatarUrl(),
                 toFrontendProjectRole(saved.getRole()),
                 asOffset(saved.getJoinedAt()),
-                taskCount
+                taskCount,
+                customRoles
         );
     }
 
@@ -454,6 +499,116 @@ public class ProjectModuleService {
                 .findByIdProjectIdAndIdUserId(projectId, memberId)
                 .orElseThrow(() -> new NotFoundException("Project member not found"));
         projectMemberRepository.delete(member);
+        // Also remove their custom role assignments for this project
+        projectMemberRoleRepository.deleteByIdProjectIdAndIdUserId(projectId, memberId);
+    }
+
+    // ── Project custom roles ──────────────────────────────────────────────────
+
+    public List<ProjectCustomRoleResponse> listProjectCustomRoles(String userIdHeader, UUID projectId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectVisible(currentUser, projectId);
+
+        return projectCustomRoleRepository.findByProjectIdOrderByCreatedAtAsc(projectId).stream()
+                .map(r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ProjectCustomRoleResponse createProjectCustomRole(String userIdHeader, UUID projectId, ProjectCustomRoleRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        String name = request.name().trim();
+        if (projectCustomRoleRepository.existsByProjectIdAndNameIgnoreCase(projectId, name)) {
+            throw new BadRequestException("A role with this name already exists in this project");
+        }
+
+        ProjectCustomRoleEntity role = new ProjectCustomRoleEntity();
+        role.setTenantId(tenantId);
+        role.setProjectId(projectId);
+        role.setName(name);
+        role.setColor(request.color() != null && !request.color().isBlank() ? request.color() : "#64748B");
+        role.setCreatedBy(currentUser.getId());
+        ProjectCustomRoleEntity saved = projectCustomRoleRepository.save(role);
+        return new ProjectCustomRoleResponse(saved.getId(), saved.getName(), saved.getColor(), saved.getProjectId());
+    }
+
+    @Transactional
+    public ProjectCustomRoleResponse updateProjectCustomRole(String userIdHeader, UUID projectId, UUID roleId, ProjectCustomRoleRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectCustomRoleEntity role = projectCustomRoleRepository.findByIdAndProjectId(roleId, projectId)
+                .orElseThrow(() -> new NotFoundException("Project role not found"));
+
+        String name = request.name().trim();
+        // Check uniqueness only if name is changing
+        if (!role.getName().equalsIgnoreCase(name) && projectCustomRoleRepository.existsByProjectIdAndNameIgnoreCase(projectId, name)) {
+            throw new BadRequestException("A role with this name already exists in this project");
+        }
+        role.setName(name);
+        if (request.color() != null && !request.color().isBlank()) {
+            role.setColor(request.color());
+        }
+        ProjectCustomRoleEntity saved = projectCustomRoleRepository.save(role);
+        return new ProjectCustomRoleResponse(saved.getId(), saved.getName(), saved.getColor(), saved.getProjectId());
+    }
+
+    @Transactional
+    public void deleteProjectCustomRole(String userIdHeader, UUID projectId, UUID roleId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectCustomRoleEntity role = projectCustomRoleRepository.findByIdAndProjectId(roleId, projectId)
+                .orElseThrow(() -> new NotFoundException("Project role not found"));
+        projectCustomRoleRepository.delete(role);
+        // project_member_roles rows are cascade-deleted by FK
+    }
+
+    @Transactional
+    public void assignMemberCustomRole(String userIdHeader, UUID projectId, UUID memberId, UUID roleId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        // Validate member exists in project
+        projectMemberRepository.findByIdProjectIdAndIdUserId(projectId, memberId)
+                .orElseThrow(() -> new NotFoundException("Member not found in this project"));
+
+        // Validate role belongs to project
+        projectCustomRoleRepository.findByIdAndProjectId(roleId, projectId)
+                .orElseThrow(() -> new NotFoundException("Project role not found"));
+
+        ProjectMemberRoleId id = new ProjectMemberRoleId(projectId, memberId, roleId);
+        if (!projectMemberRoleRepository.existsById(id)) {
+            ProjectMemberRoleEntity entity = new ProjectMemberRoleEntity();
+            entity.setId(id);
+            entity.setAssignedAt(Instant.now());
+            projectMemberRoleRepository.save(entity);
+        }
+    }
+
+    @Transactional
+    public void removeMemberCustomRole(String userIdHeader, UUID projectId, UUID memberId, UUID roleId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectMemberRoleId id = new ProjectMemberRoleId(projectId, memberId, roleId);
+        if (projectMemberRoleRepository.existsById(id)) {
+            projectMemberRoleRepository.deleteById(id);
+        }
     }
 
     // ── Workflow stages ────────────────────────────────────────────────────────
