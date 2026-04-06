@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface TaskCommentRepository extends JpaRepository<TaskCommentEntity, UUID> {
 
     List<TaskCommentEntity> findByTaskIdOrderByCreatedAtAsc(UUID taskId);
+
+    void deleteByTaskId(UUID taskId);
 }

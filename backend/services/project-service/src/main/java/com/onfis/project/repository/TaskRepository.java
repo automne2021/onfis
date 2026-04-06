@@ -70,4 +70,55 @@ public interface TaskRepository extends JpaRepository<TaskEntity, UUID> {
     List<TaskEntity> findByTenantIdAndMilestoneId(UUID tenantId, UUID milestoneId);
 
     long countByProjectIdAndStageId(UUID projectId, UUID stageId);
+
+    List<TaskEntity> findByTenantIdAndParentTaskId(UUID tenantId, UUID parentTaskId);
+
+    // Review queue queries: IN_REVIEW always shown; DONE/IN_PROGRESS only if task has reviews
+    @Query("""
+        SELECT t FROM TaskEntity t
+        WHERE t.tenantId = :tenantId
+        AND (
+            t.status = com.onfis.project.domain.TaskStatus.IN_REVIEW
+            OR (t.status IN :statuses AND EXISTS (
+                SELECT 1 FROM TaskReviewEntity r WHERE r.taskId = t.id
+            ))
+        )
+    """)
+    Page<TaskEntity> findReviewQueue(UUID tenantId, @org.springframework.data.repository.query.Param("statuses") Collection<TaskStatus> statuses, Pageable pageable);
+
+    @Query("""
+        SELECT t FROM TaskEntity t
+        WHERE t.tenantId = :tenantId AND t.projectId = :projectId
+        AND (
+            t.status = com.onfis.project.domain.TaskStatus.IN_REVIEW
+            OR (t.status IN :statuses AND EXISTS (
+                SELECT 1 FROM TaskReviewEntity r WHERE r.taskId = t.id
+            ))
+        )
+    """)
+    Page<TaskEntity> findReviewQueueByProject(UUID tenantId, UUID projectId, @org.springframework.data.repository.query.Param("statuses") Collection<TaskStatus> statuses, Pageable pageable);
+
+    @Query("""
+        SELECT t FROM TaskEntity t
+        WHERE t.tenantId = :tenantId AND t.reporterId = :reporterId
+        AND (
+            t.status = com.onfis.project.domain.TaskStatus.IN_REVIEW
+            OR (t.status IN :statuses AND EXISTS (
+                SELECT 1 FROM TaskReviewEntity r WHERE r.taskId = t.id
+            ))
+        )
+    """)
+    Page<TaskEntity> findReviewQueueByReporter(UUID tenantId, UUID reporterId, @org.springframework.data.repository.query.Param("statuses") Collection<TaskStatus> statuses, Pageable pageable);
+
+    @Query("""
+        SELECT t FROM TaskEntity t
+        WHERE t.tenantId = :tenantId AND t.projectId = :projectId AND t.reporterId = :reporterId
+        AND (
+            t.status = com.onfis.project.domain.TaskStatus.IN_REVIEW
+            OR (t.status IN :statuses AND EXISTS (
+                SELECT 1 FROM TaskReviewEntity r WHERE r.taskId = t.id
+            ))
+        )
+    """)
+    Page<TaskEntity> findReviewQueueByProjectAndReporter(UUID tenantId, UUID projectId, UUID reporterId, @org.springframework.data.repository.query.Param("statuses") Collection<TaskStatus> statuses, Pageable pageable);
 }

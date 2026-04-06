@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { SearchIcon, StarIcon, CompletedMilestoneIcon, LateMilestoneIcon, UpcomingMilestoneIcon, TasksViewIcon as KanbanIcon } from "../../../components/common/Icons";
 import { ArrowRightAltOutlined } from '@mui/icons-material';
@@ -290,6 +290,121 @@ export default function ProjectDetailPage() {
     progress: "",
   });
 
+  // Inline editing state
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<string>("");
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const descInputRef = useRef<HTMLTextAreaElement>(null);
+  const customerInputRef = useRef<HTMLInputElement>(null);
+
+  const startEditing = (field: string, currentValue: string) => {
+    if (!isManager) return;
+    setEditingField(field);
+    setEditDraft(currentValue);
+  };
+
+  useEffect(() => {
+    if (editingField === 'title') titleInputRef.current?.focus();
+    if (editingField === 'description') descInputRef.current?.focus();
+    if (editingField === 'customer') customerInputRef.current?.focus();
+  }, [editingField]);
+
+  const saveField = async (field: string, value: string) => {
+    if (!projectIdentifier || !project) return;
+    setEditingField(null);
+
+    const trimmed = value.trim();
+    // Don't save if title is empty or nothing changed
+    if (field === 'title' && !trimmed) return;
+    const currentVal = field === 'title' ? project.title
+      : field === 'description' ? project.description
+      : field === 'customer' ? (project.customer ?? '')
+      : '';
+    if (trimmed === currentVal) return;
+
+    const prev = { ...project };
+    const updated = { ...project, [field]: trimmed || null };
+    setProject(updated);
+
+    try {
+      await updateProject(projectIdentifier, {
+        title: updated.title,
+        description: updated.description,
+        status: status.toUpperCase() as 'PLANNING' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED',
+        priority: updated.priority.toUpperCase() as 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW',
+        progress: updated.progress,
+        startDate: updated.startDate ?? undefined,
+        dueDate: updated.dueDate ?? undefined,
+        tags: updated.tags,
+        managerId: updated.managerId ?? undefined,
+        customer: updated.customer ?? undefined,
+      });
+      showToast('Project updated', 'success');
+    } catch {
+      setProject(prev);
+      showToast('Failed to update project', 'error');
+    }
+  };
+
+  const saveDateField = async (field: 'startDate' | 'dueDate', value: string) => {
+    if (!projectIdentifier || !project) return;
+    const current = field === 'startDate' ? project.startDate : project.dueDate;
+    if ((value || null) === (current || null)) return;
+
+    const prev = { ...project };
+    const updated = { ...project, [field]: value || null };
+    if (field === 'dueDate') {
+      updated.endDate = value || null;
+    }
+    setProject(updated);
+
+    try {
+      await updateProject(projectIdentifier, {
+        title: updated.title,
+        description: updated.description,
+        status: status.toUpperCase() as 'PLANNING' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED',
+        priority: updated.priority.toUpperCase() as 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW',
+        progress: updated.progress,
+        startDate: updated.startDate ?? undefined,
+        dueDate: updated.dueDate ?? undefined,
+        tags: updated.tags,
+        managerId: updated.managerId ?? undefined,
+        customer: updated.customer ?? undefined,
+      });
+      showToast('Project updated', 'success');
+    } catch {
+      setProject(prev);
+      showToast('Failed to update project', 'error');
+    }
+  };
+
+  const savePriority = async (newPriority: Priority) => {
+    if (!projectIdentifier || !project) return;
+    if (newPriority === project.priority) return;
+
+    const prev = { ...project };
+    setProject({ ...project, priority: newPriority });
+
+    try {
+      await updateProject(projectIdentifier, {
+        title: project.title,
+        description: project.description,
+        status: status.toUpperCase() as 'PLANNING' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED',
+        priority: newPriority.toUpperCase() as 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW',
+        progress: project.progress,
+        startDate: project.startDate ?? undefined,
+        dueDate: project.dueDate ?? undefined,
+        tags: project.tags,
+        managerId: project.managerId ?? undefined,
+        customer: project.customer ?? undefined,
+      });
+      showToast('Project updated', 'success');
+    } catch {
+      setProject(prev);
+      showToast('Failed to update project', 'error');
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       if (!projectIdentifier) return;
@@ -554,9 +669,26 @@ export default function ProjectDetailPage() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between">
           {/* Title + Star */}
           <div className="flex items-center gap-2 shrink-0">
-            <p className="header-h6 leading-snug text-neutral-900">
-              {project.title}
-            </p>
+            {editingField === 'title' ? (
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onBlur={() => void saveField('title', editDraft)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveField('title', editDraft); if (e.key === 'Escape') setEditingField(null); }}
+                className="header-h6 leading-snug text-neutral-900 bg-transparent border-b-2 border-primary outline-none min-w-[200px]"
+                maxLength={200}
+              />
+            ) : (
+              <p
+                className={`header-h6 leading-snug text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded px-1 -mx-1 transition-colors' : ''}`}
+                onClick={() => startEditing('title', project.title)}
+                title={isManager ? 'Click to edit' : undefined}
+              >
+                {project.title}
+              </p>
+            )}
             <button type="button" onClick={handleToggleStar} className="shrink-0 hover:scale-110 transition-transform" aria-label="Toggle star">
               <StarIcon filled={isStarred} />
             </button>
@@ -600,7 +732,26 @@ export default function ProjectDetailPage() {
 
             {/* Customer */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Customer</span>
-            <span className="text-xs leading-4 text-neutral-900">{project.customer ?? '—'}</span>
+            {editingField === 'customer' ? (
+              <input
+                ref={customerInputRef}
+                type="text"
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onBlur={() => void saveField('customer', editDraft)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveField('customer', editDraft); if (e.key === 'Escape') setEditingField(null); }}
+                className="text-xs leading-4 text-neutral-900 bg-transparent border-b border-primary outline-none"
+                maxLength={200}
+              />
+            ) : (
+              <span
+                className={`text-xs leading-4 text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded px-1 -mx-1 transition-colors' : ''}`}
+                onClick={() => startEditing('customer', project.customer ?? '')}
+                title={isManager ? 'Click to edit' : undefined}
+              >
+                {project.customer ?? '—'}
+              </span>
+            )}
 
             {/* Tags */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Tags</span>
@@ -621,14 +772,59 @@ export default function ProjectDetailPage() {
             {/* Planned Date */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Planned Date</span>
             <div className="flex items-center gap-3">
-              <span className="text-xs leading-4 text-neutral-900">{plannedStartDate}</span>
+              {isManager ? (
+                <input
+                  type="date"
+                  value={project.startDate ?? ''}
+                  onChange={(e) => void saveDateField('startDate', e.target.value)}
+                  className="text-xs leading-4 text-neutral-900 bg-transparent border-b border-neutral-200 hover:border-primary outline-none cursor-pointer focus:border-primary"
+                />
+              ) : (
+                <span className="text-xs leading-4 text-neutral-900">{plannedStartDate}</span>
+              )}
               <ArrowRightAltOutlined fontSize="small"/>
-              <span className="text-xs leading-4 text-neutral-900">{plannedEndDate}</span>
+              {isManager ? (
+                <input
+                  type="date"
+                  value={project.dueDate ?? project.endDate ?? ''}
+                  onChange={(e) => void saveDateField('dueDate', e.target.value)}
+                  className="text-xs leading-4 text-neutral-900 bg-transparent border-b border-neutral-200 hover:border-primary outline-none cursor-pointer focus:border-primary"
+                />
+              ) : (
+                <span className="text-xs leading-4 text-neutral-900">{plannedEndDate}</span>
+              )}
             </div>
 
             {/* Priority */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Priority</span>
-            <div><PriorityBadge priority={project.priority} /></div>
+            {isManager ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setEditingField(editingField === 'priority' ? null : 'priority')}
+                  className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+                >
+                  <PriorityBadge priority={project.priority} />
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${editingField === 'priority' ? 'rotate-180' : ''}`}>
+                    <path d="M3 4.5L6 7.5L9 4.5" stroke="#90A1B9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <div className={`absolute top-full left-0 mt-1 inline-flex flex-col bg-white border border-neutral-200 rounded-lg shadow-lg py-0.5 z-20 transition-all duration-200 ease-out origin-top ${editingField === 'priority' ? 'opacity-100 scale-y-100 pointer-events-auto' : 'opacity-0 scale-y-75 pointer-events-none'}`}>
+                  {(['urgent', 'high', 'medium', 'low'] as Priority[]).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`text-left px-2 py-1 text-xs hover:bg-neutral-50 rounded transition-colors ${project.priority === p ? 'font-bold' : ''}`}
+                      onClick={() => { setEditingField(null); void savePriority(p); }}
+                    >
+                      <PriorityBadge priority={p} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div><PriorityBadge priority={project.priority} /></div>
+            )}
 
             {/* Status */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Status</span>
@@ -820,9 +1016,27 @@ export default function ProjectDetailPage() {
         <h2 className="font-bold text-sm leading-5 text-neutral-900">
           Description
         </h2>
-        <p className="text-xs leading-4 text-neutral-900">
-          {project.description || <span className="text-neutral-400">No description provided.</span>}
-        </p>
+        {editingField === 'description' ? (
+          <textarea
+            ref={descInputRef}
+            value={editDraft}
+            onChange={(e) => setEditDraft(e.target.value)}
+            onBlur={() => void saveField('description', editDraft)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null); }}
+            className="text-xs leading-5 text-neutral-900 border border-primary rounded-lg p-2 outline-none resize-y min-h-[80px]"
+            rows={4}
+          />
+        ) : (
+          <p
+            className={`text-xs leading-4 text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded p-1 -m-1 transition-colors' : ''}`}
+            onClick={() => startEditing('description', project.description ?? '')}
+            title={isManager ? 'Click to edit' : undefined}
+          >
+            {project.description
+              ? <span dangerouslySetInnerHTML={{ __html: project.description }} />
+              : <span className="text-neutral-400">No description provided.</span>}
+          </p>
+        )}
       </div>
 
       {/* Delete project confirmation dialog */}

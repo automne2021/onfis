@@ -82,6 +82,9 @@ public class TaskEntity {
     @Column(name = "task_key")
     private String taskKey;
 
+    @Column(name = "blocked_reason")
+    private String blockedReason;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "tags", columnDefinition = "jsonb")
     private String tags = "[]";

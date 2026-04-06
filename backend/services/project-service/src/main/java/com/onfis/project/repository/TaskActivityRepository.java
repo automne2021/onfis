@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface TaskActivityRepository extends JpaRepository<TaskActivityEntity, UUID> {
 
     List<TaskActivityEntity> findByTaskIdOrderByCreatedAtAsc(UUID taskId);
+
+    void deleteByTaskId(UUID taskId);
 }

@@ -96,6 +96,7 @@ const toTaskView = (task: ApiTask): Task => ({
   estimatedEffort: task.estimatedEffort,
   actualEffort: task.actualEffort,
   blockedBy: task.blockedBy,
+  blockedReason: task.blockedReason,
   tags: [],
 });
 

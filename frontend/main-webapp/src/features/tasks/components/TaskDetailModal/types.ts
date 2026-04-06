@@ -37,4 +37,5 @@ export interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: TaskDetail) => void;
+  onDelete?: (taskId: string) => void;
 }

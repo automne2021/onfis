@@ -18,6 +18,16 @@ const toDate = (raw?: string | null): Date | null => {
   if (!raw) {
     return null;
   }
+  // Parse "YYYY-MM-DD" as local date to avoid UTC offset shifting
+  const parts = raw.split("-");
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (!Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)) {
+      return new Date(y, m, d);
+    }
+  }
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) {
     return null;

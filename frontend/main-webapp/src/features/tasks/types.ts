@@ -38,6 +38,7 @@ export interface Task {
   estimatedEffort?: number;
   actualEffort?: number;
   blockedBy?: string[];
+  blockedReason?: string;
 }
 
 export interface Stage {

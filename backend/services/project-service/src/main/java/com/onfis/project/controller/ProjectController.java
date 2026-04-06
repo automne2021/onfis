@@ -388,6 +388,15 @@ public class ProjectController {
         return ResponseEntity.ok(projectModuleService.updateTask(userId, taskId, request));
     }
 
+    @DeleteMapping("/tasks/{taskId}")
+    public ResponseEntity<Void> deleteTask(
+            @RequestHeader(USER_HEADER) String userId,
+            @PathVariable UUID taskId
+    ) {
+        projectModuleService.deleteTask(userId, taskId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/tasks/{taskId}/stage")
     public ResponseEntity<TaskResponse> updateTaskStage(
             @RequestHeader(USER_HEADER) String userId,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { TaskDetail, TaskDetailModalProps } from "./types";
+import ConfirmDialog from "../../../../components/common/ConfirmDialog";
 import type { Assignee } from "../../types";
 import SubTaskList from "./SubTaskList";
 import ActivityLog from "./ActivityLog";
@@ -225,6 +226,7 @@ function apiDetailToTaskDetail(api: ApiTaskDetail): TaskDetail {
     estimatedEffort: api.estimatedEffort,
     actualEffort: api.actualEffort,
     blockedBy: api.blockedBy,
+    blockedReason: api.blockedReason,
     subTasks: api.subtasks,
     activities: api.activities.map((a) => ({
       id: a.id,
@@ -259,9 +261,13 @@ export default function TaskDetailModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
 }: TaskDetailModalProps) {
   const [task, setTask] = useState<TaskDetail>(initialTask);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
+  const [showBlockedPrompt, setShowBlockedPrompt] = useState(false);
+  const [blockedReasonDraft, setBlockedReasonDraft] = useState("");
   const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -576,9 +582,56 @@ export default function TaskDetailModal({
                 <StatusSelector
                   value={task.status}
                   task={task}
-                  onChange={(status) => setTask({ ...task, status })}
+                  onChange={(status) => {
+                    if (status === "BLOCKED") {
+                      setBlockedReasonDraft(task.blockedReason ?? "");
+                      setShowBlockedPrompt(true);
+                      return;
+                    }
+                    setTask({ ...task, status, blockedReason: undefined });
+                  }}
                   disabled={isLockedForAssignee}
                 />
+
+                {/* Blocked Reason Prompt */}
+                {showBlockedPrompt && (
+                  <div className="border border-red-200 bg-red-50 rounded-xl p-4 flex flex-col gap-3">
+                    <p className="text-sm font-medium text-red-800">
+                      Why is this task blocked?
+                    </p>
+                    <textarea
+                      value={blockedReasonDraft}
+                      onChange={(e) => setBlockedReasonDraft(e.target.value)}
+                      placeholder="Describe what is blocking this task..."
+                      className="w-full min-h-[80px] p-3 text-sm text-neutral-900 border border-red-200 rounded-lg resize-none outline-none focus:border-red-400 bg-white"
+                    />
+                    <div className="flex items-center gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setShowBlockedPrompt(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          if (blockedReasonDraft.trim()) {
+                            setTask({ ...task, status: "BLOCKED", blockedReason: blockedReasonDraft.trim() });
+                            setShowBlockedPrompt(false);
+                          }
+                        }}
+                        disabled={!blockedReasonDraft.trim()}
+                      >
+                        Confirm Block
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Blocked Reason Display */}
+                {task.status === "BLOCKED" && task.blockedReason && !showBlockedPrompt && (
+                  <div className="border border-red-200 bg-red-50 rounded-xl p-3">
+                    <p className="text-xs font-medium text-red-600 mb-1">Blocked Reason</p>
+                    <p className="text-sm text-red-800">{task.blockedReason}</p>
+                  </div>
+                )}
 
                 {/* Due Date */}
                 <div className="flex flex-col gap-2">
@@ -646,18 +699,43 @@ export default function TaskDetailModal({
           </div>
 
           {/* Footer Actions - Fixed at bottom */}
-          <div className="flex items-center justify-end gap-3 px-6 lg:px-8 py-4 border-t border-neutral-200 bg-white">
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            {!isLockedForAssignee && (
-              <Button variant="primary" onClick={handleSave}>
-                Save Task
+          <div className="flex items-center justify-between px-6 lg:px-8 py-4 border-t border-neutral-200 bg-white">
+            <div>
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <span className="text-red-600">Delete Task</span>
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
               </Button>
-            )}
+              {!isLockedForAssignee && (
+                <Button variant="primary" onClick={handleSave}>
+                  Save Task
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {onDelete && (
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          title="Delete Task"
+          message="Are you sure you want to delete this task? This action cannot be undone."
+          confirmLabel="Delete Task"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={() => { setShowDeleteConfirm(false); onDelete(task.id); }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </>,
     document.body
   );

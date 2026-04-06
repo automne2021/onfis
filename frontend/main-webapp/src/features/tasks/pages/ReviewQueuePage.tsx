@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTenantPath } from "../../../hooks/useTenantPath";
+
+const stripHtml = (html: string): string => {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent?.trim() || "";
+};
 import { useRole } from "../../../hooks/useRole";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useToast } from "../../../contexts/useToast";
@@ -71,6 +76,7 @@ const toReviewTask = (task: ApiTask): ReviewTask => ({
   estimatedEffort: task.estimatedEffort,
   actualEffort: task.actualEffort,
   blockedBy: task.blockedBy,
+  blockedReason: task.blockedReason,
   projectName: task.projectTitle || "Project",
   submittedAt: task.status === "IN_REVIEW" ? "Recently" : "-",
   reviews: task.reviews,
@@ -391,7 +397,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-neutral-900">{task.title}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5 truncate">{task.description}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5 truncate">{stripHtml(task.description)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span
@@ -594,7 +600,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${PRIORITY_COLOR[task.priority]}`} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-neutral-900">{task.title}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{task.description}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{stripHtml(task.description)}</p>
                   </div>
                   {display && (
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border flex-shrink-0 ${display.bg}`}>

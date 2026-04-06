@@ -61,6 +61,7 @@ export interface ApiTask {
   key: string;
   canEdit: boolean;
   canReview: boolean;
+  blockedReason?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -86,6 +87,7 @@ export interface UpsertTaskPayload {
   milestoneId?: string;
   tags?: string;
   assigneeIds: string[];
+  blockedReason?: string;
 }
 
 export interface ReviewPayload {
@@ -190,6 +192,10 @@ export async function getTask(taskId: string): Promise<ApiTask> {
 export async function updateTask(taskId: string, payload: UpsertTaskPayload): Promise<ApiTask> {
   const { data } = await api.put<ApiTask>(`/projects/tasks/${taskId}`, payload);
   return data;
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  await api.delete(`/projects/tasks/${taskId}`);
 }
 
 export async function getTaskDetail(taskId: string): Promise<ApiTaskDetail> {

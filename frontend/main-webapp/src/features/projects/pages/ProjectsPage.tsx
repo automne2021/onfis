@@ -155,6 +155,7 @@ export default function ProjectsPage() {
         dueDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : undefined,
         tags: serializedTags,
         managerId: data.managerId || undefined,
+        customer: data.customer || undefined,
       });
 
       const milestoneInputs = data.milestones

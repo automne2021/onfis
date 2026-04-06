@@ -86,6 +86,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -797,7 +798,7 @@ public class ProjectModuleService {
         task.setCreatedBy(currentUser.getId());
         task.setUpdatedBy(currentUser.getId());
         TaskStatus requestedStatus = parseTaskStatus(request.status(), task.getStatus());
-        validateTaskPrerequisitesForStatus(requestedStatus, request.assigneeIds(), request.reporterId());
+        validateTaskPrerequisitesForStatus(requestedStatus, request.assigneeIds(), request.reporterId(), request.progress(), request.actualEffort());
         if (request.reporterId() != null) {
             requireUser(request.reporterId(), tenantId);
         }
@@ -826,7 +827,9 @@ public class ProjectModuleService {
         if (nextStatus != task.getStatus()) {
             validateTaskTransition(task.getStatus(), nextStatus);
             UUID reporterId = request.reporterId() != null ? request.reporterId() : task.getReporterId();
-            validateTaskPrerequisitesForStatus(nextStatus, request.assigneeIds(), reporterId);
+            Integer effectiveProgress = request.progress() != null ? request.progress() : task.getProgress();
+            BigDecimal effectiveEffort = request.actualEffort() != null ? request.actualEffort() : task.getActualEffort();
+            validateTaskPrerequisitesForStatus(nextStatus, request.assigneeIds(), reporterId, effectiveProgress, effectiveEffort);
         }
         if (request.reporterId() != null && !request.reporterId().equals(task.getReporterId())) {
             requireUser(request.reporterId(), tenantId);
@@ -883,7 +886,8 @@ public class ProjectModuleService {
                     .stream()
                     .map(a -> a.getId().getUserId())
                     .toList();
-            validateTaskPrerequisitesForStatus(nextStatus, assigneeIds, task.getReporterId());
+            Integer effectiveProgress = request.progress() != null ? request.progress() : task.getProgress();
+            validateTaskPrerequisitesForStatus(nextStatus, assigneeIds, task.getReporterId(), effectiveProgress, task.getActualEffort());
         }
 
         task.setStageId(request.stageId());
@@ -905,6 +909,33 @@ public class ProjectModuleService {
         }
 
         return toTaskResponse(saved, currentUser);
+    }
+
+    @Transactional
+    public void deleteTask(String userIdHeader, UUID taskId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        // Nullify parent reference on child tasks
+        List<TaskEntity> children = taskRepository.findByTenantIdAndParentTaskId(tenantId, taskId);
+        for (TaskEntity child : children) {
+            child.setParentTaskId(null);
+            taskRepository.save(child);
+        }
+
+        // Delete all related entities
+        taskAssigneeRepository.deleteByIdTaskId(taskId);
+        taskTagLinkRepository.deleteByIdTaskId(taskId);
+        taskDependencyRepository.deleteByIdTaskId(taskId);
+        taskDependencyRepository.deleteByIdBlockedByTaskId(taskId);
+        taskSubtaskRepository.deleteByTaskId(taskId);
+        taskReviewRepository.deleteByTaskId(taskId);
+        taskCommentRepository.deleteByTaskId(taskId);
+        taskActivityRepository.deleteByTaskId(taskId);
+
+        taskRepository.delete(task);
     }
 
     @Transactional
@@ -1044,12 +1075,12 @@ public class ProjectModuleService {
         Page<TaskEntity> taskPage;
         if (isManager(currentUser)) {
             taskPage = projectId == null
-                    ? taskRepository.findByTenantIdAndStatusIn(tenantId, statuses, pageable)
-                    : taskRepository.findByTenantIdAndProjectIdAndStatusIn(tenantId, projectId, statuses, pageable);
+                    ? taskRepository.findReviewQueue(tenantId, statuses, pageable)
+                    : taskRepository.findReviewQueueByProject(tenantId, projectId, statuses, pageable);
         } else {
             taskPage = projectId == null
-                    ? taskRepository.findByTenantIdAndReporterIdAndStatusIn(tenantId, currentUser.getId(), statuses, pageable)
-                    : taskRepository.findByTenantIdAndProjectIdAndReporterIdAndStatusIn(
+                    ? taskRepository.findReviewQueueByReporter(tenantId, currentUser.getId(), statuses, pageable)
+                    : taskRepository.findReviewQueueByProjectAndReporter(
                             tenantId,
                             projectId,
                             currentUser.getId(),
@@ -1432,7 +1463,8 @@ public class ProjectModuleService {
                 asOffset(task.getUpdatedAt()),
             resolveTaskKey(task, project),
                 canEdit,
-                canReview
+                canReview,
+                task.getBlockedReason()
         );
     }
 
@@ -1673,6 +1705,13 @@ public class ProjectModuleService {
         task.setEstimatedEffort(request.estimatedEffort());
         task.setActualEffort(request.actualEffort());
         task.setParentTaskId(request.parentTaskId());
+
+        // Handle blocked reason
+        if (nextStatus == TaskStatus.BLOCKED) {
+            task.setBlockedReason(request.blockedReason());
+        } else {
+            task.setBlockedReason(null);
+        }
         if (request.stageId() != null) {
             WorkflowStageEntity stage = workflowStageRepository.findById(request.stageId())
                     .orElseThrow(() -> new NotFoundException("Workflow stage not found"));
@@ -1920,14 +1959,22 @@ public class ProjectModuleService {
         }
     }
 
-    private void validateTaskPrerequisitesForStatus(TaskStatus status, List<UUID> assigneeIds, UUID reporterId) {
+    private void validateTaskPrerequisitesForStatus(TaskStatus status, List<UUID> assigneeIds, UUID reporterId, Integer progress, BigDecimal actualEffort) {
         if (status == TaskStatus.IN_PROGRESS) {
             if (assigneeIds == null || assigneeIds.isEmpty()) {
                 throw new BadRequestException("Cannot move task to IN_PROGRESS without an assignee");
             }
         }
-        if (status == TaskStatus.IN_REVIEW && reporterId == null) {
-            throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
+        if (status == TaskStatus.IN_REVIEW) {
+            if (reporterId == null) {
+                throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
+            }
+            if (progress == null || progress < 100) {
+                throw new BadRequestException("Progress must be 100% before submitting for review");
+            }
+            if (actualEffort == null || actualEffort.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException("Please log actual effort before submitting for review");
+            }
         }
     }
 

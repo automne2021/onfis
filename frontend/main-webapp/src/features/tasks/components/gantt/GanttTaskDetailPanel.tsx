@@ -137,9 +137,10 @@ export default function GanttTaskDetailPanel({
           <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
             Description
           </label>
-          <p className="mt-2 text-sm text-neutral-700 leading-relaxed">
-            {task.description || "No description available."}
-          </p>
+          <div
+            className="mt-2 text-sm text-neutral-700 leading-relaxed prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: task.description || "<p>No description available.</p>" }}
+          />
         </div>
 
         {/* Sub-tasks */}

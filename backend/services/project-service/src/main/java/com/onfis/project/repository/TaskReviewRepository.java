@@ -11,4 +11,6 @@ public interface TaskReviewRepository extends JpaRepository<TaskReviewEntity, UU
     List<TaskReviewEntity> findByTenantIdAndTaskIdOrderByCreatedAtAsc(UUID tenantId, UUID taskId);
 
     List<TaskReviewEntity> findByTenantIdAndTaskIdInOrderByCreatedAtAsc(UUID tenantId, List<UUID> taskIds);
+
+    void deleteByTaskId(UUID taskId);
 }

@@ -9,7 +9,7 @@ import CreateTaskModal from "../../projects/components/CreateTaskModal";
 import type { Stage, ViewMode, Task } from "../types";
 import type { TaskFormData } from "../../projects/components/CreateTaskModal";
 import { getCurrentProjectUser, createProjectStage, updateProjectStage, deleteProjectStage, getProjectMembers, getProject, listCompanyTags, getProjectStages, type ApiWorkflowStage } from "../../../services/projectService";
-import { createTask, listProjectTasks, reviewTask, updateTask, getTaskDetail, type ApiTask } from "../../../services/taskService";
+import { createTask, createSubtask, deleteTask, listProjectTasks, reviewTask, updateTask, getTaskDetail, type ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
@@ -88,6 +88,7 @@ const toTaskView = (task: ApiTask): Task => ({
   estimatedEffort: task.estimatedEffort,
   actualEffort: task.actualEffort,
   blockedBy: task.blockedBy,
+  blockedReason: task.blockedReason,
   tags: parseTaskTags(task.tags),
 });
 
@@ -377,6 +378,7 @@ export default function ProjectTasksPage() {
           milestoneId: updatedTask.milestoneId ?? undefined,
           assigneeIds: updatedTask.assignees.map((a) => a.id),
           tags: serializeTaskTags(updatedTask.tags),
+          blockedReason: updatedTask.blockedReason,
         });
 
         if (updatedTask.reviews && updatedTask.reviews.length > 0) {
@@ -516,6 +518,16 @@ export default function ProjectTasksPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSave={handleTaskSave}
+          onDelete={async (taskId) => {
+            try {
+              await deleteTask(taskId);
+              setIsModalOpen(false);
+              if (projectIdentifier) await refreshTaskBoard(projectIdentifier);
+              showToast("Task deleted", "success");
+            } catch {
+              showToast("Unable to delete task", "error");
+            }
+          }}
         />
       )}
 
@@ -534,7 +546,7 @@ export default function ProjectTasksPage() {
           const submit = async (formData: TaskFormData) => {
             if (!projectIdentifier) return;
             try {
-              await createTask(projectIdentifier, {
+              const created = await createTask(projectIdentifier, {
                 title: formData.name,
                 description: formData.description,
                 status: "TODO",
@@ -547,6 +559,13 @@ export default function ProjectTasksPage() {
                 assigneeIds: formData.assigneeId ? [formData.assigneeId] : [],
                 tags: JSON.stringify(formData.tags.map((label) => ({ label, type: "scope" as const }))),
               });
+
+              // Create subtasks for the newly created task
+              const validSubtasks = formData.subtasks.filter((s) => s.name.trim());
+              for (const subtask of validSubtasks) {
+                await createSubtask(created.id, { title: subtask.name, completed: subtask.completed });
+              }
+
               await refreshTaskBoard(projectIdentifier);
               showToast("Task created", "success");
             } catch {

@@ -32,6 +32,7 @@ public record TaskResponse(
         OffsetDateTime updatedAt,
         String key,
         boolean canEdit,
-        boolean canReview
+        boolean canReview,
+        String blockedReason
 ) {
 }

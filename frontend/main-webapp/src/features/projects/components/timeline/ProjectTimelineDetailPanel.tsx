@@ -149,7 +149,9 @@ export default function ProjectTimelineDetailPanel({
             Description
           </label>
           <p className="mt-2 text-sm text-neutral-700 leading-relaxed">
-            {project.description || "No description available."}
+            {project.description
+              ? <span dangerouslySetInnerHTML={{ __html: project.description }} />
+              : "No description available."}
           </p>
         </div>
       </div>

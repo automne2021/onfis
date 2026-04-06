@@ -24,6 +24,7 @@ public record TaskUpsertRequest(
         UUID stageId,
         UUID milestoneId,
         String tags,
-        @NotNull List<UUID> assigneeIds
+        @NotNull List<UUID> assigneeIds,
+        String blockedReason
 ) {
 }
