@@ -23,6 +23,8 @@ export interface Project {
   tags: Tag[];
   priority: Priority;
   progress: number;
+  startDateRaw?: string | null;
+  dueDateRaw?: string | null;
   dueDate: string;
   status: ProjectStatus;
   assignees: Assignee[];

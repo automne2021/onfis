@@ -10,6 +10,7 @@ import StatusOverview from "./StatusOverview";
 
 interface TaskCalendarViewProps {
   tasks: Task[];
+  onTaskClick?: (taskId: string) => void;
   currentDate?: Date;
   onCurrentDateChange?: (date: Date) => void;
 }
@@ -45,6 +46,7 @@ const STATUS_TO_COLOR: Record<Task["status"], CalendarEvent["color"]> = {
 
 export default function TaskCalendarView({
   tasks,
+  onTaskClick,
   currentDate,
   onCurrentDateChange,
 }: TaskCalendarViewProps) {
@@ -158,9 +160,13 @@ export default function TaskCalendarView({
     onCurrentDateChange?.(date);
   };
 
-  const handleEventClick = (_eventId: string) => {};
+  const handleEventClick = (eventId: string) => {
+    onTaskClick?.(eventId);
+  };
 
-  const handleDeadlineClick = (_deadlineId: string) => {};
+  const handleDeadlineClick = (deadlineId: string) => {
+    onTaskClick?.(deadlineId);
+  };
 
   return (
     <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto">

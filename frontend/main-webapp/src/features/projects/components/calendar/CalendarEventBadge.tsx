@@ -9,6 +9,7 @@ interface CalendarEventBadgeProps {
 
 export default function CalendarEventBadge({ event, onClick, compact = false }: CalendarEventBadgeProps) {
   const colors = eventColors[event.color];
+  const prefix = event.eventType === "start" ? "▶\u202F" : event.eventType === "end" ? "◀\u202F" : "";
 
   return (
     <div
@@ -21,7 +22,7 @@ export default function CalendarEventBadge({ event, onClick, compact = false }: 
       `}
       title={event.title}
     >
-      <span className="block truncate">{event.title}</span>
+      <span className="block truncate">{prefix}{event.title}</span>
     </div>
   );
 }

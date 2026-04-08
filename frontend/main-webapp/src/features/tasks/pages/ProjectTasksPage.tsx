@@ -497,6 +497,10 @@ export default function ProjectTasksPage() {
               tasks={ganttTasks}
               currentDate={currentViewDate}
               onCurrentDateChange={setCurrentViewDate}
+              onTaskClick={(taskId) => {
+                const task = filteredTasks.find((t) => t.id === taskId);
+                if (task) handleTaskClick(task);
+              }}
             />
           )}
 
@@ -505,6 +509,10 @@ export default function ProjectTasksPage() {
               tasks={filteredTasks}
               currentDate={currentViewDate}
               onCurrentDateChange={setCurrentViewDate}
+              onTaskClick={(taskId) => {
+                const task = filteredTasks.find((t) => t.id === taskId);
+                if (task) handleTaskClick(task);
+              }}
             />
           )}
             </>

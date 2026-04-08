@@ -4,7 +4,6 @@ import type { ProjectTimelineItem, TimelineViewMode } from "./types";
 import { projectToTimelineItem } from "./types";
 import TimelineToolbar from "./TimelineToolbar";
 import ProjectTimelineGrid from "./ProjectTimelineGrid";
-import ProjectTimelineDetailPanel from "./ProjectTimelineDetailPanel";
 import { generateTimelineConfig } from "./timelineUtils";
 
 interface ProjectTimelineViewProps {
@@ -22,8 +21,7 @@ export default function ProjectTimelineView({
 }: ProjectTimelineViewProps) {
   const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<TimelineViewMode>("week");
-  const [selectedProject, setSelectedProject] = useState<ProjectTimelineItem | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
 
   const effectiveCurrentDate = currentDate ?? internalCurrentDate;
 
@@ -49,16 +47,11 @@ export default function ProjectTimelineView({
   );
 
   const handleProjectClick = (timelineProject: ProjectTimelineItem) => {
-    setSelectedProject(timelineProject);
-    setIsPanelOpen(true);
+    setSelectedProjectId(timelineProject.id);
     const originalProject = projects.find((p) => p.id === timelineProject.id);
     if (originalProject && onProjectClick) {
       onProjectClick(originalProject);
     }
-  };
-
-  const handleClosePanel = () => {
-    setIsPanelOpen(false);
   };
 
   return (
@@ -78,20 +71,12 @@ export default function ProjectTimelineView({
             No projects to display
           </div>
         ) : (
-          <>
-            <ProjectTimelineGrid
-              projects={timelineProjects}
-              config={timelineConfig}
-              selectedProjectId={selectedProject?.id}
-              onProjectClick={handleProjectClick}
-            />
-
-            <ProjectTimelineDetailPanel
-              project={selectedProject}
-              isOpen={isPanelOpen}
-              onClose={handleClosePanel}
-            />
-          </>
+          <ProjectTimelineGrid
+            projects={timelineProjects}
+            config={timelineConfig}
+            selectedProjectId={selectedProjectId}
+            onProjectClick={handleProjectClick}
+          />
         )}
       </div>
     </div>

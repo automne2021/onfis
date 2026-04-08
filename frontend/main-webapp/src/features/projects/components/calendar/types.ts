@@ -7,6 +7,7 @@ export interface ProjectCalendarEvent {
   endDate?: Date;
   project: Project;
   color: "planning" | "in_progress" | "on_hold" | "completed";
+  eventType?: "start" | "end";
 }
 
 export interface CalendarDay {
@@ -27,9 +28,10 @@ export interface UpcomingDeadline {
 }
 
 export interface StatusCount {
-  completed: number;
+  planning: number;
   inProgress: number;
-  toDo: number;
+  onHold: number;
+  completed: number;
 }
 
 export const eventColors: Record<ProjectStatus, { bg: string; border: string; text: string }> = {

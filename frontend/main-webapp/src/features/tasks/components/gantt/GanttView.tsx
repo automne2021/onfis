@@ -2,23 +2,22 @@ import { useMemo, useState } from "react";
 import type { GanttTask, GanttViewMode } from "./types";
 import GanttToolbar from "./GanttToolbar";
 import GanttTimeline from "./GanttTimeline";
-import GanttTaskDetailPanel from "./GanttTaskDetailPanel";
 import { generateTimelineConfig } from "./ganttUtils";
 
 interface GanttViewProps {
   tasks: GanttTask[];
+  onTaskClick?: (taskId: string) => void;
   currentDate?: Date;
   onCurrentDateChange?: (date: Date) => void;
 }
 
-export default function GanttView({ tasks, currentDate, onCurrentDateChange }: GanttViewProps) {
+export default function GanttView({ tasks, onTaskClick, currentDate, onCurrentDateChange }: GanttViewProps) {
   const [internalCurrentDate, setInternalCurrentDate] = useState<Date>(() => {
     const firstTaskDate = tasks[0]?.startDate;
     return firstTaskDate ?? new Date();
   });
   const [viewMode, setViewMode] = useState<GanttViewMode>("week");
-  const [selectedTask, setSelectedTask] = useState<GanttTask | null>(null);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(undefined);
 
   const effectiveCurrentDate = currentDate ?? internalCurrentDate;
 
@@ -37,16 +36,8 @@ export default function GanttView({ tasks, currentDate, onCurrentDateChange }: G
   );
 
   const handleTaskSelect = (task: GanttTask) => {
-    setSelectedTask(task);
-    setIsPanelOpen(true);
-  };
-
-  const handleClosePanel = () => {
-    setIsPanelOpen(false);
-  };
-
-  const handleSaveTask = (_updatedTask: GanttTask) => {
-    setIsPanelOpen(false);
+    setSelectedTaskId(task.id);
+    onTaskClick?.(task.id);
   };
 
   if (tasks.length === 0) {
@@ -70,15 +61,8 @@ export default function GanttView({ tasks, currentDate, onCurrentDateChange }: G
         <GanttTimeline
           tasks={tasks}
           config={timelineConfig}
-          selectedTaskId={selectedTask?.id}
+          selectedTaskId={selectedTaskId}
           onTaskSelect={handleTaskSelect}
-        />
-
-        <GanttTaskDetailPanel
-          task={selectedTask}
-          isOpen={isPanelOpen}
-          onClose={handleClosePanel}
-          onSave={handleSaveTask}
         />
       </div>
     </div>

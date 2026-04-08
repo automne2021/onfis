@@ -33,6 +33,8 @@ const toProjectViewModel = (apiProject: Awaited<ReturnType<typeof listProjects>>
   tags: parseTagJson(apiProject.tags || "[]"),
   priority: apiProject.priority,
   progress: apiProject.progress,
+  startDateRaw: apiProject.startDate,
+  dueDateRaw: apiProject.dueDate,
   dueDate: apiProject.dueDate ? formatVNDate(apiProject.dueDate) : "",
   status: apiProject.status,
   assignees: apiProject.assignees,

@@ -57,6 +57,7 @@ export interface ApiProject {
   status: 'planning' | 'in_progress' | 'on_hold' | 'completed';
   priority: 'urgent' | 'high' | 'medium' | 'low';
   progress: number;
+  startDate: string | null;
   dueDate: string | null;
   tags: string;
   assignees: ApiUserSummary[];

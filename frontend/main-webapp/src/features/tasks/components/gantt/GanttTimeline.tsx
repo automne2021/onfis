@@ -72,43 +72,90 @@ export default function GanttTimeline({
         <div style={{ minWidth: `${totalWidth}px` }}>
           {/* Timeline Header */}
           <div className="h-[56px] border-b border-neutral-200 bg-neutral-50">
-            {/* Week Row */}
-            <div className="flex h-7 border-b border-neutral-200">
-              {config.weeks.map((week, weekIndex) => (
-                <div
-                  key={weekIndex}
-                  className="flex items-center justify-center border-r border-neutral-200 text-xs font-semibold text-neutral-500"
-                  style={{ width: `${week.days.length * config.dayWidth}px` }}
-                >
-                  Week {week.weekNumber}
-                </div>
-              ))}
-            </div>
-
-            {/* Days Row */}
-            <div className="flex h-[28px]">
-              {config.weeks.map((week) =>
-                week.days.map((day, dayIndex) => {
-                  const isTodayDate = isToday(day);
-                  const isWeekendDate = isWeekend(day);
-
-                  return (
+            {config.dayWidth >= 20 ? (
+              <>
+                {/* Week Row */}
+                <div className="flex h-7 border-b border-neutral-200">
+                  {config.weeks.map((week, weekIndex) => (
                     <div
-                      key={`${day.getTime()}-${dayIndex}`}
-                      className={`flex items-center justify-center border-r border-neutral-200 text-xs ${isTodayDate
-                          ? "bg-priority-high/10 text-priority-high font-semibold"
-                          : isWeekendDate
-                            ? "bg-neutral-100 text-neutral-400"
-                            : "text-neutral-500"
-                        }`}
-                      style={{ width: `${config.dayWidth}px` }}
+                      key={weekIndex}
+                      className="flex items-center justify-center border-r border-neutral-200 text-xs font-semibold text-neutral-500"
+                      style={{ width: `${week.days.length * config.dayWidth}px` }}
                     >
-                      {day.getDate().toString().padStart(2, "0")}
+                      Week {week.weekNumber}
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  ))}
+                </div>
+                {/* Days Row */}
+                <div className="flex h-[28px]">
+                  {config.weeks.map((week) =>
+                    week.days.map((day, dayIndex) => {
+                      const isTodayDate = isToday(day);
+                      const isWeekendDate = isWeekend(day);
+                      return (
+                        <div
+                          key={`${day.getTime()}-${dayIndex}`}
+                          className={`flex items-center justify-center border-r border-neutral-200 text-xs ${
+                            isTodayDate
+                              ? "bg-priority-high/10 text-priority-high font-semibold"
+                              : isWeekendDate
+                              ? "bg-neutral-100 text-neutral-400"
+                              : "text-neutral-500"
+                          }`}
+                          style={{ width: `${config.dayWidth}px` }}
+                        >
+                          {day.getDate().toString().padStart(2, "0")}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Month Row (month view: group days by month) */}
+                <div className="flex h-7 border-b border-neutral-200">
+                  {(() => {
+                    const allDays = config.weeks.flatMap((w) => w.days);
+                    const groups: { label: string; count: number }[] = [];
+                    allDays.forEach((day) => {
+                      const label = day.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                      if (groups.length === 0 || groups[groups.length - 1].label !== label) {
+                        groups.push({ label, count: 1 });
+                      } else {
+                        groups[groups.length - 1].count += 1;
+                      }
+                    });
+                    return groups.map((g, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-center border-r border-neutral-200 text-xs font-semibold text-neutral-500 overflow-hidden"
+                        style={{ width: `${g.count * config.dayWidth}px` }}
+                      >
+                        {g.label}
+                      </div>
+                    ));
+                  })()}
+                </div>
+                {/* Week Row (abbreviated W##) */}
+                <div className="flex h-[28px]">
+                  {config.weeks.map((week, weekIndex) => {
+                    const hasToday = week.days.some((d) => isToday(d));
+                    return (
+                      <div
+                        key={weekIndex}
+                        className={`flex items-center justify-center border-r border-neutral-200 text-[10px] font-medium overflow-hidden ${
+                          hasToday ? "bg-priority-high/10 text-priority-high" : "text-neutral-400"
+                        }`}
+                        style={{ width: `${week.days.length * config.dayWidth}px` }}
+                      >
+                        W{week.weekNumber}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Timeline Body with Bars */}

@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, ChevronRightIcon, CalendarDateIcon as CalendarIcon, TodayIcon } from "../../../../components/common/Icons";
+import { ChevronLeftIcon, ChevronRightIcon } from "../../../../components/common/Icons";
 import type { TimelineViewMode } from "./types";
 import { getMonthName } from "./timelineUtils";
 
@@ -50,57 +50,52 @@ export default function TimelineToolbar({
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-2 bg-white border-b border-neutral-200">
-      {/* Left: Navigation */}
+    <div className="flex flex-wrap items-center justify-end gap-2 py-2 border-b border-neutral-200">
+      {/* Navigation */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handlePrev}
-            className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-600"
-            aria-label="Previous"
-          >
-            <ChevronLeftIcon />
-          </button>
-          <button
-            onClick={handleNext}
-            className="p-1 hover:bg-neutral-100 rounded-lg transition-colors text-neutral-600"
-            aria-label="Next"
-          >
-            <ChevronRightIcon />
-          </button>
-        </div>
+        <button
+          onClick={handlePrev}
+          className="p-1 text-neutral-500 hover:bg-neutral-100 rounded-md transition-colors"
+          aria-label="Previous"
+        >
+          <ChevronLeftIcon />
+        </button>
 
-        <div className="flex items-center gap-1.5">
-          <CalendarIcon />
-          <span className="font-medium text-xs text-neutral-900">{getMonthName(currentDate)}</span>
-        </div>
+        <span className="text-xs font-semibold text-neutral-900 min-w-[130px] text-center">
+          {getMonthName(currentDate)}
+        </span>
+
+        <button
+          onClick={handleNext}
+          className="p-1 text-neutral-500 hover:bg-neutral-100 rounded-md transition-colors"
+          aria-label="Next"
+        >
+          <ChevronRightIcon />
+        </button>
 
         <button
           onClick={handleToday}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          className="px-2.5 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100 rounded-md transition-colors"
         >
-          <TodayIcon />
-          <span>Today</span>
+          Today
         </button>
       </div>
 
-      {/* Right: Controls */}
-      <div className="flex items-center gap-2">
-        {/* View Mode Toggle */}
-        <div className="flex items-center rounded-lg overflow-hidden border border-neutral-200">
-          {viewModes.map(({ mode, label }) => (
-            <button
-              key={mode}
-              onClick={() => onViewModeChange(mode)}
-              className={`px-2.5 py-1 text-xs font-medium transition-colors ${viewMode === mode
-                ? "bg-primary text-white"
-                : "bg-white text-neutral-600 hover:bg-neutral-50"
-                }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* View Mode Toggle */}
+      <div className="flex items-center bg-neutral-100 rounded-lg p-0.5">
+        {viewModes.map(({ mode, label }) => (
+          <button
+            key={mode}
+            onClick={() => onViewModeChange(mode)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+              viewMode === mode
+                ? "bg-primary text-white shadow-sm"
+                : "text-neutral-500 hover:text-neutral-900"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </div>
   );

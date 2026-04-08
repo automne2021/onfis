@@ -129,7 +129,7 @@ export function getTodayPosition(config: GanttTimelineConfig): number | null {
     (today.getTime() - config.startDate.getTime()) / (1000 * 60 * 60 * 24)
   );
   
-  return offset * config.dayWidth + config.dayWidth / 2;
+  return offset * config.dayWidth;
 }
 
 /**

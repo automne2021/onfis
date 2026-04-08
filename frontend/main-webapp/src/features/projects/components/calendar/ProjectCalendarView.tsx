@@ -50,27 +50,47 @@ export default function ProjectCalendarView({
 
     return projects
       .filter((project) => {
-        const dueDate = new Date(project.dueDate);
-        return dueDate >= now && dueDate <= thirtyDaysFromNow;
+        if (!project.dueDateRaw) return false;
+        const raw = project.dueDateRaw;
+        let dueDate: Date;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+          const [y, m, d] = raw.split("-").map(Number);
+          dueDate = new Date(y, m - 1, d);
+        } else {
+          dueDate = new Date(raw);
+        }
+        return !isNaN(dueDate.getTime()) && dueDate >= now && dueDate <= thirtyDaysFromNow;
       })
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .sort((a, b) => {
+        const parseRaw = (r: string) => (/^\d{4}-\d{2}-\d{2}$/.test(r)
+          ? new Date(+r.slice(0,4), +r.slice(5,7)-1, +r.slice(8,10))
+          : new Date(r));
+        return parseRaw(a.dueDateRaw!).getTime() - parseRaw(b.dueDateRaw!).getTime();
+      })
       .slice(0, 5)
-      .map((project) => ({
-        id: project.id,
-        title: project.title,
-        subtitle: project.description.slice(0, 50) + "...",
-        date: new Date(project.dueDate),
-        status: project.status,
-        priority: project.priority,
-      }));
+      .map((project) => {
+        const raw = project.dueDateRaw!;
+        const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+          ? new Date(+raw.slice(0,4), +raw.slice(5,7)-1, +raw.slice(8,10))
+          : new Date(raw);
+        return {
+          id: project.id,
+          title: project.title,
+          subtitle: project.description.slice(0, 50),
+          date: dueDate,
+          status: project.status,
+          priority: project.priority,
+        };
+      });
   }, [projects]);
 
   // Calculate status counts
   const statusCounts: StatusCount = useMemo(
     () => ({
-      completed: projects.filter((p) => p.status === "completed").length,
+      planning: projects.filter((p) => p.status === "planning").length,
       inProgress: projects.filter((p) => p.status === "in_progress").length,
-      toDo: projects.filter((p) => p.status === "planning" || p.status === "on_hold").length,
+      onHold: projects.filter((p) => p.status === "on_hold").length,
+      completed: projects.filter((p) => p.status === "completed").length,
     }),
     [projects]
   );
@@ -149,7 +169,7 @@ export default function ProjectCalendarView({
             onPrevMonth={handlePrevMonth}
             onNextMonth={handleNextMonth}
           />
-          <UpcomingDeadlines deadlines={upcomingDeadlines} onViewAll={() => {}} onDeadlineClick={handleDeadlineClick} />
+          <UpcomingDeadlines deadlines={upcomingDeadlines} onDeadlineClick={handleDeadlineClick} />
           <StatusOverview status={statusCounts} />
         </aside>
       </div>

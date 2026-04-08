@@ -6,9 +6,10 @@ interface StatusOverviewProps {
 
 export default function StatusOverview({ status }: StatusOverviewProps) {
   const items = [
-    { label: "Completed", count: status.completed, color: "bg-action-success" },
+    { label: "Planning", count: status.planning, color: "bg-status-on_hold" },
     { label: "In Progress", count: status.inProgress, color: "bg-primary" },
-    { label: "To Do", count: status.toDo, color: "bg-priority-high" },
+    { label: "On Hold", count: status.onHold, color: "bg-status-off_track" },
+    { label: "Completed", count: status.completed, color: "bg-status-done" },
   ];
 
   return (
