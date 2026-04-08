@@ -63,3 +63,5 @@ coverage/
 
 # Build outputs
 *.out
+/*.sql
+/infrastructure/sql/*.sql

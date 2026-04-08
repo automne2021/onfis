@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 
@@ -26,14 +26,14 @@ const MANAGER_FILTER_STATUS: Record<ManagerFilter, ReviewStatus[]> = {
   all: ["IN_REVIEW", "DONE", "IN_PROGRESS"],
   pending: ["IN_REVIEW"],
   approved: ["DONE"],
-  changes: ["IN_PROGRESS"],
+  changes: ["IN_REVIEW", "IN_PROGRESS"],
 };
 
 const EMPLOYEE_FILTER_STATUS: Record<EmployeeFilter, ReviewStatus[]> = {
   all: ["IN_REVIEW", "DONE", "IN_PROGRESS"],
   under_review: ["IN_REVIEW"],
   approved: ["DONE"],
-  rework: ["IN_PROGRESS"],
+  rework: ["IN_REVIEW", "IN_PROGRESS"],
 };
 
 interface ReviewTask extends Task {
@@ -231,6 +231,7 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
 function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const topRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<ManagerFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,9 +251,14 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
     const load = async () => {
       try {
         setLoading(true);
+        const managerChangesRequested: boolean | undefined =
+          filter === "changes" ? true :
+          filter === "pending" ? false :
+          undefined;
         const query: ReviewQueueQuery = {
           projectId,
           status: MANAGER_FILTER_STATUS[filter],
+          changesRequested: managerChangesRequested,
           page,
           size: PAGE_SIZE,
           sortBy: "updatedAt",
@@ -326,7 +332,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
   };
 
   return (
-    <div className="onfis-section">
+    <div className="onfis-section" ref={topRef}>
       <div className="navbar-style">
         <div className="flex items-center gap-3">
           <div>
@@ -459,8 +465,8 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
       <PaginationBar
         page={page}
         totalPages={totalPages}
-        onPrev={() => setPage((prev) => Math.max(prev - 1, 0))}
-        onNext={() => setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0)))}
+        onPrev={() => { setPage((prev) => Math.max(prev - 1, 0)); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+        onNext={() => { setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0))); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
       />
 
       {selectedTask && (
@@ -478,6 +484,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
 function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const topRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<EmployeeFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -497,9 +504,14 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
     const load = async () => {
       try {
         setLoading(true);
+        const employeeChangesRequested: boolean | undefined =
+          filter === "rework" ? true :
+          filter === "under_review" ? false :
+          undefined;
         const query: ReviewQueueQuery = {
           projectId,
           status: EMPLOYEE_FILTER_STATUS[filter],
+          changesRequested: employeeChangesRequested,
           page,
           size: PAGE_SIZE,
           sortBy: "updatedAt",
@@ -526,7 +538,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
   };
 
   return (
-    <div className="onfis-section">
+    <div className="onfis-section" ref={topRef}>
       <div className="navbar-style">
         <div>
           <h1 className="text-xl font-bold text-neutral-900">My Reviews</h1>
@@ -641,8 +653,8 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
       <PaginationBar
         page={page}
         totalPages={totalPages}
-        onPrev={() => setPage((prev) => Math.max(prev - 1, 0))}
-        onNext={() => setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0)))}
+        onPrev={() => { setPage((prev) => Math.max(prev - 1, 0)); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+        onNext={() => { setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0))); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
       />
 
       {selectedTask && (

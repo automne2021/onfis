@@ -557,11 +557,12 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @RequestParam(required = false) String projectId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean changesRequested,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "updatedAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
-        return ResponseEntity.ok(projectModuleService.reviewQueue(userId, projectId, status, page, size, sortBy, sortDir));
+        return ResponseEntity.ok(projectModuleService.reviewQueue(userId, projectId, status, changesRequested, page, size, sortBy, sortDir));
     }
 }

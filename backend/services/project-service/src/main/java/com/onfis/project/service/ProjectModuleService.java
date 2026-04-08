@@ -925,10 +925,6 @@ public class ProjectModuleService {
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
         TaskEntity task = requireTask(taskId, tenantId);
         enforceProjectVisible(currentUser, task.getProjectId());
-
-        if (task.getStatus() != TaskStatus.IN_REVIEW) {
-            throw new BadRequestException("Task must be IN_REVIEW before submitting a review");
-        }
         return toTaskResponse(task, currentUser);
     }
 
@@ -1211,6 +1207,7 @@ public class ProjectModuleService {
             String userIdHeader,
             String projectIdentifier,
             String status,
+            Boolean changesRequested,
             int page,
             int size,
             String sortBy,
@@ -1229,19 +1226,46 @@ public class ProjectModuleService {
 
         Page<TaskEntity> taskPage;
         if (isManager(currentUser)) {
-            taskPage = projectId == null
-                    ? taskRepository.findReviewQueue(tenantId, statuses, pageable)
-                    : taskRepository.findReviewQueueByProject(tenantId, projectId, statuses, pageable);
+            if (Boolean.TRUE.equals(changesRequested)) {
+                // "Changes Requested" tab: tasks that have had changes requested
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueueWithChangesHistory(tenantId, statuses, pageable)
+                        : taskRepository.findReviewQueueByProjectWithChangesHistory(tenantId, projectId, statuses, pageable);
+            } else if (Boolean.FALSE.equals(changesRequested)) {
+                // "Pending Review" tab: fresh IN_REVIEW tasks with no CHANGES_REQUESTED history
+                taskPage = projectId == null
+                        ? taskRepository.findPendingReviewQueue(tenantId, pageable)
+                        : taskRepository.findPendingReviewQueueByProject(tenantId, projectId, pageable);
+            } else {
+                // All other manager tabs (all, approved)
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueue(tenantId, statuses, pageable)
+                        : taskRepository.findReviewQueueByProject(tenantId, projectId, statuses, pageable);
+            }
         } else {
-            taskPage = projectId == null
-                    ? taskRepository.findReviewQueueByReporter(tenantId, currentUser.getId(), statuses, pageable)
-                    : taskRepository.findReviewQueueByProjectAndReporter(
-                            tenantId,
-                            projectId,
-                            currentUser.getId(),
-                            statuses,
-                            pageable
-                    );
+            if (Boolean.TRUE.equals(changesRequested)) {
+                // "Rework Needed" tab: tasks that have had changes requested
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueueByAssigneeWithChangesHistory(tenantId, currentUser.getId(), statuses, pageable)
+                        : taskRepository.findReviewQueueByProjectAndAssigneeWithChangesHistory(
+                                tenantId, projectId, currentUser.getId(), statuses, pageable);
+            } else if (Boolean.FALSE.equals(changesRequested)) {
+                // "Under Review" tab: fresh submissions with no CHANGES_REQUESTED history
+                taskPage = projectId == null
+                        ? taskRepository.findUnderReviewByAssignee(tenantId, currentUser.getId(), pageable)
+                        : taskRepository.findUnderReviewByProjectAndAssignee(tenantId, projectId, currentUser.getId(), pageable);
+            } else {
+                // All other employee tabs (all, approved)
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueueByAssignee(tenantId, currentUser.getId(), statuses, pageable)
+                        : taskRepository.findReviewQueueByProjectAndAssignee(
+                                tenantId,
+                                projectId,
+                                currentUser.getId(),
+                                statuses,
+                                pageable
+                        );
+            }
         }
 
         List<TaskResponse> content = toTaskResponses(taskPage.getContent(), currentUser, tenantId);

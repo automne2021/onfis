@@ -98,6 +98,7 @@ export interface ReviewPayload {
 export interface ReviewQueueQuery {
   projectId?: string;
   status?: Array<'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'IN_REVIEW' | 'DONE'>;
+  changesRequested?: boolean;
   page?: number;
   size?: number;
   sortBy?: 'updatedAt' | 'createdAt' | 'dueDate' | 'priority' | 'status' | 'title';
@@ -253,6 +254,9 @@ export async function getReviewQueue(query: ReviewQueueQuery = {}): Promise<Page
   }
   if (query.status && query.status.length > 0) {
     params.status = query.status.join(',');
+  }
+  if (query.changesRequested !== undefined) {
+    params.changesRequested = String(query.changesRequested);
   }
 
   const { data } = await api.get<PagedApiResponse<ApiTask>>('/projects/reviews', {
