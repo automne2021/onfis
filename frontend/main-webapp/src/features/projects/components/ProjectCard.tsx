@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import type { Project, Tag } from "../types";
 import { FlagIcon, CalendarIcon, EyeIcon, TasksViewIcon as TasksIcon } from "../../../components/common/Icons";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 
 // Tag component
 const TagBadge = ({ tag }: { tag: Tag }) => {
@@ -78,6 +79,7 @@ interface ProjectCardProps {
 
 export default function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate();
+  const { withTenant } = useTenantPath();
 
   return (
     <div className="group relative bg-white rounded-[12px] shadow-sm border border-neutral-100 px-3 py-3 flex flex-col gap-3 overflow-hidden min-w-0 cursor-pointer card-hover">
@@ -86,7 +88,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/projects/${project.id}`);
+            navigate(withTenant(`/projects/${project.slug}`));
           }}
           className="w-[140px] flex items-center justify-center gap-2 px-4 py-2 bg-white text-primary rounded-lg font-medium text-sm hover:bg-neutral-50 transition-colors shadow-md"
         >
@@ -96,7 +98,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/projects/${project.id}/tasks`);
+            navigate(withTenant(`/projects/${project.slug}/tasks`));
           }}
           className="w-[140px] flex items-center justify-center gap-2 px-4 py-2 bg-white/20 text-white border border-white/40 rounded-lg font-medium text-sm hover:bg-white/30 transition-colors"
         >

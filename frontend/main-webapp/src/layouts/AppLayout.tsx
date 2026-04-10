@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import Sidebar from "../components/navigation/Sidebar";
 import { Header } from "../components/common/Header";
@@ -14,6 +14,12 @@ export default function AppLayout() {
   const { tenant } = useParams<{ tenant: string }>();
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll main content to top on route change
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
 
   useEffect(() => {
     let mounted = true;
@@ -62,7 +68,7 @@ export default function AppLayout() {
               <Sidebar />
 
               {/* Main Content Area */}
-              <main className="flex-1 overflow-auto">
+              <main ref={mainRef} className="flex-1 overflow-auto">
                 <div key={location.pathname} className="animate-page-enter">
                   <Outlet />
                 </div>

@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTenantPath } from "../../../hooks/useTenantPath";
+
+const stripHtml = (html: string): string => {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent?.trim() || "";
+};
 import { useRole } from "../../../hooks/useRole";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useToast } from "../../../contexts/useToast";
@@ -8,11 +13,28 @@ import { TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
 import type { Task, ReviewComment } from "../types";
 import { STATUS_CONFIG } from "../workflowUtils";
-import { listProjects } from "../../../services/projectService";
-import { getReviewQueue, listProjectTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
+import { getReviewQueue, reviewTask, updateTask, type ApiTask, type ReviewQueueQuery } from "../../../services/taskService";
+import { formatVNDate } from "../../../utils/getTime";
 
 type ManagerFilter = "all" | "pending" | "approved" | "changes";
 type EmployeeFilter = "all" | "under_review" | "approved" | "rework";
+type ReviewStatus = "TODO" | "IN_PROGRESS" | "BLOCKED" | "IN_REVIEW" | "DONE";
+
+const PAGE_SIZE = 20;
+
+const MANAGER_FILTER_STATUS: Record<ManagerFilter, ReviewStatus[]> = {
+  all: ["IN_REVIEW", "DONE", "IN_PROGRESS"],
+  pending: ["IN_REVIEW"],
+  approved: ["DONE"],
+  changes: ["IN_REVIEW", "IN_PROGRESS"],
+};
+
+const EMPLOYEE_FILTER_STATUS: Record<EmployeeFilter, ReviewStatus[]> = {
+  all: ["IN_REVIEW", "DONE", "IN_PROGRESS"],
+  under_review: ["IN_REVIEW"],
+  approved: ["DONE"],
+  rework: ["IN_REVIEW", "IN_PROGRESS"],
+};
 
 interface ReviewTask extends Task {
   projectName: string;
@@ -34,21 +56,28 @@ const PRIORITY_LABEL: Record<string, string> = {
   low: "Low",
 };
 
-const toReviewTask = (task: ApiTask, projectName: string): ReviewTask => ({
+const toReviewTask = (task: ApiTask): ReviewTask => ({
   id: task.id,
+  key: task.key,
+  projectTitle: task.projectTitle,
+  projectSlug: task.projectSlug,
   title: task.title,
   description: task.description || "",
   priority: task.priority,
   status: task.status,
   progress: task.progress,
-  dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "",
+  startDateRaw: task.startDate,
+  dueDateRaw: task.dueDate,
+  dueDate: task.dueDate ? formatVNDate(task.dueDate) : "-",
   assignees: task.assignees,
   tags: [],
   reporterId: task.reporterId,
+  reporterName: task.reporterName,
   estimatedEffort: task.estimatedEffort,
   actualEffort: task.actualEffort,
   blockedBy: task.blockedBy,
-  projectName,
+  blockedReason: task.blockedReason,
+  projectName: task.projectTitle || "Project",
   submittedAt: task.status === "IN_REVIEW" ? "Recently" : "-",
   reviews: task.reviews,
 });
@@ -70,12 +99,52 @@ function convertToTaskDetail(task: ReviewTask): TaskDetail {
   return {
     ...task,
     subTasks: [],
-    activities: [{ id: "a1", user: "System", action: "synced from API", timestamp: "Recently" }],
+    activities: [{ id: "a1", user: "System", action: "synced", description: "Synced from API", timestamp: "Recently" }],
     comments: [],
     createdAt: "",
     updatedAt: "",
-    key: `TASK-${task.id.toUpperCase()}`,
+    key: task.key || "TASK-000",
   };
+}
+
+function PaginationBar({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+}: {
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-2 pt-2">
+      <button
+        type="button"
+        onClick={onPrev}
+        disabled={page <= 0}
+        className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Previous
+      </button>
+      <span className="text-xs text-neutral-500">
+        Page {page + 1} / {totalPages}
+      </span>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={page + 1 >= totalPages}
+        className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        Next
+      </button>
+    </div>
+  );
 }
 
 function Avatar({ name, avatar, size = 28 }: { name: string; avatar?: string; size?: number }) {
@@ -162,9 +231,12 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
 function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const topRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<ManagerFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -179,9 +251,23 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
     const load = async () => {
       try {
         setLoading(true);
-        const [reviewQueue, projects] = await Promise.all([getReviewQueue(projectId), listProjects()]);
-        const projectMap = new Map(projects.map((p) => [p.id, p.title]));
-        setTasks(reviewQueue.map((task) => toReviewTask(task, projectMap.get(projectId || "") || "Project")));
+        const managerChangesRequested: boolean | undefined =
+          filter === "changes" ? true :
+          filter === "pending" ? false :
+          undefined;
+        const query: ReviewQueueQuery = {
+          projectId,
+          status: MANAGER_FILTER_STATUS[filter],
+          changesRequested: managerChangesRequested,
+          page,
+          size: PAGE_SIZE,
+          sortBy: "updatedAt",
+          sortDir: "desc",
+        };
+
+        const reviewQueue = await getReviewQueue(query);
+        setTasks(reviewQueue.content.map((task) => toReviewTask(task)));
+        setTotalPages(reviewQueue.totalPages);
       } catch {
         showToast("Failed to load review queue", "error");
       } finally {
@@ -190,24 +276,17 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
     };
 
     void load();
-  }, [projectId, showToast]);
+  }, [projectId, filter, page, showToast]);
 
   const pendingCount = tasks.filter((t) => t.status === "IN_REVIEW").length;
-
-  const filtered = useMemo(() => tasks.filter((t) => {
-    if (filter === "pending") return t.status === "IN_REVIEW";
-    if (filter === "approved") return t.status === "DONE";
-    if (filter === "changes") {
-      const last = t.reviews[t.reviews.length - 1];
-      return last?.action === "changes_requested";
-    }
-    return true;
-  }), [filter, tasks]);
 
   const handleApprove = async (taskId: string) => {
     try {
       const updated = await reviewTask(taskId, { action: "APPROVED" });
-      setTasks((prev) => prev.map((task) => (task.id === taskId ? toReviewTask(updated, task.projectName) : task)));
+      setTasks((prev) => prev
+        .map((task) => (task.id === taskId ? toReviewTask(updated) : task))
+        .filter((task) => (filter === "pending" ? task.id !== taskId : true))
+      );
       showToast("Task approved and marked as DONE.", "success");
     } catch {
       showToast("Unable to approve task", "error");
@@ -217,7 +296,10 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
   const handleRequestChanges = async (taskId: string, reason: string) => {
     try {
       const updated = await reviewTask(taskId, { action: "CHANGES_REQUESTED", content: reason });
-      setTasks((prev) => prev.map((task) => (task.id === taskId ? toReviewTask(updated, task.projectName) : task)));
+      setTasks((prev) => prev
+        .map((task) => (task.id === taskId ? toReviewTask(updated) : task))
+        .filter((task) => (filter === "pending" ? task.id !== taskId : true))
+      );
       showToast("Changes requested.", "warning");
     } catch {
       showToast("Unable to request changes", "error");
@@ -233,14 +315,15 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
           status: updated.status,
           priority: toApiPriority(updated.priority),
           progress: updated.progress,
-          dueDate: updated.dueDate ? new Date(updated.dueDate).toISOString().slice(0, 10) : undefined,
+          dueDate: updated.dueDateRaw ?? undefined,
           reporterId: updated.reporterId,
           estimatedEffort: updated.estimatedEffort,
           actualEffort: updated.actualEffort,
           assigneeIds: updated.assignees.map((a) => a.id),
           tags: "[]",
+          blockedReason: updated.blockedReason,
         });
-        setTasks((prev) => prev.map((task) => (task.id === saved.id ? toReviewTask(saved, task.projectName) : task)));
+        setTasks((prev) => prev.map((task) => (task.id === saved.id ? toReviewTask(saved) : task)));
       } catch {
         showToast("Unable to update task", "error");
       }
@@ -249,7 +332,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
   };
 
   return (
-    <div className="onfis-section">
+    <div className="onfis-section" ref={topRef}>
       <div className="navbar-style">
         <div className="flex items-center gap-3">
           <div>
@@ -271,14 +354,19 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         </Link>
       </div>
 
-      <div className="flex gap-1 mt-3 bg-neutral-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1 border-b border-neutral-200 mt-3">
         {filterOptions.map((opt) => (
           <button
             key={opt.key}
             type="button"
-            onClick={() => setFilter(opt.key)}
-            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              filter === opt.key ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-800"
+              onClick={() => {
+                setFilter(opt.key);
+                setPage(0);
+              }}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              filter === opt.key
+                ? "text-primary border-primary"
+                : "text-neutral-500 border-transparent hover:text-neutral-800"
             }`}
           >
             {opt.label}
@@ -286,34 +374,37 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         ))}
       </div>
 
-      {loading && <div className="mt-4 text-sm text-neutral-500">Loading review tasks...</div>}
+      {loading && (
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-28 rounded-xl bg-neutral-100 animate-pulse" />
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-3">
-        {!loading && filtered.length === 0 ? (
+        {!loading && tasks.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3 bg-white rounded-xl border border-neutral-100">
             <span className="material-symbols-rounded text-neutral-300" style={{ fontSize: 48 }}>done_all</span>
             <p className="text-sm text-neutral-400">No tasks match this filter.</p>
           </div>
         ) : (
-          filtered.map((task) => {
+          tasks.map((task) => {
             const statusCfg = STATUS_CONFIG[task.status];
             const lastReview = task.reviews[task.reviews.length - 1];
             return (
-              <div key={task.id} className="bg-white rounded-xl border border-neutral-200 shadow-sm p-4 flex flex-col gap-3">
+              <div
+                key={task.id}
+                className="bg-white rounded-xl border border-neutral-200 shadow-sm p-4 flex flex-col gap-3 cursor-pointer hover:border-neutral-300 transition-colors"
+                onClick={() => {
+                  setSelectedTask(convertToTaskDetail(task));
+                  setIsModalOpen(true);
+                }}
+              >
                 <div className="flex items-start gap-3">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${PRIORITY_COLOR[task.priority]}`} />
                   <div className="flex-1 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedTask(convertToTaskDetail(task));
-                        setIsModalOpen(true);
-                      }}
-                      className="text-left font-semibold text-sm text-neutral-900 hover:text-primary transition-colors"
-                    >
-                      {task.title}
-                    </button>
-                    <p className="text-xs text-neutral-400 mt-0.5 truncate">{task.description}</p>
+                    <p className="font-semibold text-sm text-neutral-900">{task.title}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5 truncate">{stripHtml(task.description)}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span
@@ -350,7 +441,10 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                 </div>
 
                 {task.status === "IN_REVIEW" && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-neutral-100">
+                  <div
+                    className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       type="button"
                       onClick={() => void handleApprove(task.id)}
@@ -368,6 +462,13 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         )}
       </div>
 
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        onPrev={() => { setPage((prev) => Math.max(prev - 1, 0)); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+        onNext={() => { setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0))); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+      />
+
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -382,11 +483,13 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
 
 function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
   const { withTenant } = useTenantPath();
-  const { currentUser } = useAuth();
   const { showToast } = useToast();
+  const topRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<EmployeeFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -398,24 +501,26 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
   ];
 
   useEffect(() => {
-    if (!currentUser.id) {
-      return;
-    }
-
     const load = async () => {
       try {
         setLoading(true);
-        const projects = await listProjects();
-        const selectedProjects = projectId ? projects.filter((p) => p.id === projectId) : projects;
-        const tasksByProject = await Promise.all(
-          selectedProjects.map(async (project) => {
-            const tasks = await listProjectTasks(project.id);
-            return tasks
-              .filter((task) => task.reporterId === currentUser.id)
-              .map((task) => toReviewTask(task, project.title));
-          }),
-        );
-        setTasks(tasksByProject.flat());
+        const employeeChangesRequested: boolean | undefined =
+          filter === "rework" ? true :
+          filter === "under_review" ? false :
+          undefined;
+        const query: ReviewQueueQuery = {
+          projectId,
+          status: EMPLOYEE_FILTER_STATUS[filter],
+          changesRequested: employeeChangesRequested,
+          page,
+          size: PAGE_SIZE,
+          sortBy: "updatedAt",
+          sortDir: "desc",
+        };
+
+        const reviewQueue = await getReviewQueue(query);
+        setTasks(reviewQueue.content.map((task) => toReviewTask(task)));
+        setTotalPages(reviewQueue.totalPages);
       } catch {
         showToast("Failed to load your submissions", "error");
       } finally {
@@ -424,15 +529,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
     };
 
     void load();
-  }, [currentUser.id, projectId, showToast]);
-
-  const filtered = useMemo(() => tasks.filter((t) => {
-    const lastReview = t.reviews[t.reviews.length - 1];
-    if (filter === "under_review") return t.status === "IN_REVIEW";
-    if (filter === "approved") return t.status === "DONE";
-    if (filter === "rework") return lastReview?.action === "changes_requested" || t.status === "IN_PROGRESS";
-    return true;
-  }), [filter, tasks]);
+  }, [projectId, filter, page, showToast]);
 
   const STATUS_DISPLAY: Partial<Record<string, { label: string; bg: string; icon: string }>> = {
     IN_REVIEW: { label: "Under Review", bg: "bg-blue-50 text-blue-700 border-blue-200", icon: "hourglass_top" },
@@ -441,7 +538,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
   };
 
   return (
-    <div className="onfis-section">
+    <div className="onfis-section" ref={topRef}>
       <div className="navbar-style">
         <div>
           <h1 className="text-xl font-bold text-neutral-900">My Reviews</h1>
@@ -456,14 +553,19 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         </Link>
       </div>
 
-      <div className="flex gap-1 mt-3 bg-neutral-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center gap-1 border-b border-neutral-200 mt-3">
         {filterOptions.map((opt) => (
           <button
             key={opt.key}
             type="button"
-            onClick={() => setFilter(opt.key)}
-            className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              filter === opt.key ? "bg-white text-primary shadow-sm" : "text-neutral-500 hover:text-neutral-800"
+            onClick={() => {
+              setFilter(opt.key);
+              setPage(0);
+            }}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              filter === opt.key
+                ? "text-primary border-primary"
+                : "text-neutral-500 border-transparent hover:text-neutral-800"
             }`}
           >
             {opt.label}
@@ -471,16 +573,22 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         ))}
       </div>
 
-      {loading && <div className="mt-4 text-sm text-neutral-500">Loading submissions...</div>}
+      {loading && (
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-24 rounded-xl bg-neutral-100 animate-pulse" />
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-3">
-        {!loading && filtered.length === 0 ? (
+        {!loading && tasks.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3 bg-white rounded-xl border border-neutral-100">
             <span className="material-symbols-rounded text-neutral-300" style={{ fontSize: 48 }}>rate_review</span>
             <p className="text-sm text-neutral-400">No submitted tasks match this filter.</p>
           </div>
         ) : (
-          filtered.map((task) => {
+          tasks.map((task) => {
             const lastReview = task.reviews[task.reviews.length - 1];
             const statusKey =
               task.status === "IN_REVIEW"
@@ -505,7 +613,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${PRIORITY_COLOR[task.priority]}`} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-neutral-900">{task.title}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{task.description}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5 line-clamp-1">{stripHtml(task.description)}</p>
                   </div>
                   {display && (
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border flex-shrink-0 ${display.bg}`}>
@@ -542,6 +650,13 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         )}
       </div>
 
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        onPrev={() => { setPage((prev) => Math.max(prev - 1, 0)); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+        onNext={() => { setPage((prev) => Math.min(prev + 1, Math.max(totalPages - 1, 0))); topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+      />
+
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -556,12 +671,13 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                   status: updated.status,
                   priority: toApiPriority(updated.priority),
                   progress: updated.progress,
-                  dueDate: updated.dueDate ? new Date(updated.dueDate).toISOString().slice(0, 10) : undefined,
+                  dueDate: updated.dueDateRaw ?? undefined,
                   reporterId: updated.reporterId,
                   estimatedEffort: updated.estimatedEffort,
                   actualEffort: updated.actualEffort,
                   assigneeIds: updated.assignees.map((a) => a.id),
                   tags: "[]",
+                  blockedReason: updated.blockedReason,
                 });
               } catch {
                 showToast("Unable to update task", "error");
@@ -578,6 +694,15 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
 export default function ReviewQueuePage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { isManager } = useRole();
+  const { currentUser } = useAuth();
+
+  if (!currentUser.id) {
+    return (
+      <div className="onfis-section">
+        <div className="mt-4 h-24 rounded-xl bg-neutral-100 animate-pulse" />
+      </div>
+    );
+  }
 
   return isManager ? <ManagerReviewQueue projectId={projectId} /> : <EmployeeSubmissions projectId={projectId} />;
 }

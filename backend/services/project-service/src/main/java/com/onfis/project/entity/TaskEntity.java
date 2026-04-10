@@ -12,7 +12,9 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -41,6 +43,9 @@ public class TaskEntity {
 
     @Column(name = "stage_id")
     private UUID stageId;
+
+    @Column(name = "milestone_id")
+    private UUID milestoneId;
 
     @Column(name = "title", nullable = false)
     private String title;
@@ -77,6 +82,10 @@ public class TaskEntity {
     @Column(name = "task_key")
     private String taskKey;
 
+    @Column(name = "blocked_reason")
+    private String blockedReason;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "tags", columnDefinition = "jsonb")
     private String tags = "[]";
 

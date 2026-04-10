@@ -11,6 +11,7 @@ export interface ActivityItem {
   user: string;
   action: string;
   value?: string;
+  description?: string;
   timestamp: string;
 }
 
@@ -36,4 +37,5 @@ export interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: TaskDetail) => void;
+  onDelete?: (taskId: string) => void;
 }

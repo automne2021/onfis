@@ -12,6 +12,8 @@ public interface TaskAssigneeRepository extends JpaRepository<TaskAssigneeEntity
 
     List<TaskAssigneeEntity> findByIdTaskId(UUID taskId);
 
+    List<TaskAssigneeEntity> findByIdTaskIdIn(List<UUID> taskIds);
+
     void deleteByIdTaskId(UUID taskId);
 
     @Query("""

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "../../../components/common/Modal";
 import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
@@ -11,9 +11,18 @@ interface SubTask {
   assigneeId?: string;
 }
 
+interface FormErrors {
+  name?: string;
+  dateRange?: string;
+}
+
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
+  users?: Array<{ id: string; name: string; avatar?: string }>;
+  projects?: Array<{ id: string; name: string }>;
+  availableTags?: string[];
+  defaultProjectId?: string;
   onSubmit?: (data: TaskFormData) => void;
 }
 
@@ -26,27 +35,10 @@ export interface TaskFormData {
   priority: "low" | "medium" | "high" | "urgent";
   estimatedEffort: number;
   projectId: string;
+  tags: string[];
   description: string;
   subtasks: SubTask[];
 }
-
-const ASSIGNEES = [
-  {
-    id: "1",
-    name: "Michael Chen",
-    avatar:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAJPWaqMq7LGHKEaa9oKc4MnTiZB6RSJDVsj0F_yWXL1I69pVXeOfZACSeFqEeqm_WUtAoERFRXc1-mt0NmyZT2cgZv1Zt_MkYX4W9MAfwdoCLWu_mRNuA1RedxiOIWdaE2EEiYZijqmC7hLMs-9lB0s2UXUSfqdUO7qzpbCIP6C9I1OpPmfYs_ltzSdT2y2GQADxo2xnr7brYA0strhsvaR7ljwV-WkJco2O15Ms4wEeOenhMnE-pkjxkIZu2mvlgbC1kfBibTk5Y",
-    initials: "MC",
-  },
-  { id: "2", name: "Sarah Jenkins", initials: "SJ" },
-  { id: "3", name: "Amara Okafor", initials: "AO" },
-];
-
-const PROJECTS = [
-  { id: "1", name: "ERP Migration" },
-  { id: "2", name: "Mobile App Refresh" },
-  { id: "3", name: "Q4 Marketing" },
-];
 
 const PRIORITIES = [
   { value: "low" as const, label: "Low Priority", color: "bg-green-500" },
@@ -58,6 +50,10 @@ const PRIORITIES = [
 export default function CreateTaskModal({
   isOpen,
   onClose,
+  users = [],
+  projects = [],
+  availableTags = [],
+  defaultProjectId,
   onSubmit,
 }: CreateTaskModalProps) {
   const [formData, setFormData] = useState<TaskFormData>({
@@ -69,17 +65,50 @@ export default function CreateTaskModal({
     priority: "medium",
     estimatedEffort: 0,
     projectId: "",
+    tags: [],
     description: "",
     subtasks: [{ id: "1", name: "", completed: false }],
   });
   const [showReporterDropdown, setShowReporterDropdown] = useState(false);
-  const selectedReporter = ASSIGNEES.find((a) => a.id === formData.reporterId);
-  const [errors, setErrors] = useState<{ name?: string }>({});
+  const selectedReporter = users.find((a) => a.id === formData.reporterId);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [openSubtaskAssigneeId, setOpenSubtaskAssigneeId] = useState<string | null>(null);
 
-  const selectedAssignee = ASSIGNEES.find((a) => a.id === formData.assigneeId);
+  const selectedAssignee = users.find((a) => a.id === formData.assigneeId);
   const selectedPriority = PRIORITIES.find((p) => p.value === formData.priority);
+  const subtaskAssigneeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (subtaskAssigneeRef.current && !subtaskAssigneeRef.current.contains(event.target as Node)) {
+        setOpenSubtaskAssigneeId(null);
+      }
+    };
+    if (openSubtaskAssigneeId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openSubtaskAssigneeId]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      projectId: defaultProjectId || projects[0]?.id || "",
+    }));
+  }, [defaultProjectId, isOpen, projects]);
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, name: e.target.value }));
@@ -118,13 +147,47 @@ export default function CreateTaskModal({
     }));
   };
 
+  const handleSubtaskAssigneeChange = (subtaskId: string, userId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      subtasks: prev.subtasks.map((s) =>
+        s.id === subtaskId ? { ...s, assigneeId: userId } : s
+      ),
+    }));
+    setOpenSubtaskAssigneeId(null);
+  };
+
+  const handleToggleTag = (tagName: string) => {
+    setFormData((prev) => {
+      const exists = prev.tags.includes(tagName);
+      return {
+        ...prev,
+        tags: exists ? prev.tags.filter((tag) => tag !== tagName) : [...prev.tags, tagName],
+      };
+    });
+  };
+
   const handleSubmit = () => {
-    // Validate
+    const nextErrors: FormErrors = {};
+
     if (!formData.name.trim()) {
-      setErrors({ name: "Task name is required" });
+      nextErrors.name = "Task name is required";
+    }
+
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      formData.endDate.getTime() < formData.startDate.getTime()
+    ) {
+      nextErrors.dateRange = "Task end date must be the same as or after start date.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
 
+    setErrors({});
     onSubmit?.(formData);
     onClose();
   };
@@ -139,6 +202,7 @@ export default function CreateTaskModal({
       priority: "medium",
       estimatedEffort: 0,
       projectId: "",
+      tags: [],
       description: "",
       subtasks: [{ id: "1", name: "", completed: false }],
     });
@@ -210,14 +274,22 @@ export default function CreateTaskModal({
         <DateRangePicker
           startDate={formData.startDate}
           endDate={formData.endDate}
-          onStartDateChange={(date: Date | null) =>
-            setFormData((prev) => ({ ...prev, startDate: date }))
-          }
-          onEndDateChange={(date: Date | null) =>
-            setFormData((prev) => ({ ...prev, endDate: date }))
-          }
+          onStartDateChange={(date: Date | null) => {
+            setFormData((prev) => ({ ...prev, startDate: date }));
+            setErrors((prev) => ({ ...prev, dateRange: undefined }));
+          }}
+          onEndDateChange={(date: Date | null) => {
+            setFormData((prev) => ({ ...prev, endDate: date }));
+            setErrors((prev) => ({ ...prev, dateRange: undefined }));
+          }}
           label="Select Task Duration"
+          disablePast
+          allowClear
+          showLunarDay
         />
+        {errors.dateRange && (
+          <p className="text-xs text-red-500 -mt-4">{errors.dateRange}</p>
+        )}
 
         {/* Assignee, Priority, Project */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -243,7 +315,7 @@ export default function CreateTaskModal({
                       />
                     ) : (
                       <div className="size-6 rounded-full bg-neutral-300 text-[10px] flex items-center justify-center text-neutral-500 font-bold">
-                        {selectedAssignee.initials}
+                        {getInitials(selectedAssignee.name)}
                       </div>
                     )}
                     <span className="text-neutral-900 truncate">
@@ -261,7 +333,7 @@ export default function CreateTaskModal({
               {/* Dropdown */}
               {showAssigneeDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-20">
-                  {ASSIGNEES.map((assignee) => (
+                  {users.map((assignee) => (
                     <button
                       key={assignee.id}
                       type="button"
@@ -275,7 +347,7 @@ export default function CreateTaskModal({
                       className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-100"
                     >
                       <div className="size-6 rounded-full bg-neutral-300 text-[10px] flex items-center justify-center text-neutral-500 font-bold">
-                        {assignee.initials}
+                        {getInitials(assignee.name)}
                       </div>
                       <span>{assignee.name}</span>
                     </button>
@@ -350,7 +422,7 @@ export default function CreateTaskModal({
                 <option disabled value="">
                   Select a project...
                 </option>
-                {PROJECTS.map((project) => (
+                {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
@@ -379,7 +451,7 @@ export default function CreateTaskModal({
                 {selectedReporter ? (
                   <>
                     <div className="size-6 rounded-full bg-amber-400 text-[10px] flex items-center justify-center text-white font-bold">
-                      {selectedReporter.initials}
+                      {getInitials(selectedReporter.name)}
                     </div>
                     <span className="text-neutral-900 truncate">
                       {selectedReporter.name}
@@ -394,7 +466,7 @@ export default function CreateTaskModal({
               </div>
               {showReporterDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-20">
-                  {ASSIGNEES.map((assignee) => (
+                  {users.map((assignee) => (
                     <button
                       key={assignee.id}
                       type="button"
@@ -405,7 +477,7 @@ export default function CreateTaskModal({
                       className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-neutral-100"
                     >
                       <div className="size-6 rounded-full bg-amber-400 text-[10px] flex items-center justify-center text-white font-bold">
-                        {assignee.initials}
+                        {getInitials(assignee.name)}
                       </div>
                       <span>{assignee.name}</span>
                     </button>
@@ -432,6 +504,38 @@ export default function CreateTaskModal({
               className="w-full px-4 py-3 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 text-sm transition-colors"
             />
           </div>
+        </div>
+
+        {/* Shared Tags */}
+        <div>
+          <label className="block text-sm font-semibold text-neutral-900 mb-2">
+            Tags (Shared In Settings)
+          </label>
+          {availableTags.length === 0 ? (
+            <div className="px-3 py-2 text-xs text-neutral-500 bg-neutral-50 border border-dashed border-neutral-200 rounded-lg">
+              No shared tags found. Add tags in Settings first.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tagName) => {
+                const active = formData.tags.includes(tagName);
+                return (
+                  <button
+                    key={tagName}
+                    type="button"
+                    onClick={() => handleToggleTag(tagName)}
+                    className={`px-2.5 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                      active
+                        ? "bg-primary/10 text-primary border-primary/30"
+                        : "bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50"
+                    }`}
+                  >
+                    {tagName}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -497,11 +601,53 @@ export default function CreateTaskModal({
                   />
                 </div>
                 <div className="flex items-center gap-2 pr-2">
+                  {/* Subtask Assignee */}
                   <div
-                    className="size-6 rounded-full bg-neutral-200 text-[10px] flex items-center justify-center text-neutral-500 font-bold border border-white cursor-pointer hover:bg-neutral-300"
-                    title="Assign"
+                    className="relative"
+                    ref={openSubtaskAssigneeId === subtask.id ? subtaskAssigneeRef : undefined}
                   >
-                    <PersonAddIcon />
+                    {subtask.assigneeId ? (
+                      <div
+                        className="size-6 rounded-full bg-primary text-[10px] flex items-center justify-center text-white font-bold border border-white cursor-pointer hover:opacity-80"
+                        title={users.find((u) => u.id === subtask.assigneeId)?.name ?? "Assigned"}
+                        onClick={() =>
+                          setOpenSubtaskAssigneeId(
+                            openSubtaskAssigneeId === subtask.id ? null : subtask.id
+                          )
+                        }
+                      >
+                        {getInitials(users.find((u) => u.id === subtask.assigneeId)?.name ?? "?")}
+                      </div>
+                    ) : (
+                      <div
+                        className="size-6 rounded-full bg-neutral-200 text-[10px] flex items-center justify-center text-neutral-500 font-bold border border-white cursor-pointer hover:bg-neutral-300"
+                        title="Assign"
+                        onClick={() =>
+                          setOpenSubtaskAssigneeId(
+                            openSubtaskAssigneeId === subtask.id ? null : subtask.id
+                          )
+                        }
+                      >
+                        <PersonAddIcon />
+                      </div>
+                    )}
+                    {openSubtaskAssigneeId === subtask.id && users.length > 0 && (
+                      <div className="absolute right-0 bottom-full mb-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 min-w-[160px] py-1">
+                        {users.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => handleSubtaskAssigneeChange(subtask.id, user.id)}
+                            className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-neutral-50"
+                          >
+                            <div className="size-5 rounded-full bg-neutral-300 text-[9px] flex items-center justify-center text-neutral-600 font-bold shrink-0">
+                              {getInitials(user.name)}
+                            </div>
+                            <span className="text-neutral-700">{user.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"

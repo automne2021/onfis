@@ -32,21 +32,28 @@ export interface ApiTaskActivity {
   actorName: string;
   action: string;
   value: string | null;
+  description: string;
   createdAt: string;
 }
 
 export interface ApiTask {
   id: string;
   projectId?: string;
+  stageId?: string | null;
+  milestoneId?: string | null;
+  projectTitle?: string;
+  projectSlug?: string;
   title: string;
   description: string;
   priority: 'urgent' | 'high' | 'medium' | 'low';
   status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'IN_REVIEW' | 'DONE';
   progress: number;
+  startDate: string | null;
   dueDate: string | null;
   assignees: ApiUserSummary[];
   tags: string;
   reporterId?: string;
+  reporterName?: string;
   estimatedEffort?: number;
   actualEffort?: number;
   blockedBy: string[];
@@ -54,6 +61,9 @@ export interface ApiTask {
   key: string;
   canEdit: boolean;
   canReview: boolean;
+  blockedReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ApiTaskDetail extends ApiTask {
@@ -74,8 +84,10 @@ export interface UpsertTaskPayload {
   actualEffort?: number;
   parentTaskId?: string;
   stageId?: string;
+  milestoneId?: string;
   tags?: string;
   assigneeIds: string[];
+  blockedReason?: string;
 }
 
 export interface ReviewPayload {
@@ -83,8 +95,88 @@ export interface ReviewPayload {
   content?: string;
 }
 
+export interface ReviewQueueQuery {
+  projectId?: string;
+  status?: Array<'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'IN_REVIEW' | 'DONE'>;
+  changesRequested?: boolean;
+  page?: number;
+  size?: number;
+  sortBy?: 'updatedAt' | 'createdAt' | 'dueDate' | 'priority' | 'status' | 'title';
+  sortDir?: 'asc' | 'desc';
+}
+
+export interface MyTasksQuery {
+  tab?: 'assigned' | 'created' | 'reviewing' | 'all';
+  search?: string;
+  status?: string;
+  priority?: string;
+  stageId?: string;
+  page?: number;
+  size?: number;
+  sortBy?: 'updatedAt' | 'createdAt' | 'dueDate' | 'startDate' | 'priority' | 'status' | 'title';
+  sortDir?: 'asc' | 'desc';
+}
+
+export interface PagedApiResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+// ── Task Stage Update ───────────────────────────────────────────────────
+
+export interface TaskStageUpdatePayload {
+  stageId: string;
+  status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'IN_REVIEW' | 'DONE';
+  progress?: number;
+}
+
+// ── Task Dependencies ───────────────────────────────────────────────────
+
+export interface TaskDependencyPayload {
+  blockedByTaskId: string;
+}
+
+// ── Subtask Payloads ────────────────────────────────────────────────────
+
+export interface SubtaskPayload {
+  title: string;
+  completed?: boolean;
+}
+
+// ── Tasks ───────────────────────────────────────────────────────────────
+
 export async function listProjectTasks(projectId: string): Promise<ApiTask[]> {
   const { data } = await api.get<ApiTask[]>(`/projects/${projectId}/tasks`);
+  return data;
+}
+
+export async function listMyTasks(query: MyTasksQuery = {}): Promise<PagedApiResponse<ApiTask>> {
+  const params: Record<string, string | number> = {
+    tab: query.tab ?? 'assigned',
+    page: query.page ?? 0,
+    size: query.size ?? 10,
+    sortBy: query.sortBy ?? 'updatedAt',
+    sortDir: query.sortDir ?? 'desc',
+  };
+
+  if (query.search) {
+    params.search = query.search;
+  }
+  if (query.status) {
+    params.status = query.status;
+  }
+  if (query.priority) {
+    params.priority = query.priority;
+  }
+  if (query.stageId) {
+    params.stageId = query.stageId;
+  }
+
+  const { data } = await api.get<PagedApiResponse<ApiTask>>('/projects/tasks/me', { params });
   return data;
 }
 
@@ -103,20 +195,80 @@ export async function updateTask(taskId: string, payload: UpsertTaskPayload): Pr
   return data;
 }
 
+export async function deleteTask(taskId: string): Promise<void> {
+  await api.delete(`/projects/tasks/${taskId}`);
+}
+
+export async function getTaskDetail(taskId: string): Promise<ApiTaskDetail> {
+  const { data } = await api.get<ApiTaskDetail>(`/projects/tasks/${taskId}/detail`);
+  return data;
+}
+
+// ── Task Stage Update ───────────────────────────────────────────────────
+
+export async function updateTaskStage(
+  taskId: string,
+  payload: TaskStageUpdatePayload,
+): Promise<ApiTask> {
+  const { data } = await api.patch<ApiTask>(`/projects/tasks/${taskId}/stage`, payload);
+  return data;
+}
+
+// ── Task Dependencies ───────────────────────────────────────────────────
+
+export async function addTaskDependency(
+  taskId: string,
+  payload: TaskDependencyPayload,
+): Promise<ApiTask> {
+  const { data } = await api.post<ApiTask>(`/projects/tasks/${taskId}/dependencies`, payload);
+  return data;
+}
+
+export async function removeTaskDependency(
+  taskId: string,
+  blockedByTaskId: string,
+): Promise<ApiTask> {
+  const { data } = await api.delete<ApiTask>(
+    `/projects/tasks/${taskId}/dependencies/${blockedByTaskId}`,
+  );
+  return data;
+}
+
+// ── Reviews ─────────────────────────────────────────────────────────────
+
 export async function reviewTask(taskId: string, payload: ReviewPayload): Promise<ApiTask> {
   const { data } = await api.post<ApiTask>(`/projects/tasks/${taskId}/reviews`, payload);
   return data;
 }
 
-export async function getReviewQueue(projectId?: string): Promise<ApiTask[]> {
-  const { data } = await api.get<ApiTask[]>('/projects/reviews', {
-    params: projectId ? { projectId } : undefined,
+export async function getReviewQueue(query: ReviewQueueQuery = {}): Promise<PagedApiResponse<ApiTask>> {
+  const params: Record<string, string | number> = {
+    page: query.page ?? 0,
+    size: query.size ?? 20,
+    sortBy: query.sortBy ?? 'updatedAt',
+    sortDir: query.sortDir ?? 'desc',
+  };
+
+  if (query.projectId) {
+    params.projectId = query.projectId;
+  }
+  if (query.status && query.status.length > 0) {
+    params.status = query.status.join(',');
+  }
+  if (query.changesRequested !== undefined) {
+    params.changesRequested = String(query.changesRequested);
+  }
+
+  const { data } = await api.get<PagedApiResponse<ApiTask>>('/projects/reviews', {
+    params,
   });
   return data;
 }
 
-export async function getTaskDetail(taskId: string): Promise<ApiTaskDetail> {
-  const { data } = await api.get<ApiTaskDetail>(`/projects/tasks/${taskId}/detail`);
+// ── Comments ────────────────────────────────────────────────────────────
+
+export async function listTaskComments(taskId: string): Promise<ApiTaskComment[]> {
+  const { data } = await api.get<ApiTaskComment[]>(`/projects/tasks/${taskId}/comments`);
   return data;
 }
 
@@ -125,7 +277,31 @@ export async function addTaskComment(taskId: string, content: string): Promise<A
   return data;
 }
 
-export async function listTaskComments(taskId: string): Promise<ApiTaskComment[]> {
-  const { data } = await api.get<ApiTaskComment[]>(`/projects/tasks/${taskId}/comments`);
+// ── Subtasks ────────────────────────────────────────────────────────────
+
+export async function createSubtask(
+  taskId: string,
+  payload: SubtaskPayload,
+): Promise<ApiTaskSubtask> {
+  const { data } = await api.post<ApiTaskSubtask>(
+    `/projects/tasks/${taskId}/subtasks`,
+    payload,
+  );
   return data;
+}
+
+export async function updateSubtask(
+  taskId: string,
+  subtaskId: string,
+  payload: SubtaskPayload,
+): Promise<ApiTaskSubtask> {
+  const { data } = await api.put<ApiTaskSubtask>(
+    `/projects/tasks/${taskId}/subtasks/${subtaskId}`,
+    payload,
+  );
+  return data;
+}
+
+export async function deleteSubtask(taskId: string, subtaskId: string): Promise<void> {
+  await api.delete(`/projects/tasks/${taskId}/subtasks/${subtaskId}`);
 }

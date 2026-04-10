@@ -6,20 +6,26 @@ import com.onfis.project.domain.ProjectStatus;
 import com.onfis.project.domain.ReviewAction;
 import com.onfis.project.domain.TaskPriority;
 import com.onfis.project.domain.TaskStatus;
+import com.onfis.project.dto.CompanyTagResponse;
+import com.onfis.project.dto.CompanyTagUpsertRequest;
 import com.onfis.project.dto.CurrentUserResponse;
 import com.onfis.project.dto.MilestoneUpsertRequest;
 import com.onfis.project.dto.MilestoneResponse;
 import com.onfis.project.dto.ProjectDetailResponse;
+import com.onfis.project.dto.ProjectCustomRoleRequest;
+import com.onfis.project.dto.ProjectCustomRoleResponse;
 import com.onfis.project.dto.ProjectMemberRequest;
 import com.onfis.project.dto.ProjectMemberResponse;
 import com.onfis.project.dto.ProjectResponse;
 import com.onfis.project.dto.ProjectUpsertRequest;
+import com.onfis.project.dto.ReviewQueuePageResponse;
 import com.onfis.project.dto.ReviewCreateRequest;
 import com.onfis.project.dto.TaskDependencyRequest;
 import com.onfis.project.dto.TaskActivityResponse;
 import com.onfis.project.dto.TaskCommentRequest;
 import com.onfis.project.dto.TaskCommentResponse;
 import com.onfis.project.dto.TaskDetailResponse;
+import com.onfis.project.dto.TaskPageResponse;
 import com.onfis.project.dto.TaskResponse;
 import com.onfis.project.dto.TaskStageUpdateRequest;
 import com.onfis.project.dto.TaskReviewResponse;
@@ -32,12 +38,18 @@ import com.onfis.project.dto.WorkflowStageReorderRequest;
 import com.onfis.project.dto.WorkflowStageResponse;
 import com.onfis.project.dto.WorkflowStageUpsertRequest;
 import com.onfis.project.entity.AppUserEntity;
+import com.onfis.project.entity.CompanyTagEntity;
 import com.onfis.project.entity.ProjectEntity;
 import com.onfis.project.entity.ProjectFavoriteEntity;
 import com.onfis.project.entity.ProjectFavoriteId;
 import com.onfis.project.entity.ProjectMemberEntity;
 import com.onfis.project.entity.ProjectMemberId;
 import com.onfis.project.entity.ProjectMilestoneEntity;
+import com.onfis.project.entity.ProjectTagLinkEntity;
+import com.onfis.project.entity.ProjectTagLinkId;
+import com.onfis.project.entity.ProjectCustomRoleEntity;
+import com.onfis.project.entity.ProjectMemberRoleEntity;
+import com.onfis.project.entity.ProjectMemberRoleId;
 import com.onfis.project.entity.TaskAssigneeEntity;
 import com.onfis.project.entity.TaskAssigneeId;
 import com.onfis.project.entity.TaskActivityEntity;
@@ -45,6 +57,8 @@ import com.onfis.project.entity.TaskCommentEntity;
 import com.onfis.project.entity.TaskDependencyEntity;
 import com.onfis.project.entity.TaskDependencyId;
 import com.onfis.project.entity.TaskEntity;
+import com.onfis.project.entity.TaskTagLinkEntity;
+import com.onfis.project.entity.TaskTagLinkId;
 import com.onfis.project.entity.TaskSubtaskEntity;
 import com.onfis.project.entity.TaskReviewEntity;
 import com.onfis.project.entity.WorkflowStageEntity;
@@ -52,31 +66,46 @@ import com.onfis.project.exception.BadRequestException;
 import com.onfis.project.exception.ForbiddenException;
 import com.onfis.project.exception.NotFoundException;
 import com.onfis.project.repository.AppUserRepository;
+import com.onfis.project.repository.CompanyTagRepository;
 import com.onfis.project.repository.TaskDependencyRepository;
 import com.onfis.project.repository.ProjectFavoriteRepository;
 import com.onfis.project.repository.ProjectMemberRepository;
 import com.onfis.project.repository.ProjectMilestoneRepository;
 import com.onfis.project.repository.ProjectRepository;
+import com.onfis.project.repository.ProjectTagLinkRepository;
+import com.onfis.project.repository.ProjectCustomRoleRepository;
+import com.onfis.project.repository.ProjectMemberRoleRepository;
 import com.onfis.project.repository.TaskActivityRepository;
 import com.onfis.project.repository.TaskAssigneeRepository;
 import com.onfis.project.repository.TaskCommentRepository;
 import com.onfis.project.repository.TaskRepository;
 import com.onfis.project.repository.TaskReviewRepository;
+import com.onfis.project.repository.TaskTagLinkRepository;
 import com.onfis.project.repository.TaskSubtaskRepository;
 import com.onfis.project.repository.WorkflowStageRepository;
 import com.onfis.shared.security.TenantContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -86,9 +115,21 @@ import java.util.stream.Collectors;
 public class ProjectModuleService {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final int DEFAULT_REVIEW_PAGE_SIZE = 20;
+    private static final int MAX_REVIEW_PAGE_SIZE = 100;
+    private static final int DEFAULT_MY_TASKS_PAGE_SIZE = 10;
+    private static final int MAX_MY_TASKS_PAGE_SIZE = 100;
+    private static final Map<TaskStatus, Set<TaskStatus>> TASK_TRANSITIONS = Map.of(
+            TaskStatus.TODO, Set.of(TaskStatus.IN_PROGRESS),
+            TaskStatus.IN_PROGRESS, Set.of(TaskStatus.IN_REVIEW, TaskStatus.BLOCKED),
+            TaskStatus.BLOCKED, Set.of(TaskStatus.IN_PROGRESS, TaskStatus.TODO),
+            TaskStatus.IN_REVIEW, Set.of(TaskStatus.DONE, TaskStatus.IN_PROGRESS, TaskStatus.TODO),
+            TaskStatus.DONE, Set.of()
+    );
 
     private final TenantContext tenantContext;
     private final AppUserRepository appUserRepository;
+    private final CompanyTagRepository companyTagRepository;
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final TaskRepository taskRepository;
@@ -101,10 +142,15 @@ public class ProjectModuleService {
     private final TaskSubtaskRepository taskSubtaskRepository;
     private final TaskActivityRepository taskActivityRepository;
     private final TaskDependencyRepository taskDependencyRepository;
+    private final ProjectTagLinkRepository projectTagLinkRepository;
+    private final TaskTagLinkRepository taskTagLinkRepository;
+    private final ProjectCustomRoleRepository projectCustomRoleRepository;
+    private final ProjectMemberRoleRepository projectMemberRoleRepository;
 
     public ProjectModuleService(
             TenantContext tenantContext,
             AppUserRepository appUserRepository,
+            CompanyTagRepository companyTagRepository,
             ProjectRepository projectRepository,
             ProjectMemberRepository projectMemberRepository,
             TaskRepository taskRepository,
@@ -116,10 +162,15 @@ public class ProjectModuleService {
             TaskCommentRepository taskCommentRepository,
             TaskSubtaskRepository taskSubtaskRepository,
                 TaskActivityRepository taskActivityRepository,
-                TaskDependencyRepository taskDependencyRepository
+                TaskDependencyRepository taskDependencyRepository,
+                ProjectTagLinkRepository projectTagLinkRepository,
+                TaskTagLinkRepository taskTagLinkRepository,
+                ProjectCustomRoleRepository projectCustomRoleRepository,
+                ProjectMemberRoleRepository projectMemberRoleRepository
     ) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
+        this.companyTagRepository = companyTagRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.taskRepository = taskRepository;
@@ -132,6 +183,10 @@ public class ProjectModuleService {
         this.taskSubtaskRepository = taskSubtaskRepository;
         this.taskActivityRepository = taskActivityRepository;
         this.taskDependencyRepository = taskDependencyRepository;
+        this.projectTagLinkRepository = projectTagLinkRepository;
+        this.taskTagLinkRepository = taskTagLinkRepository;
+        this.projectCustomRoleRepository = projectCustomRoleRepository;
+        this.projectMemberRoleRepository = projectMemberRoleRepository;
     }
 
     // ── Current user ──────────────────────────────────────────────────────────
@@ -158,11 +213,7 @@ public class ProjectModuleService {
                 ? projectRepository.findByTenantIdOrderByCreatedAtDesc(tenantId)
                 : projectRepository.findVisibleByUser(tenantId, currentUser.getId());
 
-        List<ProjectResponse> result = new ArrayList<>();
-        for (ProjectEntity project : projects) {
-            result.add(toProjectResponse(project, currentUser));
-        }
-        return result;
+        return toProjectResponses(projects, currentUser, tenantId);
     }
 
     public ProjectResponse getProject(String userIdHeader, UUID projectId) {
@@ -179,23 +230,36 @@ public class ProjectModuleService {
         ProjectEntity project = requireProject(projectId, tenantId);
         enforceProjectVisible(currentUser, project.getId());
 
-        // Manager info
+        List<ProjectMemberEntity> memberEntities = projectMemberRepository.findByIdProjectId(projectId);
+        Set<UUID> userIds = new HashSet<>();
+        if (project.getManagerId() != null) {
+            userIds.add(project.getManagerId());
+        }
+        for (ProjectMemberEntity memberEntity : memberEntities) {
+            userIds.add(memberEntity.getId().getUserId());
+        }
+
+        Map<UUID, AppUserEntity> usersById = appUserRepository
+                .findAllById(userIds)
+                .stream()
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
         String managerName = null;
         String managerAvatar = null;
         if (project.getManagerId() != null) {
-            AppUserEntity manager = appUserRepository.findById(project.getManagerId()).orElse(null);
+            AppUserEntity manager = usersById.get(project.getManagerId());
             if (manager != null) {
                 managerName = fullName(manager);
                 managerAvatar = manager.getAvatarUrl();
             }
         }
 
-        // Members
-        List<ProjectMemberEntity> memberEntities = projectMemberRepository.findByIdProjectId(projectId);
         List<UserSummaryResponse> members = new ArrayList<>();
         for (ProjectMemberEntity m : memberEntities) {
-            appUserRepository.findById(m.getId().getUserId())
-                    .ifPresent(u -> members.add(new UserSummaryResponse(u.getId(), fullName(u), u.getAvatarUrl())));
+            AppUserEntity user = usersById.get(m.getId().getUserId());
+            if (user != null) {
+                members.add(new UserSummaryResponse(user.getId(), fullName(user), user.getAvatarUrl()));
+            }
         }
 
         // Starred
@@ -206,20 +270,15 @@ public class ProjectModuleService {
                 .findByProjectIdOrderBySortOrderAsc(projectId)
                 .stream()
                 .limit(6)
-                .map(m -> new MilestoneResponse(m.getId().toString(), m.getTitle(), m.getTargetDate(),
-                        m.getStatus() != null ? m.getStatus().toLowerCase() : "upcoming"))
+            .map(this::toMilestoneResponse)
                 .collect(Collectors.toList());
 
-        // Recent tasks (limit 5)
         List<TaskEntity> recentTaskEntities = taskRepository
                 .findByTenantIdAndProjectIdOrderByCreatedAtDesc(tenantId, projectId)
                 .stream()
                 .limit(5)
                 .collect(Collectors.toList());
-        List<TaskResponse> recentTasks = new ArrayList<>();
-        for (TaskEntity t : recentTaskEntities) {
-            recentTasks.add(toTaskResponse(t, currentUser));
-        }
+        List<TaskResponse> recentTasks = toTaskResponses(recentTaskEntities, currentUser, tenantId);
 
         // Days remaining
         int daysRemaining = 0;
@@ -230,6 +289,7 @@ public class ProjectModuleService {
 
         return new ProjectDetailResponse(
                 project.getId(),
+            project.getSlug(),
                 project.getName(),
                 project.getDescription(),
                 project.getManagerId(),
@@ -265,6 +325,7 @@ public class ProjectModuleService {
         project.setCreatedBy(currentUser.getId());
         applyProjectUpsert(project, request);
         ProjectEntity saved = projectRepository.save(project);
+        syncProjectTagLinks(tenantId, saved.getId(), saved.getTags());
 
         ProjectMemberEntity creatorMembership = new ProjectMemberEntity();
         creatorMembership.setId(new ProjectMemberId(saved.getId(), currentUser.getId()));
@@ -283,6 +344,7 @@ public class ProjectModuleService {
         enforceProjectManage(currentUser, projectId);
         applyProjectUpsert(project, request);
         ProjectEntity saved = projectRepository.save(project);
+        syncProjectTagLinks(tenantId, saved.getId(), saved.getTags());
         return toProjectResponse(saved, currentUser);
     }
 
@@ -324,18 +386,34 @@ public class ProjectModuleService {
         requireProject(projectId, tenantId);
         enforceProjectVisible(currentUser, projectId);
 
+        List<ProjectCustomRoleEntity> allRoles = projectCustomRoleRepository.findByProjectIdOrderByCreatedAtAsc(projectId);
+        Map<UUID, ProjectCustomRoleResponse> roleMap = allRoles.stream()
+                .collect(Collectors.toMap(ProjectCustomRoleEntity::getId,
+                        r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId())));
+
+        List<ProjectMemberRoleEntity> allMemberRoles = projectMemberRoleRepository.findByProjectId(projectId);
+        Map<UUID, List<ProjectCustomRoleResponse>> memberCustomRoles = new java.util.HashMap<>();
+        for (ProjectMemberRoleEntity mr : allMemberRoles) {
+            ProjectCustomRoleResponse crResp = roleMap.get(mr.getId().getCustomRoleId());
+            if (crResp != null) {
+                memberCustomRoles.computeIfAbsent(mr.getId().getUserId(), k -> new ArrayList<>()).add(crResp);
+            }
+        }
+
         List<ProjectMemberEntity> members = projectMemberRepository.findByIdProjectId(projectId);
         List<ProjectMemberResponse> responses = new ArrayList<>();
         for (ProjectMemberEntity member : members) {
             AppUserEntity user = requireUser(member.getId().getUserId(), tenantId);
             long taskCount = taskAssigneeRepository.countAssignedInProject(projectId, user.getId());
+            List<ProjectCustomRoleResponse> customRoles = memberCustomRoles.getOrDefault(user.getId(), List.of());
             responses.add(new ProjectMemberResponse(
                     user.getId(),
                     fullName(user),
                     user.getAvatarUrl(),
                     toFrontendProjectRole(member.getRole()),
                     asOffset(member.getJoinedAt()),
-                    taskCount
+                    taskCount,
+                    customRoles
             ));
         }
         return responses;
@@ -359,13 +437,21 @@ public class ProjectModuleService {
         projectMemberRepository.save(member);
 
         long taskCount = taskAssigneeRepository.countAssignedInProject(projectId, memberUser.getId());
+        List<ProjectMemberRoleEntity> memberRoles = projectMemberRoleRepository.findByProjectIdAndUserId(projectId, memberUser.getId());
+        List<ProjectCustomRoleResponse> customRoles = memberRoles.stream()
+                .map(mr -> projectCustomRoleRepository.findById(mr.getId().getCustomRoleId())
+                        .map(r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId()))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         return new ProjectMemberResponse(
                 memberUser.getId(),
                 fullName(memberUser),
                 memberUser.getAvatarUrl(),
                 toFrontendProjectRole(member.getRole()),
                 asOffset(member.getJoinedAt()),
-                taskCount
+                taskCount,
+                customRoles
         );
     }
 
@@ -384,13 +470,21 @@ public class ProjectModuleService {
         AppUserEntity user = requireUser(memberId, tenantId);
 
         long taskCount = taskAssigneeRepository.countAssignedInProject(projectId, user.getId());
+        List<ProjectMemberRoleEntity> memberRoles = projectMemberRoleRepository.findByProjectIdAndUserId(projectId, memberId);
+        List<ProjectCustomRoleResponse> customRoles = memberRoles.stream()
+                .map(mr -> projectCustomRoleRepository.findById(mr.getId().getCustomRoleId())
+                        .map(r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId()))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         return new ProjectMemberResponse(
                 user.getId(),
                 fullName(user),
                 user.getAvatarUrl(),
                 toFrontendProjectRole(saved.getRole()),
                 asOffset(saved.getJoinedAt()),
-                taskCount
+                taskCount,
+                customRoles
         );
     }
 
@@ -405,6 +499,116 @@ public class ProjectModuleService {
                 .findByIdProjectIdAndIdUserId(projectId, memberId)
                 .orElseThrow(() -> new NotFoundException("Project member not found"));
         projectMemberRepository.delete(member);
+        // Also remove their custom role assignments for this project
+        projectMemberRoleRepository.deleteByIdProjectIdAndIdUserId(projectId, memberId);
+    }
+
+    // ── Project custom roles ──────────────────────────────────────────────────
+
+    public List<ProjectCustomRoleResponse> listProjectCustomRoles(String userIdHeader, UUID projectId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectVisible(currentUser, projectId);
+
+        return projectCustomRoleRepository.findByProjectIdOrderByCreatedAtAsc(projectId).stream()
+                .map(r -> new ProjectCustomRoleResponse(r.getId(), r.getName(), r.getColor(), r.getProjectId()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ProjectCustomRoleResponse createProjectCustomRole(String userIdHeader, UUID projectId, ProjectCustomRoleRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        String name = request.name().trim();
+        if (projectCustomRoleRepository.existsByProjectIdAndNameIgnoreCase(projectId, name)) {
+            throw new BadRequestException("A role with this name already exists in this project");
+        }
+
+        ProjectCustomRoleEntity role = new ProjectCustomRoleEntity();
+        role.setTenantId(tenantId);
+        role.setProjectId(projectId);
+        role.setName(name);
+        role.setColor(request.color() != null && !request.color().isBlank() ? request.color() : "#64748B");
+        role.setCreatedBy(currentUser.getId());
+        ProjectCustomRoleEntity saved = projectCustomRoleRepository.save(role);
+        return new ProjectCustomRoleResponse(saved.getId(), saved.getName(), saved.getColor(), saved.getProjectId());
+    }
+
+    @Transactional
+    public ProjectCustomRoleResponse updateProjectCustomRole(String userIdHeader, UUID projectId, UUID roleId, ProjectCustomRoleRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectCustomRoleEntity role = projectCustomRoleRepository.findByIdAndProjectId(roleId, projectId)
+                .orElseThrow(() -> new NotFoundException("Project role not found"));
+
+        String name = request.name().trim();
+        // Check uniqueness only if name is changing
+        if (!role.getName().equalsIgnoreCase(name) && projectCustomRoleRepository.existsByProjectIdAndNameIgnoreCase(projectId, name)) {
+            throw new BadRequestException("A role with this name already exists in this project");
+        }
+        role.setName(name);
+        if (request.color() != null && !request.color().isBlank()) {
+            role.setColor(request.color());
+        }
+        ProjectCustomRoleEntity saved = projectCustomRoleRepository.save(role);
+        return new ProjectCustomRoleResponse(saved.getId(), saved.getName(), saved.getColor(), saved.getProjectId());
+    }
+
+    @Transactional
+    public void deleteProjectCustomRole(String userIdHeader, UUID projectId, UUID roleId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectCustomRoleEntity role = projectCustomRoleRepository.findByIdAndProjectId(roleId, projectId)
+                .orElseThrow(() -> new NotFoundException("Project role not found"));
+        projectCustomRoleRepository.delete(role);
+        // project_member_roles rows are cascade-deleted by FK
+    }
+
+    @Transactional
+    public void assignMemberCustomRole(String userIdHeader, UUID projectId, UUID memberId, UUID roleId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        // Validate member exists in project
+        projectMemberRepository.findByIdProjectIdAndIdUserId(projectId, memberId)
+                .orElseThrow(() -> new NotFoundException("Member not found in this project"));
+
+        // Validate role belongs to project
+        projectCustomRoleRepository.findByIdAndProjectId(roleId, projectId)
+                .orElseThrow(() -> new NotFoundException("Project role not found"));
+
+        ProjectMemberRoleId id = new ProjectMemberRoleId(projectId, memberId, roleId);
+        if (!projectMemberRoleRepository.existsById(id)) {
+            ProjectMemberRoleEntity entity = new ProjectMemberRoleEntity();
+            entity.setId(id);
+            entity.setAssignedAt(Instant.now());
+            projectMemberRoleRepository.save(entity);
+        }
+    }
+
+    @Transactional
+    public void removeMemberCustomRole(String userIdHeader, UUID projectId, UUID memberId, UUID roleId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireProject(projectId, tenantId);
+        enforceProjectManage(currentUser, projectId);
+
+        ProjectMemberRoleId id = new ProjectMemberRoleId(projectId, memberId, roleId);
+        if (projectMemberRoleRepository.existsById(id)) {
+            projectMemberRoleRepository.deleteById(id);
+        }
     }
 
     // ── Workflow stages ────────────────────────────────────────────────────────
@@ -522,8 +726,7 @@ public class ProjectModuleService {
 
         return projectMilestoneRepository.findByProjectIdOrderBySortOrderAsc(projectId)
                 .stream()
-                .map(m -> new MilestoneResponse(m.getId().toString(), m.getTitle(), m.getTargetDate(),
-                        m.getStatus() != null ? m.getStatus().toLowerCase() : "upcoming"))
+            .map(this::toMilestoneResponse)
                 .collect(Collectors.toList());
     }
 
@@ -531,20 +734,26 @@ public class ProjectModuleService {
     public MilestoneResponse createMilestone(String userIdHeader, UUID projectId, MilestoneUpsertRequest request) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
-        requireProject(projectId, tenantId);
+        ProjectEntity project = requireProject(projectId, tenantId);
         enforceProjectManage(currentUser, projectId);
 
         if (request.title() == null || request.title().isBlank()) {
             throw new BadRequestException("Milestone title is required");
         }
 
+        int sortOrder = nextMilestoneOrder(projectId, request.sortOrder());
+        LocalDate targetDate = request.targetDate();
+        validateMilestoneDateWithinProject(project, targetDate);
+        validateMilestoneChronology(projectId, null, sortOrder, targetDate);
+
         ProjectMilestoneEntity milestone = new ProjectMilestoneEntity();
         milestone.setTenantId(tenantId);
         milestone.setProjectId(projectId);
         milestone.setTitle(request.title().trim());
-        milestone.setTargetDate(request.targetDate());
+        milestone.setTargetDate(targetDate);
         milestone.setStatus(normalizeMilestoneStatus(request.status()));
-        milestone.setSortOrder(nextMilestoneOrder(projectId, request.sortOrder()));
+        milestone.setSortOrder(sortOrder);
+        milestone.setProgressOverride(normalizeMilestoneProgress(request.progress()));
         ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
         return toMilestoneResponse(saved);
     }
@@ -553,7 +762,7 @@ public class ProjectModuleService {
     public MilestoneResponse updateMilestone(String userIdHeader, UUID projectId, UUID milestoneId, MilestoneUpsertRequest request) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
-        requireProject(projectId, tenantId);
+        ProjectEntity project = requireProject(projectId, tenantId);
         enforceProjectManage(currentUser, projectId);
 
         ProjectMilestoneEntity milestone = projectMilestoneRepository.findById(milestoneId)
@@ -561,6 +770,16 @@ public class ProjectModuleService {
         if (!milestone.getProjectId().equals(projectId)) {
             throw new BadRequestException("Milestone does not belong to this project");
         }
+
+        LocalDate candidateTargetDate = request.targetDate() != null
+                ? request.targetDate()
+                : milestone.getTargetDate();
+        Integer candidateSortOrder = request.sortOrder() != null
+                ? request.sortOrder()
+                : milestone.getSortOrder();
+
+        validateMilestoneDateWithinProject(project, candidateTargetDate);
+        validateMilestoneChronology(projectId, milestoneId, candidateSortOrder, candidateTargetDate);
 
         if (request.title() != null) {
             if (request.title().isBlank()) {
@@ -576,6 +795,9 @@ public class ProjectModuleService {
         }
         if (request.sortOrder() != null) {
             milestone.setSortOrder(request.sortOrder());
+        }
+        if (request.progress() != null) {
+            milestone.setProgressOverride(normalizeMilestoneProgress(request.progress()));
         }
 
         ProjectMilestoneEntity saved = projectMilestoneRepository.save(milestone);
@@ -606,27 +828,96 @@ public class ProjectModuleService {
         enforceProjectVisible(currentUser, projectId);
 
         List<TaskEntity> tasks = taskRepository.findByTenantIdAndProjectIdOrderByCreatedAtDesc(tenantId, projectId);
-        List<TaskResponse> responses = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            responses.add(toTaskResponse(task, currentUser));
-        }
-        return responses;
+        return toTaskResponses(tasks, currentUser, tenantId);
     }
 
-    public List<TaskResponse> listMyTasks(String userIdHeader) {
+        public TaskPageResponse listMyTasks(
+            String userIdHeader,
+            String tab,
+            String search,
+            String status,
+            String priority,
+            UUID stageId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+        ) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
 
-        List<TaskEntity> tasks = taskRepository.findAssignedToUser(tenantId, currentUser.getId());
-        List<TaskResponse> responses = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            if (!isManager(currentUser)
-                    && !projectMemberRepository.existsByIdProjectIdAndIdUserId(task.getProjectId(), currentUser.getId())) {
-                continue;
-            }
-            responses.add(toTaskResponse(task, currentUser));
+        int normalizedPage = Math.max(page, 0);
+        int normalizedSize = normalizeMyTasksPageSize(size);
+        String normalizedTab = normalizeMyTasksTab(tab);
+        Set<TaskStatus> statusFilter = parseTaskStatusFilter(status);
+        Set<TaskPriority> priorityFilter = parseTaskPriorityFilter(priority);
+
+        List<TaskEntity> tasks = taskRepository.findAssignedOrReportedToUser(tenantId, currentUser.getId());
+        if (tasks.isEmpty()) {
+            return new TaskPageResponse(List.of(), normalizedPage, normalizedSize, 0, 0, false);
         }
-        return responses;
+
+        List<UUID> projectIds = tasks.stream().map(TaskEntity::getProjectId).distinct().toList();
+        Set<UUID> visibleProjectIds;
+        if (isManager(currentUser)) {
+            visibleProjectIds = new HashSet<>(projectIds);
+        } else {
+            visibleProjectIds = projectMemberRepository.findByIdProjectIdIn(projectIds)
+                .stream()
+                .filter(member -> member.getId().getUserId().equals(currentUser.getId()))
+                .map(member -> member.getId().getProjectId())
+                .collect(Collectors.toSet());
+        }
+
+        List<UUID> taskIds = tasks.stream().map(TaskEntity::getId).toList();
+        Map<UUID, Set<UUID>> assigneesByTaskId = taskAssigneeRepository.findByIdTaskIdIn(taskIds)
+            .stream()
+            .collect(Collectors.groupingBy(
+                assignee -> assignee.getId().getTaskId(),
+                Collectors.mapping(assignee -> assignee.getId().getUserId(), Collectors.toSet())
+            ));
+
+        Map<UUID, ProjectEntity> projectsById = projectRepository.findAllById(projectIds)
+            .stream()
+            .filter(project -> tenantId.equals(project.getTenantId()))
+            .collect(Collectors.toMap(ProjectEntity::getId, p -> p));
+
+        List<TaskEntity> filteredTasks = tasks.stream()
+            .filter(task -> visibleProjectIds.contains(task.getProjectId()))
+            .filter(task -> matchesMyTaskTab(
+                task,
+                normalizedTab,
+                currentUser.getId(),
+                assigneesByTaskId.getOrDefault(task.getId(), Set.of())
+            ))
+            .filter(task -> matchesTaskSearch(task, projectsById.get(task.getProjectId()), search))
+            .filter(task -> statusFilter == null || statusFilter.contains(safeTaskStatus(task)))
+            .filter(task -> priorityFilter == null || priorityFilter.contains(safeTaskPriority(task)))
+            .filter(task -> stageId == null || Objects.equals(task.getStageId(), stageId))
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        filteredTasks.sort(buildMyTasksComparator(sortBy, sortDir));
+
+        long totalElements = filteredTasks.size();
+        int fromIndex = Math.min(normalizedPage * normalizedSize, filteredTasks.size());
+        int toIndex = Math.min(fromIndex + normalizedSize, filteredTasks.size());
+        List<TaskEntity> pageTasks = fromIndex >= toIndex
+            ? List.of()
+            : filteredTasks.subList(fromIndex, toIndex);
+
+        int totalPages = totalElements == 0
+            ? 0
+            : (int) Math.ceil((double) totalElements / normalizedSize);
+        boolean hasNext = normalizedPage + 1 < totalPages;
+
+        return new TaskPageResponse(
+            toTaskResponses(pageTasks, currentUser, tenantId),
+            normalizedPage,
+            normalizedSize,
+            totalElements,
+            totalPages,
+            hasNext
+        );
     }
 
     public TaskResponse getTask(String userIdHeader, UUID taskId) {
@@ -657,10 +948,20 @@ public class ProjectModuleService {
         task.setProjectId(projectId);
         task.setCreatedBy(currentUser.getId());
         task.setUpdatedBy(currentUser.getId());
+        TaskStatus requestedStatus = parseTaskStatus(request.status(), task.getStatus());
+        validateTaskPrerequisitesForStatus(requestedStatus, request.assigneeIds(), request.reporterId(), request.progress(), request.actualEffort());
+        if (request.reporterId() != null) {
+            requireUser(request.reporterId(), tenantId);
+        }
         applyTaskUpsert(task, request, currentUser);
+        task.setTaskKey(generateTaskKey(tenantId, projectId));
+        if (task.getStartDate() == null) {
+            task.setStartDate(LocalDate.now());
+        }
 
         TaskEntity saved = taskRepository.save(task);
-        saveAssignees(saved.getId(), request.assigneeIds());
+        saveAssignees(tenantId, saved.getId(), request.assigneeIds());
+        syncTaskTagLinks(tenantId, saved.getId(), saved.getTags());
         logActivity(tenantId, saved.getId(), currentUser.getId(), "created", saved.getTitle());
         logAssigneeChanges(tenantId, saved.getId(), currentUser.getId(), List.of(), request.assigneeIds());
         return toTaskResponse(saved, currentUser);
@@ -673,6 +974,18 @@ public class ProjectModuleService {
         TaskEntity task = requireTask(taskId, tenantId);
         enforceTaskEdit(currentUser, task);
 
+        TaskStatus nextStatus = parseTaskStatus(request.status(), task.getStatus());
+        if (nextStatus != task.getStatus()) {
+            validateTaskTransition(task.getStatus(), nextStatus);
+            UUID reporterId = request.reporterId() != null ? request.reporterId() : task.getReporterId();
+            Integer effectiveProgress = request.progress() != null ? request.progress() : task.getProgress();
+            BigDecimal effectiveEffort = request.actualEffort() != null ? request.actualEffort() : task.getActualEffort();
+            validateTaskPrerequisitesForStatus(nextStatus, request.assigneeIds(), reporterId, effectiveProgress, effectiveEffort);
+        }
+        if (request.reporterId() != null && !request.reporterId().equals(task.getReporterId())) {
+            requireUser(request.reporterId(), tenantId);
+        }
+
         TaskStatus previousStatus = task.getStatus();
         TaskPriority previousPriority = task.getPriority();
         Integer previousProgress = task.getProgress();
@@ -684,7 +997,8 @@ public class ProjectModuleService {
 
         applyTaskUpsert(task, request, currentUser);
         TaskEntity saved = taskRepository.save(task);
-        saveAssignees(saved.getId(), request.assigneeIds());
+        saveAssignees(tenantId, saved.getId(), request.assigneeIds());
+        syncTaskTagLinks(tenantId, saved.getId(), saved.getTags());
         logTaskChanges(
             tenantId,
             saved,
@@ -717,8 +1031,14 @@ public class ProjectModuleService {
         UUID previousStageId = task.getStageId();
 
         TaskStatus nextStatus = parseTaskStatus(request.status(), task.getStatus());
-        if (nextStatus == TaskStatus.IN_REVIEW && task.getReporterId() == null) {
-            throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
+        if (nextStatus != task.getStatus()) {
+            validateTaskTransition(task.getStatus(), nextStatus);
+            List<UUID> assigneeIds = taskAssigneeRepository.findByIdTaskId(taskId)
+                    .stream()
+                    .map(a -> a.getId().getUserId())
+                    .toList();
+            Integer effectiveProgress = request.progress() != null ? request.progress() : task.getProgress();
+            validateTaskPrerequisitesForStatus(nextStatus, assigneeIds, task.getReporterId(), effectiveProgress, task.getActualEffort());
         }
 
         task.setStageId(request.stageId());
@@ -740,6 +1060,33 @@ public class ProjectModuleService {
         }
 
         return toTaskResponse(saved, currentUser);
+    }
+
+    @Transactional
+    public void deleteTask(String userIdHeader, UUID taskId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        TaskEntity task = requireTask(taskId, tenantId);
+        enforceTaskEdit(currentUser, task);
+
+        // Nullify parent reference on child tasks
+        List<TaskEntity> children = taskRepository.findByTenantIdAndParentTaskId(tenantId, taskId);
+        for (TaskEntity child : children) {
+            child.setParentTaskId(null);
+            taskRepository.save(child);
+        }
+
+        // Delete all related entities
+        taskAssigneeRepository.deleteByIdTaskId(taskId);
+        taskTagLinkRepository.deleteByIdTaskId(taskId);
+        taskDependencyRepository.deleteByIdTaskId(taskId);
+        taskDependencyRepository.deleteByIdBlockedByTaskId(taskId);
+        taskSubtaskRepository.deleteByTaskId(taskId);
+        taskReviewRepository.deleteByTaskId(taskId);
+        taskCommentRepository.deleteByTaskId(taskId);
+        taskActivityRepository.deleteByTaskId(taskId);
+
+        taskRepository.delete(task);
     }
 
     @Transactional
@@ -766,7 +1113,7 @@ public class ProjectModuleService {
         TaskDependencyEntity dependency = new TaskDependencyEntity();
         dependency.setId(new TaskDependencyId(taskId, blocker.getId()));
         taskDependencyRepository.save(dependency);
-        logActivity(tenantId, taskId, currentUser.getId(), "dependency_added", blocker.getId().toString());
+        logActivity(tenantId, taskId, currentUser.getId(), "dependency_added", blocker.getTitle());
         return toTaskResponse(task, currentUser);
     }
 
@@ -786,7 +1133,7 @@ public class ProjectModuleService {
         }
 
         taskDependencyRepository.deleteByIdTaskIdAndIdBlockedByTaskId(taskId, blockedByTaskId);
-        logActivity(tenantId, taskId, currentUser.getId(), "dependency_removed", blockedByTaskId.toString());
+        logActivity(tenantId, taskId, currentUser.getId(), "dependency_removed", blocker.getTitle());
         return toTaskResponse(task, currentUser);
     }
 
@@ -813,6 +1160,15 @@ public class ProjectModuleService {
         review.setContent(request.content());
         taskReviewRepository.save(review);
 
+        if (action == ReviewAction.CHANGES_REQUESTED && request.content() != null && !request.content().isBlank()) {
+            TaskCommentEntity rejection = new TaskCommentEntity();
+            rejection.setTenantId(tenantId);
+            rejection.setTaskId(taskId);
+            rejection.setAuthorId(currentUser.getId());
+            rejection.setContent("[REJECTION] " + request.content().trim());
+            taskCommentRepository.save(rejection);
+        }
+
         TaskStatus previousStatus = task.getStatus();
 
         if (action == ReviewAction.APPROVED) {
@@ -824,7 +1180,17 @@ public class ProjectModuleService {
 
         task.setUpdatedBy(currentUser.getId());
         taskRepository.save(task);
-        logActivity(tenantId, task.getId(), currentUser.getId(), "reviewed", action.name().toLowerCase());
+        String reviewValue = switch (action) {
+            case APPROVED -> "Approved";
+            case CHANGES_REQUESTED -> {
+                if (request.content() != null && !request.content().isBlank()) {
+                    yield "Changes requested: " + request.content().trim();
+                }
+                yield "Changes requested";
+            }
+            default -> request.content() == null ? "Commented" : request.content().trim();
+        };
+        logActivity(tenantId, task.getId(), currentUser.getId(), "reviewed", reviewValue);
         if (previousStatus != task.getStatus()) {
             logActivity(
                     tenantId,
@@ -837,27 +1203,80 @@ public class ProjectModuleService {
         return toTaskResponse(task, currentUser);
     }
 
-    public List<TaskResponse> reviewQueue(String userIdHeader, UUID projectId) {
+    public ReviewQueuePageResponse reviewQueue(
+            String userIdHeader,
+            String projectIdentifier,
+            String status,
+            Boolean changesRequested,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
         UUID tenantId = tenantId();
         AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
-        List<TaskEntity> tasks;
-        if (isManager(currentUser)) {
-            tasks = taskRepository.findByTenantIdAndStatusOrderByUpdatedAtDesc(tenantId, TaskStatus.IN_REVIEW);
-        } else {
-            tasks = taskRepository.findByTenantIdAndStatusAndReporterIdOrderByUpdatedAtDesc(
-                    tenantId,
-                    TaskStatus.IN_REVIEW,
-                    currentUser.getId()
-            );
+
+        UUID projectId = null;
+        if (projectIdentifier != null && !projectIdentifier.isBlank()) {
+            projectId = resolveProjectId(projectIdentifier, tenantId);
         }
 
-        List<TaskResponse> responses = new ArrayList<>();
-        for (TaskEntity task : tasks) {
-            if (projectId == null || task.getProjectId().equals(projectId)) {
-                responses.add(toTaskResponse(task, currentUser));
+        Set<TaskStatus> statuses = parseReviewStatuses(status);
+        Pageable pageable = buildReviewPageable(page, size, sortBy, sortDir);
+
+        Page<TaskEntity> taskPage;
+        if (isManager(currentUser)) {
+            if (Boolean.TRUE.equals(changesRequested)) {
+                // "Changes Requested" tab: tasks that have had changes requested
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueueWithChangesHistory(tenantId, statuses, pageable)
+                        : taskRepository.findReviewQueueByProjectWithChangesHistory(tenantId, projectId, statuses, pageable);
+            } else if (Boolean.FALSE.equals(changesRequested)) {
+                // "Pending Review" tab: fresh IN_REVIEW tasks with no CHANGES_REQUESTED history
+                taskPage = projectId == null
+                        ? taskRepository.findPendingReviewQueue(tenantId, pageable)
+                        : taskRepository.findPendingReviewQueueByProject(tenantId, projectId, pageable);
+            } else {
+                // All other manager tabs (all, approved)
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueue(tenantId, statuses, pageable)
+                        : taskRepository.findReviewQueueByProject(tenantId, projectId, statuses, pageable);
+            }
+        } else {
+            if (Boolean.TRUE.equals(changesRequested)) {
+                // "Rework Needed" tab: tasks that have had changes requested
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueueByAssigneeWithChangesHistory(tenantId, currentUser.getId(), statuses, pageable)
+                        : taskRepository.findReviewQueueByProjectAndAssigneeWithChangesHistory(
+                                tenantId, projectId, currentUser.getId(), statuses, pageable);
+            } else if (Boolean.FALSE.equals(changesRequested)) {
+                // "Under Review" tab: fresh submissions with no CHANGES_REQUESTED history
+                taskPage = projectId == null
+                        ? taskRepository.findUnderReviewByAssignee(tenantId, currentUser.getId(), pageable)
+                        : taskRepository.findUnderReviewByProjectAndAssignee(tenantId, projectId, currentUser.getId(), pageable);
+            } else {
+                // All other employee tabs (all, approved)
+                taskPage = projectId == null
+                        ? taskRepository.findReviewQueueByAssignee(tenantId, currentUser.getId(), statuses, pageable)
+                        : taskRepository.findReviewQueueByProjectAndAssignee(
+                                tenantId,
+                                projectId,
+                                currentUser.getId(),
+                                statuses,
+                                pageable
+                        );
             }
         }
-        return responses;
+
+        List<TaskResponse> content = toTaskResponses(taskPage.getContent(), currentUser, tenantId);
+        return new ReviewQueuePageResponse(
+                content,
+                taskPage.getNumber(),
+                taskPage.getSize(),
+                taskPage.getTotalElements(),
+                taskPage.getTotalPages(),
+                taskPage.hasNext()
+        );
     }
 
     // ── Task comments ─────────────────────────────────────────────────────────
@@ -990,47 +1409,188 @@ public class ProjectModuleService {
                 .collect(Collectors.toList());
     }
 
+    // ── Settings: Company tags ───────────────────────────────────────────────
+
+    public List<CompanyTagResponse> listCompanyTags(String userIdHeader) {
+        UUID tenantId = tenantId();
+        requireUser(parseUserId(userIdHeader), tenantId);
+        return companyTagRepository.findByTenantIdOrderByNameAsc(tenantId)
+                .stream()
+                .map(this::toCompanyTagResponse)
+                .toList();
+    }
+
+    @Transactional
+    public CompanyTagResponse createCompanyTag(String userIdHeader, CompanyTagUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireManager(currentUser);
+
+        String normalizedName = normalizeCompanyTagName(request.name());
+        if (companyTagRepository.existsByTenantIdAndNormalizedName(tenantId, normalizedName)) {
+            throw new BadRequestException("Tag already exists");
+        }
+
+        CompanyTagEntity entity = new CompanyTagEntity();
+        entity.setTenantId(tenantId);
+        entity.setName(request.name().trim());
+        entity.setNormalizedName(normalizedName);
+        entity.setColor(normalizeCompanyTagColor(request.color()));
+        entity.setCreatedBy(currentUser.getId());
+        entity.setUpdatedBy(currentUser.getId());
+
+        CompanyTagEntity saved = companyTagRepository.save(entity);
+        return toCompanyTagResponse(saved);
+    }
+
+    @Transactional
+    public CompanyTagResponse updateCompanyTag(String userIdHeader, UUID tagId, CompanyTagUpsertRequest request) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireManager(currentUser);
+
+        CompanyTagEntity entity = companyTagRepository.findByIdAndTenantId(tagId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Company tag not found"));
+
+        String normalizedName = normalizeCompanyTagName(request.name());
+        if (companyTagRepository.existsByTenantIdAndNormalizedNameAndIdNot(tenantId, normalizedName, tagId)) {
+            throw new BadRequestException("Tag already exists");
+        }
+
+        entity.setName(request.name().trim());
+        entity.setNormalizedName(normalizedName);
+        entity.setColor(normalizeCompanyTagColor(request.color()));
+        entity.setUpdatedBy(currentUser.getId());
+
+        CompanyTagEntity saved = companyTagRepository.save(entity);
+        return toCompanyTagResponse(saved);
+    }
+
+    @Transactional
+    public void deleteCompanyTag(String userIdHeader, UUID tagId) {
+        UUID tenantId = tenantId();
+        AppUserEntity currentUser = requireUser(parseUserId(userIdHeader), tenantId);
+        requireManager(currentUser);
+
+        CompanyTagEntity entity = companyTagRepository.findByIdAndTenantId(tagId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Company tag not found"));
+        companyTagRepository.delete(entity);
+    }
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
+    private List<ProjectResponse> toProjectResponses(List<ProjectEntity> projects, AppUserEntity currentUser, UUID tenantId) {
+        if (projects.isEmpty()) {
+            return List.of();
+        }
+
+        ProjectMappingContext context = buildProjectMappingContext(projects, tenantId);
+        List<ProjectResponse> responses = new ArrayList<>(projects.size());
+        for (ProjectEntity project : projects) {
+            responses.add(toProjectResponse(project, currentUser, context));
+        }
+        return responses;
+    }
+
     private ProjectResponse toProjectResponse(ProjectEntity project, AppUserEntity currentUser) {
-        List<UserSummaryResponse> assignees = new ArrayList<>();
-        for (ProjectMemberEntity member : projectMemberRepository.findByIdProjectId(project.getId())) {
-            appUserRepository.findById(member.getId().getUserId())
-                    .ifPresent(u -> assignees.add(new UserSummaryResponse(u.getId(), fullName(u), u.getAvatarUrl())));
+        ProjectMappingContext context = buildProjectMappingContext(List.of(project), project.getTenantId());
+        return toProjectResponse(project, currentUser, context);
+    }
+
+    private ProjectResponse toProjectResponse(ProjectEntity project, AppUserEntity currentUser, ProjectMappingContext context) {
+        List<ProjectMemberEntity> members = context.membersByProjectId().getOrDefault(project.getId(), List.of());
+        List<UserSummaryResponse> assignees = new ArrayList<>(members.size());
+        for (ProjectMemberEntity member : members) {
+            AppUserEntity user = context.usersById().get(member.getId().getUserId());
+            if (user != null) {
+                assignees.add(new UserSummaryResponse(user.getId(), fullName(user), user.getAvatarUrl()));
+            }
         }
 
         return new ProjectResponse(
                 project.getId(),
+                project.getSlug(),
                 project.getName(),
                 project.getDescription(),
                 project.getManagerId(),
                 project.getCustomer(),
-            toFrontendProjectStatus(safeProjectStatus(project).name()),
-            safeProjectPriority(project).name().toLowerCase(),
+                toFrontendProjectStatus(safeProjectStatus(project).name()),
+                safeProjectPriority(project).name().toLowerCase(),
                 project.getProgress() == null ? 0 : project.getProgress(),
                 project.getDueDate(),
-            safeTags(project.getTags()),
+                safeTags(project.getTags()),
                 asOffset(project.getCreatedAt()),
                 assignees,
                 canManageProject(currentUser, project.getId())
         );
     }
 
-    private TaskResponse toTaskResponse(TaskEntity task, AppUserEntity currentUser) {
-        List<UserSummaryResponse> assignees = new ArrayList<>();
-        List<TaskAssigneeEntity> taskAssignees = taskAssigneeRepository.findByIdTaskId(task.getId());
-        Set<UUID> assigneeIds = new HashSet<>();
-        for (TaskAssigneeEntity assignee : taskAssignees) {
-            assigneeIds.add(assignee.getId().getUserId());
-            appUserRepository.findById(assignee.getId().getUserId())
-                    .ifPresent(u -> assignees.add(new UserSummaryResponse(u.getId(), fullName(u), u.getAvatarUrl())));
+    private ProjectMappingContext buildProjectMappingContext(List<ProjectEntity> projects, UUID tenantId) {
+        if (projects.isEmpty()) {
+            return new ProjectMappingContext(Map.of(), Map.of());
         }
 
-        List<TaskReviewResponse> reviews = taskReviewRepository
-                .findByTenantIdAndTaskIdOrderByCreatedAtAsc(task.getTenantId(), task.getId())
+        List<UUID> projectIds = projects.stream().map(ProjectEntity::getId).toList();
+        List<ProjectMemberEntity> memberEntities = projectMemberRepository.findByIdProjectIdIn(projectIds);
+
+        Map<UUID, List<ProjectMemberEntity>> membersByProjectId = memberEntities.stream()
+                .collect(Collectors.groupingBy(m -> m.getId().getProjectId()));
+
+        Set<UUID> userIds = memberEntities.stream()
+                .map(m -> m.getId().getUserId())
+                .collect(Collectors.toSet());
+
+        Map<UUID, AppUserEntity> usersById = appUserRepository
+                .findAllById(userIds)
                 .stream()
+                .filter(user -> tenantId.equals(user.getTenantId()))
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
+        return new ProjectMappingContext(membersByProjectId, usersById);
+    }
+
+    private record ProjectMappingContext(
+            Map<UUID, List<ProjectMemberEntity>> membersByProjectId,
+            Map<UUID, AppUserEntity> usersById
+    ) {
+    }
+
+    private List<TaskResponse> toTaskResponses(List<TaskEntity> tasks, AppUserEntity currentUser, UUID tenantId) {
+        if (tasks.isEmpty()) {
+            return List.of();
+        }
+
+        TaskMappingContext context = buildTaskMappingContext(tasks, tenantId);
+        List<TaskResponse> responses = new ArrayList<>(tasks.size());
+        for (TaskEntity task : tasks) {
+            responses.add(toTaskResponse(task, currentUser, context));
+        }
+        return responses;
+    }
+
+    private TaskResponse toTaskResponse(TaskEntity task, AppUserEntity currentUser) {
+        TaskMappingContext context = buildTaskMappingContext(List.of(task), task.getTenantId());
+        return toTaskResponse(task, currentUser, context);
+    }
+
+    private TaskResponse toTaskResponse(TaskEntity task, AppUserEntity currentUser, TaskMappingContext context) {
+        ProjectEntity project = context.projectsById().get(task.getProjectId());
+        List<TaskAssigneeEntity> taskAssignees = context.assigneesByTaskId().getOrDefault(task.getId(), List.of());
+        Set<UUID> assigneeIds = new HashSet<>();
+        List<UserSummaryResponse> assignees = new ArrayList<>(taskAssignees.size());
+        for (TaskAssigneeEntity assignee : taskAssignees) {
+            UUID assigneeId = assignee.getId().getUserId();
+            assigneeIds.add(assigneeId);
+            AppUserEntity user = context.usersById().get(assigneeId);
+            if (user != null) {
+                assignees.add(new UserSummaryResponse(user.getId(), fullName(user), user.getAvatarUrl()));
+            }
+        }
+
+        List<TaskReviewEntity> taskReviews = context.reviewsByTaskId().getOrDefault(task.getId(), List.of());
+        List<TaskReviewResponse> reviews = taskReviews.stream()
                 .map(review -> {
-                    AppUserEntity author = appUserRepository.findById(review.getReviewerId()).orElse(null);
+                    AppUserEntity author = context.usersById().get(review.getReviewerId());
                     return new TaskReviewResponse(
                             review.getId(),
                             review.getReviewerId(),
@@ -1049,50 +1609,147 @@ public class ProjectModuleService {
         boolean canReview = isManager(currentUser)
                 || (task.getReporterId() != null && task.getReporterId().equals(currentUser.getId()));
 
-        List<UUID> blockedBy = taskDependencyRepository.findByIdTaskId(task.getId())
-            .stream()
-            .map(dep -> dep.getId().getBlockedByTaskId())
-            .toList();
+        List<UUID> blockedBy = context.dependenciesByTaskId().getOrDefault(task.getId(), List.of())
+                .stream()
+                .map(dep -> dep.getId().getBlockedByTaskId())
+                .toList();
+
+        AppUserEntity reporter = task.getReporterId() == null ? null : context.usersById().get(task.getReporterId());
 
         return new TaskResponse(
                 task.getId(),
+                task.getProjectId(),
+                task.getStageId(),
+                task.getMilestoneId(),
+            project == null ? "Project" : project.getName(),
+            project == null ? null : project.getSlug(),
                 task.getTitle(),
                 task.getDescription(),
-            safeTaskPriority(task).name().toLowerCase(),
-            safeTaskStatus(task).name(),
+                safeTaskPriority(task).name().toLowerCase(),
+                safeTaskStatus(task).name(),
                 task.getProgress() == null ? 0 : task.getProgress(),
+            task.getStartDate(),
                 task.getDueDate(),
                 assignees,
-            safeTags(task.getTags()),
+                safeTags(task.getTags()),
                 task.getReporterId(),
+            reporter == null ? null : fullName(reporter),
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
-            blockedBy,
+                blockedBy,
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),
-                task.getTaskKey() == null ? "TASK-" + task.getId().toString().substring(0, 8).toUpperCase() : task.getTaskKey(),
+            resolveTaskKey(task, project),
                 canEdit,
-                canReview
+                canReview,
+                task.getBlockedReason()
         );
     }
 
-    private TaskDetailResponse toTaskDetailResponse(TaskEntity task, AppUserEntity currentUser, UUID tenantId) {
-        // Build base task data
-        List<UserSummaryResponse> assignees = new ArrayList<>();
-        List<TaskAssigneeEntity> taskAssignees = taskAssigneeRepository.findByIdTaskId(task.getId());
-        Set<UUID> assigneeIds = new HashSet<>();
-        for (TaskAssigneeEntity assignee : taskAssignees) {
-            assigneeIds.add(assignee.getId().getUserId());
-            appUserRepository.findById(assignee.getId().getUserId())
-                    .ifPresent(u -> assignees.add(new UserSummaryResponse(u.getId(), fullName(u), u.getAvatarUrl())));
+    private TaskMappingContext buildTaskMappingContext(List<TaskEntity> tasks, UUID tenantId) {
+        if (tasks.isEmpty()) {
+            return new TaskMappingContext(Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
         }
 
-        List<TaskReviewResponse> reviews = taskReviewRepository
-                .findByTenantIdAndTaskIdOrderByCreatedAtAsc(tenantId, task.getId())
+        List<UUID> taskIds = tasks.stream().map(TaskEntity::getId).toList();
+        List<UUID> projectIds = tasks.stream().map(TaskEntity::getProjectId).distinct().toList();
+
+        List<TaskAssigneeEntity> assignees = taskAssigneeRepository.findByIdTaskIdIn(taskIds);
+        List<TaskReviewEntity> reviews = taskReviewRepository.findByTenantIdAndTaskIdInOrderByCreatedAtAsc(tenantId, taskIds);
+        List<TaskDependencyEntity> dependencies = taskDependencyRepository.findByIdTaskIdIn(taskIds);
+
+        Map<UUID, List<TaskAssigneeEntity>> assigneesByTaskId = assignees.stream()
+                .collect(Collectors.groupingBy(a -> a.getId().getTaskId()));
+
+        Map<UUID, List<TaskReviewEntity>> reviewsByTaskId = reviews.stream()
+                .collect(Collectors.groupingBy(TaskReviewEntity::getTaskId));
+
+        Map<UUID, List<TaskDependencyEntity>> dependenciesByTaskId = dependencies.stream()
+                .collect(Collectors.groupingBy(d -> d.getId().getTaskId()));
+
+        Set<UUID> userIds = new HashSet<>();
+        for (TaskAssigneeEntity assignee : assignees) {
+            userIds.add(assignee.getId().getUserId());
+        }
+        for (TaskReviewEntity review : reviews) {
+            userIds.add(review.getReviewerId());
+        }
+        for (TaskEntity task : tasks) {
+            if (task.getReporterId() != null) {
+                userIds.add(task.getReporterId());
+            }
+        }
+
+        Map<UUID, ProjectEntity> projectsById = projectRepository.findAllById(projectIds)
                 .stream()
+                .filter(project -> tenantId.equals(project.getTenantId()))
+                .collect(Collectors.toMap(ProjectEntity::getId, p -> p));
+
+        Map<UUID, AppUserEntity> usersById = appUserRepository.findAllById(userIds)
+                .stream()
+                .filter(user -> tenantId.equals(user.getTenantId()))
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
+        return new TaskMappingContext(assigneesByTaskId, reviewsByTaskId, dependenciesByTaskId, usersById, projectsById);
+    }
+
+    private record TaskMappingContext(
+            Map<UUID, List<TaskAssigneeEntity>> assigneesByTaskId,
+            Map<UUID, List<TaskReviewEntity>> reviewsByTaskId,
+            Map<UUID, List<TaskDependencyEntity>> dependenciesByTaskId,
+            Map<UUID, AppUserEntity> usersById,
+            Map<UUID, ProjectEntity> projectsById
+    ) {
+    }
+
+    private TaskDetailResponse toTaskDetailResponse(TaskEntity task, AppUserEntity currentUser, UUID tenantId) {
+        ProjectEntity project = projectRepository.findByIdAndTenantId(task.getProjectId(), tenantId).orElse(null);
+        List<TaskAssigneeEntity> taskAssignees = taskAssigneeRepository.findByIdTaskId(task.getId());
+        List<TaskReviewEntity> reviewEntities = taskReviewRepository
+                .findByTenantIdAndTaskIdOrderByCreatedAtAsc(tenantId, task.getId());
+        List<TaskSubtaskEntity> subtaskEntities = taskSubtaskRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
+        List<TaskCommentEntity> commentEntities = taskCommentRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
+        List<TaskActivityEntity> activityEntities = taskActivityRepository.findByTaskIdOrderByCreatedAtAsc(task.getId());
+
+        Set<UUID> userIds = new HashSet<>();
+        for (TaskAssigneeEntity assignee : taskAssignees) {
+            userIds.add(assignee.getId().getUserId());
+        }
+        for (TaskReviewEntity reviewEntity : reviewEntities) {
+            userIds.add(reviewEntity.getReviewerId());
+        }
+        for (TaskCommentEntity commentEntity : commentEntities) {
+            userIds.add(commentEntity.getAuthorId());
+        }
+        if (task.getReporterId() != null) {
+            userIds.add(task.getReporterId());
+        }
+        for (TaskActivityEntity activityEntity : activityEntities) {
+            if (activityEntity.getActorId() != null) {
+                userIds.add(activityEntity.getActorId());
+            }
+        }
+
+        Map<UUID, AppUserEntity> usersById = appUserRepository.findAllById(userIds)
+                .stream()
+                .filter(user -> tenantId.equals(user.getTenantId()))
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
+        List<UserSummaryResponse> assignees = new ArrayList<>();
+        Set<UUID> assigneeIds = new HashSet<>();
+        for (TaskAssigneeEntity assignee : taskAssignees) {
+            UUID assigneeId = assignee.getId().getUserId();
+            assigneeIds.add(assigneeId);
+            AppUserEntity user = usersById.get(assigneeId);
+            if (user != null) {
+                assignees.add(new UserSummaryResponse(user.getId(), fullName(user), user.getAvatarUrl()));
+            }
+        }
+
+        List<TaskReviewResponse> reviews = reviewEntities.stream()
                 .map(review -> {
-                    AppUserEntity author = appUserRepository.findById(review.getReviewerId()).orElse(null);
+                    AppUserEntity author = usersById.get(review.getReviewerId());
                     return new TaskReviewResponse(
                             review.getId(),
                             review.getReviewerId(),
@@ -1111,19 +1768,15 @@ public class ProjectModuleService {
         boolean canReview = isManager(currentUser)
                 || (task.getReporterId() != null && task.getReporterId().equals(currentUser.getId()));
 
-        // Subtasks
-        List<TaskSubtaskResponse> subtasks = taskSubtaskRepository
-                .findByTaskIdOrderByCreatedAtAsc(task.getId())
+        List<TaskSubtaskResponse> subtasks = subtaskEntities
                 .stream()
                 .map(s -> new TaskSubtaskResponse(s.getId(), s.getTitle(), Boolean.TRUE.equals(s.getCompleted())))
                 .collect(Collectors.toList());
 
-        // Comments
-        List<TaskCommentResponse> comments = taskCommentRepository
-                .findByTaskIdOrderByCreatedAtAsc(task.getId())
+        List<TaskCommentResponse> comments = commentEntities
                 .stream()
                 .map(c -> {
-                    AppUserEntity author = appUserRepository.findById(c.getAuthorId()).orElse(null);
+                AppUserEntity author = usersById.get(c.getAuthorId());
                     return new TaskCommentResponse(
                             c.getId(),
                             c.getAuthorId(),
@@ -1135,18 +1788,17 @@ public class ProjectModuleService {
                 })
                 .collect(Collectors.toList());
 
-        // Activities
-        List<TaskActivityResponse> activities = taskActivityRepository
-                .findByTaskIdOrderByCreatedAtAsc(task.getId())
+        List<TaskActivityResponse> activities = activityEntities
                 .stream()
                 .map(a -> {
-                    AppUserEntity actor = a.getActorId() != null ? appUserRepository.findById(a.getActorId()).orElse(null) : null;
+                AppUserEntity actor = a.getActorId() != null ? usersById.get(a.getActorId()) : null;
                     return new TaskActivityResponse(
                             a.getId(),
                             a.getActorId(),
                             actor == null ? "System" : fullName(actor),
                             a.getAction(),
                             a.getValue(),
+                            formatActivityDescription(a.getAction(), a.getValue()),
                             asOffset(a.getCreatedAt())
                     );
                 })
@@ -1160,22 +1812,29 @@ public class ProjectModuleService {
         return new TaskDetailResponse(
                 task.getId(),
                 task.getProjectId(),
+            task.getStageId(),
+            task.getMilestoneId(),
+                project == null ? "Project" : project.getName(),
+                project == null ? null : project.getSlug(),
                 task.getTitle(),
                 task.getDescription(),
             safeTaskPriority(task).name().toLowerCase(),
             safeTaskStatus(task).name(),
                 task.getProgress() == null ? 0 : task.getProgress(),
+                task.getStartDate(),
                 task.getDueDate(),
                 assignees,
             safeTags(task.getTags()),
                 task.getReporterId(),
+                task.getReporterId() == null ? null : usersById.containsKey(task.getReporterId()) ? fullName(usersById.get(task.getReporterId())) : null,
                 task.getEstimatedEffort(),
                 task.getActualEffort(),
             blockedBy,
+                task.getBlockedReason(),
                 reviews,
                 asOffset(task.getCreatedAt()),
                 asOffset(task.getUpdatedAt()),
-                task.getTaskKey() == null ? "TASK-" + task.getId().toString().substring(0, 8).toUpperCase() : task.getTaskKey(),
+                resolveTaskKey(task, project),
                 canEdit,
                 canReview,
                 subtasks,
@@ -1185,13 +1844,18 @@ public class ProjectModuleService {
     }
 
     private void applyProjectUpsert(ProjectEntity project, ProjectUpsertRequest request) {
-        project.setName(request.title());
+        String normalizedTitle = request.title() == null ? "" : request.title().trim();
+        project.setName(normalizedTitle);
+        project.setSlug(generateUniqueProjectSlug(project.getTenantId(), normalizedTitle, project.getId()));
         project.setDescription(request.description());
         // Guard enum parsing to avoid NPEs and invalid enum values from client input.
         project.setStatus(parseProjectStatus(request.status(), project.getStatus()));
         project.setPriority(parseTaskPriority(request.priority(), project.getPriority()));
         project.setProgress(request.progress() == null ? 0 : request.progress());
+        validateProjectDateRange(request.startDate(), request.dueDate());
         project.setStartDate(request.startDate());
+        // Keep legacy end_date aligned with due_date until old consumers are removed.
+        project.setEndDate(request.dueDate());
         project.setDueDate(request.dueDate());
         // Normalize jsonb tags to a valid JSON string to prevent casting errors.
         project.setTags(normalizeTags(request.tags()));
@@ -1212,24 +1876,53 @@ public class ProjectModuleService {
         task.setPriority(parseTaskPriority(request.priority(), task.getPriority()));
         task.setProgress(request.progress() == null ? 0 : request.progress());
         task.setDueDate(request.dueDate());
+        if (task.getStartDate() == null) {
+            task.setStartDate(LocalDate.now());
+        }
         if (request.reporterId() != null) {
             task.setReporterId(request.reporterId());
         }
         task.setEstimatedEffort(request.estimatedEffort());
         task.setActualEffort(request.actualEffort());
         task.setParentTaskId(request.parentTaskId());
-        task.setStageId(request.stageId());
+
+        // Handle blocked reason
+        if (nextStatus == TaskStatus.BLOCKED) {
+            task.setBlockedReason(request.blockedReason());
+        } else {
+            task.setBlockedReason(null);
+        }
+        if (request.stageId() != null) {
+            WorkflowStageEntity stage = workflowStageRepository.findById(request.stageId())
+                    .orElseThrow(() -> new NotFoundException("Workflow stage not found"));
+            if (!stage.getProjectId().equals(task.getProjectId())) {
+                throw new BadRequestException("Stage does not belong to the task's project");
+            }
+            task.setStageId(request.stageId());
+        }
+        if (request.milestoneId() != null) {
+            ProjectMilestoneEntity milestone = projectMilestoneRepository.findById(request.milestoneId())
+                    .orElseThrow(() -> new NotFoundException("Milestone not found"));
+            if (!milestone.getProjectId().equals(task.getProjectId())) {
+                throw new BadRequestException("Milestone does not belong to the task's project");
+            }
+            if (!Objects.equals(milestone.getTenantId(), task.getTenantId())) {
+                throw new BadRequestException("Milestone does not belong to your tenant");
+            }
+            task.setMilestoneId(request.milestoneId());
+        }
         // Normalize jsonb tags to a valid JSON string to prevent casting errors.
         task.setTags(normalizeTags(request.tags()));
         task.setUpdatedBy(currentUser.getId());
     }
 
-    private void saveAssignees(UUID taskId, List<UUID> assigneeIds) {
+    private void saveAssignees(UUID tenantId, UUID taskId, List<UUID> assigneeIds) {
         taskAssigneeRepository.deleteByIdTaskId(taskId);
         if (assigneeIds == null) {
             return;
         }
         for (UUID assigneeId : assigneeIds) {
+            requireUser(assigneeId, tenantId);
             TaskAssigneeEntity entity = new TaskAssigneeEntity();
             entity.setId(new TaskAssigneeId(taskId, assigneeId));
             entity.setAssignedAt(Instant.now());
@@ -1270,6 +1963,161 @@ public class ProjectModuleService {
         }
     }
 
+    private int normalizeMyTasksPageSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_MY_TASKS_PAGE_SIZE;
+        }
+        return Math.min(size, MAX_MY_TASKS_PAGE_SIZE);
+    }
+
+    private String normalizeMyTasksTab(String rawTab) {
+        if (rawTab == null || rawTab.isBlank()) {
+            return "assigned";
+        }
+
+        String normalized = rawTab.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "assigned", "created", "reviewing", "all" -> normalized;
+            default -> throw new BadRequestException("Invalid my tasks tab: " + rawTab);
+        };
+    }
+
+    private Set<TaskStatus> parseTaskStatusFilter(String rawStatuses) {
+        if (rawStatuses == null || rawStatuses.isBlank()) {
+            return null;
+        }
+
+        Set<TaskStatus> parsed = new HashSet<>();
+        for (String token : rawStatuses.split(",")) {
+            String value = token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                parsed.add(TaskStatus.valueOf(value.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ex) {
+                throw new BadRequestException("Invalid task status filter: " + value);
+            }
+        }
+
+        return parsed.isEmpty() ? null : parsed;
+    }
+
+    private Set<TaskPriority> parseTaskPriorityFilter(String rawPriorities) {
+        if (rawPriorities == null || rawPriorities.isBlank()) {
+            return null;
+        }
+
+        Set<TaskPriority> parsed = new HashSet<>();
+        for (String token : rawPriorities.split(",")) {
+            String value = token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                parsed.add(TaskPriority.valueOf(value.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ex) {
+                throw new BadRequestException("Invalid task priority filter: " + value);
+            }
+        }
+
+        return parsed.isEmpty() ? null : parsed;
+    }
+
+    private boolean matchesMyTaskTab(TaskEntity task, String tab, UUID currentUserId, Set<UUID> assigneeIds) {
+        return switch (tab) {
+            case "assigned" -> assigneeIds.contains(currentUserId);
+            case "created" -> Objects.equals(task.getReporterId(), currentUserId);
+            case "reviewing" -> Objects.equals(task.getReporterId(), currentUserId)
+                    && safeTaskStatus(task) == TaskStatus.IN_REVIEW;
+            case "all" -> true;
+            default -> true;
+        };
+    }
+
+    private boolean matchesTaskSearch(TaskEntity task, ProjectEntity project, String rawSearch) {
+        if (rawSearch == null || rawSearch.isBlank()) {
+            return true;
+        }
+
+        String keyword = rawSearch.trim().toLowerCase(Locale.ROOT);
+        String title = task.getTitle() == null ? "" : task.getTitle().toLowerCase(Locale.ROOT);
+        String description = task.getDescription() == null ? "" : task.getDescription().toLowerCase(Locale.ROOT);
+        String taskKey = task.getTaskKey() == null ? "" : task.getTaskKey().toLowerCase(Locale.ROOT);
+        String projectName = project == null || project.getName() == null
+                ? ""
+                : project.getName().toLowerCase(Locale.ROOT);
+
+        return title.contains(keyword)
+                || description.contains(keyword)
+                || taskKey.contains(keyword)
+                || projectName.contains(keyword);
+    }
+
+    private Comparator<TaskEntity> buildMyTasksComparator(String sortBy, String sortDir) {
+        String normalizedSortBy = sortBy == null || sortBy.isBlank()
+                ? "updatedat"
+                : sortBy.trim().toLowerCase(Locale.ROOT);
+
+        Comparator<TaskEntity> comparator = switch (normalizedSortBy) {
+            case "createdat" -> Comparator.comparing(
+                    TaskEntity::getCreatedAt,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            case "duedate" -> Comparator.comparing(
+                    TaskEntity::getDueDate,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            case "startdate" -> Comparator.comparing(
+                    TaskEntity::getStartDate,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            case "priority" -> Comparator.comparingInt(task -> taskPrioritySortRank(safeTaskPriority(task)));
+            case "status" -> Comparator.comparingInt(task -> safeTaskStatus(task).ordinal());
+            case "title" -> Comparator.comparing(
+                    task -> task.getTitle() == null ? "" : task.getTitle().toLowerCase(Locale.ROOT)
+            );
+            case "updatedat" -> Comparator.comparing(
+                    TaskEntity::getUpdatedAt,
+                    Comparator.nullsLast(Comparator.naturalOrder())
+            );
+            default -> throw new BadRequestException("Invalid sortBy value: " + sortBy);
+        };
+
+        comparator = comparator.thenComparing(TaskEntity::getId);
+        String normalizedSortDir = sortDir == null || sortDir.isBlank()
+                ? "desc"
+                : sortDir.trim().toLowerCase(Locale.ROOT);
+        return switch (normalizedSortDir) {
+            case "asc" -> comparator;
+            case "desc" -> comparator.reversed();
+            default -> throw new BadRequestException("Invalid sortDir value: " + sortDir);
+        };
+    }
+
+    private int taskPrioritySortRank(TaskPriority priority) {
+        return switch (priority) {
+            case URGENT -> 0;
+            case HIGH -> 1;
+            case MEDIUM -> 2;
+            case LOW -> 3;
+        };
+    }
+
+    private Integer normalizeMilestoneProgress(Integer rawProgress) {
+        if (rawProgress == null) {
+            return null;
+        }
+        if (rawProgress < 0 || rawProgress > 100) {
+            throw new BadRequestException("Milestone progress must be between 0 and 100");
+        }
+        return rawProgress;
+    }
+
+    private int clampProgress(int rawProgress) {
+        return Math.max(0, Math.min(100, rawProgress));
+    }
+
     private ReviewAction parseReviewAction(String raw) {
         if (raw == null || raw.isBlank()) {
             throw new BadRequestException("Review action is required");
@@ -1278,6 +2126,35 @@ public class ProjectModuleService {
             return ReviewAction.valueOf(raw.toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException("Invalid review action: " + raw);
+        }
+    }
+
+    private void validateTaskTransition(TaskStatus from, TaskStatus to) {
+        if (from == to) {
+            return;
+        }
+        Set<TaskStatus> allowed = TASK_TRANSITIONS.getOrDefault(from, Set.of());
+        if (!allowed.contains(to)) {
+            throw new BadRequestException("Cannot move task from " + from + " to " + to);
+        }
+    }
+
+    private void validateTaskPrerequisitesForStatus(TaskStatus status, List<UUID> assigneeIds, UUID reporterId, Integer progress, BigDecimal actualEffort) {
+        if (status == TaskStatus.IN_PROGRESS) {
+            if (assigneeIds == null || assigneeIds.isEmpty()) {
+                throw new BadRequestException("Cannot move task to IN_PROGRESS without an assignee");
+            }
+        }
+        if (status == TaskStatus.IN_REVIEW) {
+            if (reporterId == null) {
+                throw new BadRequestException("reporterId is required before moving task to IN_REVIEW");
+            }
+            if (progress == null || progress < 100) {
+                throw new BadRequestException("Progress must be 100% before submitting for review");
+            }
+            if (actualEffort == null || actualEffort.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException("Please log actual effort before submitting for review");
+            }
         }
     }
 
@@ -1317,11 +2194,223 @@ public class ProjectModuleService {
         return normalizeTags(raw);
     }
 
+    private void syncProjectTagLinks(UUID tenantId, UUID projectId, String rawTags) {
+        projectTagLinkRepository.deleteByIdProjectId(projectId);
+
+        Set<String> normalizedTagNames = extractNormalizedTagNames(rawTags);
+        if (normalizedTagNames.isEmpty()) {
+            return;
+        }
+
+        List<CompanyTagEntity> tags = companyTagRepository.findByTenantIdAndNormalizedNameIn(tenantId, normalizedTagNames);
+        if (tags.isEmpty()) {
+            return;
+        }
+
+        List<ProjectTagLinkEntity> links = new ArrayList<>(tags.size());
+        for (CompanyTagEntity tag : tags) {
+            ProjectTagLinkEntity link = new ProjectTagLinkEntity();
+            link.setId(new ProjectTagLinkId(projectId, tag.getId()));
+            link.setTenantId(tenantId);
+            links.add(link);
+        }
+
+        projectTagLinkRepository.saveAll(links);
+    }
+
+    private void syncTaskTagLinks(UUID tenantId, UUID taskId, String rawTags) {
+        taskTagLinkRepository.deleteByIdTaskId(taskId);
+
+        Set<String> normalizedTagNames = extractNormalizedTagNames(rawTags);
+        if (normalizedTagNames.isEmpty()) {
+            return;
+        }
+
+        List<CompanyTagEntity> tags = companyTagRepository.findByTenantIdAndNormalizedNameIn(tenantId, normalizedTagNames);
+        if (tags.isEmpty()) {
+            return;
+        }
+
+        List<TaskTagLinkEntity> links = new ArrayList<>(tags.size());
+        for (CompanyTagEntity tag : tags) {
+            TaskTagLinkEntity link = new TaskTagLinkEntity();
+            link.setId(new TaskTagLinkId(taskId, tag.getId()));
+            link.setTenantId(tenantId);
+            links.add(link);
+        }
+
+        taskTagLinkRepository.saveAll(links);
+    }
+
+    private Set<String> extractNormalizedTagNames(String rawTags) {
+        String normalizedJson = normalizeTags(rawTags);
+        try {
+            JsonNode root = OBJECT_MAPPER.readTree(normalizedJson);
+            if (!root.isArray()) {
+                return Set.of();
+            }
+
+            Set<String> normalizedNames = new HashSet<>();
+            for (JsonNode node : root) {
+                String label = null;
+                if (node.isTextual()) {
+                    label = node.asText();
+                } else if (node.isObject()) {
+                    if (node.hasNonNull("label")) {
+                        label = node.get("label").asText();
+                    } else if (node.hasNonNull("name")) {
+                        label = node.get("name").asText();
+                    } else if (node.hasNonNull("value")) {
+                        label = node.get("value").asText();
+                    }
+                }
+
+                if (label != null && !label.isBlank()) {
+                    normalizedNames.add(normalizeCompanyTagName(label));
+                }
+            }
+            return normalizedNames;
+        } catch (Exception ex) {
+            return Set.of();
+        }
+    }
+
+    private CompanyTagResponse toCompanyTagResponse(CompanyTagEntity entity) {
+        return new CompanyTagResponse(
+                entity.getId(),
+                entity.getName(),
+                entity.getColor(),
+                asOffset(entity.getCreatedAt()),
+                asOffset(entity.getUpdatedAt())
+        );
+    }
+
+    private String normalizeCompanyTagName(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new BadRequestException("Tag name is required");
+        }
+        return raw.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+
+    private String normalizeCompanyTagColor(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "#64748B";
+        }
+        String normalized = raw.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.matches("^#[0-9A-F]{6}$")) {
+            throw new BadRequestException("Tag color must be a valid hex value like #22C55E");
+        }
+        return normalized;
+    }
+
+    private String resolveTaskKey(TaskEntity task, ProjectEntity project) {
+        if (task.getTaskKey() != null && !task.getTaskKey().isBlank()) {
+            return task.getTaskKey();
+        }
+
+        String prefix = normalizeTaskKeyPrefix(project == null ? null : project.getSlug());
+        int fallbackSequence = Math.abs(task.getId().hashCode()) % 900 + 100;
+        return prefix + "-" + String.format("%03d", fallbackSequence);
+    }
+
+    private String generateTaskKey(UUID tenantId, UUID projectId) {
+        ProjectEntity project = requireProject(projectId, tenantId);
+        String prefix = normalizeTaskKeyPrefix(project.getSlug());
+
+        int sequence = 1;
+        String candidate = prefix + "-" + String.format("%03d", sequence);
+        while (taskRepository.existsByTenantIdAndProjectIdAndTaskKey(tenantId, projectId, candidate)) {
+            sequence++;
+            candidate = prefix + "-" + String.format("%03d", sequence);
+        }
+        return candidate;
+    }
+
+    private String normalizeTaskKeyPrefix(String rawSlug) {
+        String source = rawSlug == null || rawSlug.isBlank() ? "project" : rawSlug;
+        String normalized = source
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "-")
+                .replaceAll("(^-+|-+$)", "")
+                .replaceAll("-{2,}", "-");
+        return normalized.isBlank() ? "PROJECT" : normalized;
+    }
+
+    private String formatActivityDescription(String action, String value) {
+        return switch (action) {
+            case "created" -> "Created task" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "status_changed" -> "Updated status " + (value == null ? "" : "(" + value + ")");
+            case "priority_changed" -> "Updated priority " + (value == null ? "" : "(" + value + ")");
+            case "progress_changed" -> "Updated progress " + (value == null ? "" : "(" + value + ")");
+            case "due_date_changed" -> "Updated due date " + (value == null ? "" : "(" + value + ")");
+            case "stage_changed" -> "Moved task stage " + (value == null ? "" : "(" + value + ")");
+            case "assignees_added" -> "Assigned: " + (value == null ? "" : value);
+            case "assignees_removed" -> "Unassigned: " + (value == null ? "" : value);
+            case "dependency_added" -> "Added dependency" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "dependency_removed" -> "Removed dependency" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "reviewed" -> "Review update" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "subtask_added" -> "Added subtask" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "subtask_updated" -> "Updated subtask" + (value == null || value.isBlank() ? "" : ": " + value);
+            case "subtask_deleted" -> "Deleted subtask" + (value == null || value.isBlank() ? "" : ": " + value);
+            default -> {
+                if (value == null || value.isBlank()) {
+                    yield action;
+                }
+                yield action + ": " + value;
+            }
+        };
+    }
+
     private String normalizeMilestoneStatus(String raw) {
         if (raw == null || raw.isBlank()) {
             return "UPCOMING";
         }
         return raw.trim().toUpperCase();
+    }
+
+    private void validateProjectDateRange(LocalDate startDate, LocalDate dueDate) {
+        if (startDate != null && dueDate != null && dueDate.isBefore(startDate)) {
+            throw new BadRequestException("Project due date must be on or after start date");
+        }
+    }
+
+    private void validateMilestoneDateWithinProject(ProjectEntity project, LocalDate targetDate) {
+        if (targetDate == null) {
+            return;
+        }
+
+        LocalDate projectStart = project.getStartDate();
+        LocalDate projectEnd = project.getDueDate() != null ? project.getDueDate() : project.getEndDate();
+
+        if (projectStart != null && targetDate.isBefore(projectStart)) {
+            throw new BadRequestException("Milestone target date must be on or after project start date");
+        }
+        if (projectEnd != null && targetDate.isAfter(projectEnd)) {
+            throw new BadRequestException("Milestone target date must be on or before project end date");
+        }
+    }
+
+    private void validateMilestoneChronology(UUID projectId, UUID currentMilestoneId, Integer sortOrder, LocalDate targetDate) {
+        if (targetDate == null || sortOrder == null) {
+            return;
+        }
+
+        List<ProjectMilestoneEntity> milestones = projectMilestoneRepository.findByProjectIdOrderBySortOrderAsc(projectId);
+        for (ProjectMilestoneEntity existing : milestones) {
+            if (currentMilestoneId != null && existing.getId().equals(currentMilestoneId)) {
+                continue;
+            }
+            if (existing.getSortOrder() == null || existing.getTargetDate() == null) {
+                continue;
+            }
+
+            if (existing.getSortOrder() < sortOrder && existing.getTargetDate().isAfter(targetDate)) {
+                throw new BadRequestException("Milestone date cannot be earlier than previous milestones");
+            }
+            if (existing.getSortOrder() > sortOrder && existing.getTargetDate().isBefore(targetDate)) {
+                throw new BadRequestException("Milestone date cannot be later than next milestones");
+            }
+        }
     }
 
     private int nextStageOrder(UUID projectId) {
@@ -1359,13 +2448,39 @@ public class ProjectModuleService {
     }
 
     private MilestoneResponse toMilestoneResponse(ProjectMilestoneEntity milestone) {
+        int suggestedProgress = calculateSuggestedMilestoneProgress(milestone);
+        boolean progressOverridden = milestone.getProgressOverride() != null;
+        int progress = progressOverridden
+            ? clampProgress(milestone.getProgressOverride())
+            : suggestedProgress;
+
         return new MilestoneResponse(
                 milestone.getId().toString(),
                 milestone.getTitle(),
                 milestone.getTargetDate(),
-                milestone.getStatus() != null ? milestone.getStatus().toLowerCase() : "upcoming"
+            milestone.getStatus() != null ? milestone.getStatus().toLowerCase() : "upcoming",
+            progress,
+            suggestedProgress,
+            progressOverridden
         );
     }
+
+        private int calculateSuggestedMilestoneProgress(ProjectMilestoneEntity milestone) {
+        List<TaskEntity> milestoneTasks = taskRepository.findByTenantIdAndMilestoneId(
+            milestone.getTenantId(),
+            milestone.getId()
+        );
+        if (milestoneTasks.isEmpty()) {
+            return 0;
+        }
+
+        int totalProgress = milestoneTasks.stream()
+            .map(TaskEntity::getProgress)
+            .map(progress -> progress == null ? 0 : clampProgress(progress))
+            .reduce(0, Integer::sum);
+
+        return Math.round((float) totalProgress / milestoneTasks.size());
+        }
 
     private boolean hasDependencyPath(UUID fromTaskId, UUID targetTaskId) {
         return hasDependencyPath(fromTaskId, targetTaskId, new HashSet<>());
@@ -1427,13 +2542,13 @@ public class ProjectModuleService {
         Set<UUID> added = new HashSet<>(after);
         added.removeAll(before);
         if (!added.isEmpty()) {
-            logActivity(tenantId, taskId, actorId, "assignees_added", joinIds(added));
+            logActivity(tenantId, taskId, actorId, "assignees_added", joinUserNames(tenantId, added));
         }
 
         Set<UUID> removed = new HashSet<>(before);
         removed.removeAll(after);
         if (!removed.isEmpty()) {
-            logActivity(tenantId, taskId, actorId, "assignees_removed", joinIds(removed));
+            logActivity(tenantId, taskId, actorId, "assignees_removed", joinUserNames(tenantId, removed));
         }
     }
 
@@ -1447,12 +2562,131 @@ public class ProjectModuleService {
         taskActivityRepository.save(activity);
     }
 
-    private String joinIds(Set<UUID> ids) {
-        return ids.stream().map(UUID::toString).collect(Collectors.joining(", "));
+    private String joinUserNames(UUID tenantId, Set<UUID> ids) {
+        if (ids.isEmpty()) {
+            return "";
+        }
+
+        Map<UUID, AppUserEntity> users = appUserRepository.findAllById(ids)
+                .stream()
+                .filter(user -> tenantId.equals(user.getTenantId()))
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
+        return ids.stream()
+                .map(id -> users.containsKey(id) ? fullName(users.get(id)) : id.toString())
+                .collect(Collectors.joining(", "));
     }
 
     private String formatChange(Object from, Object to) {
         return String.valueOf(from) + " -> " + String.valueOf(to);
+    }
+
+    public UUID resolveProjectId(String projectIdentifier) {
+        return resolveProjectId(projectIdentifier, tenantId());
+    }
+
+    private UUID resolveProjectId(String projectIdentifier, UUID tenantId) {
+        if (projectIdentifier == null || projectIdentifier.isBlank()) {
+            throw new BadRequestException("Project identifier is required");
+        }
+
+        String candidate = projectIdentifier.trim();
+        try {
+            UUID id = UUID.fromString(candidate);
+            return projectRepository.findByIdAndTenantId(id, tenantId)
+                    .map(ProjectEntity::getId)
+                    .orElseGet(() -> projectRepository.findByTenantIdAndSlug(tenantId, normalizeIdentifierSlug(candidate))
+                            .map(ProjectEntity::getId)
+                            .orElseThrow(() -> new NotFoundException("Project not found")));
+        } catch (IllegalArgumentException ignored) {
+            return projectRepository.findByTenantIdAndSlug(tenantId, normalizeIdentifierSlug(candidate))
+                    .map(ProjectEntity::getId)
+                    .orElseThrow(() -> new NotFoundException("Project not found"));
+        }
+    }
+
+    private String normalizeIdentifierSlug(String input) {
+        return input == null ? "" : input.trim().toLowerCase();
+    }
+
+    private String generateUniqueProjectSlug(UUID tenantId, String title, UUID currentProjectId) {
+        String base = slugifyProjectTitle(title);
+        String candidate = base;
+        int suffix = 2;
+        while (isSlugTaken(tenantId, candidate, currentProjectId)) {
+            candidate = base + "-" + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private boolean isSlugTaken(UUID tenantId, String slug, UUID currentProjectId) {
+        return projectRepository.findByTenantIdAndSlug(tenantId, slug)
+                .map(project -> currentProjectId == null || !project.getId().equals(currentProjectId))
+                .orElse(false);
+    }
+
+    private String slugifyProjectTitle(String title) {
+        if (title == null || title.isBlank()) {
+            return "project";
+        }
+
+        String normalized = Normalizer.normalize(title, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'd')
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "")
+                .replaceAll("-{2,}", "-");
+
+        return normalized.isBlank() ? "project" : normalized;
+    }
+
+    private Set<TaskStatus> parseReviewStatuses(String rawStatuses) {
+        if (rawStatuses == null || rawStatuses.isBlank()) {
+            return Set.of(TaskStatus.IN_REVIEW);
+        }
+
+        Set<TaskStatus> statuses = new HashSet<>();
+        String[] tokens = rawStatuses.split(",");
+        for (String token : tokens) {
+            String value = token == null ? "" : token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                statuses.add(TaskStatus.valueOf(value.toUpperCase()));
+            } catch (IllegalArgumentException ex) {
+                throw new BadRequestException("Invalid review status: " + value);
+            }
+        }
+
+        if (statuses.isEmpty()) {
+            throw new BadRequestException("At least one valid status is required");
+        }
+        return statuses;
+    }
+
+    private Pageable buildReviewPageable(int page, int size, String sortBy, String sortDir) {
+        int safePage = Math.max(page, 0);
+        int requestedSize = size <= 0 ? DEFAULT_REVIEW_PAGE_SIZE : size;
+        int safeSize = Math.min(requestedSize, MAX_REVIEW_PAGE_SIZE);
+
+        String sortProperty = switch ((sortBy == null ? "" : sortBy.trim())) {
+            case "createdAt" -> "createdAt";
+            case "dueDate" -> "dueDate";
+            case "priority" -> "priority";
+            case "status" -> "status";
+            case "title" -> "title";
+            default -> "updatedAt";
+        };
+
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir)
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        return PageRequest.of(safePage, safeSize, Sort.by(direction, sortProperty));
     }
 
     private ProjectEntity requireProject(UUID projectId, UUID tenantId) {

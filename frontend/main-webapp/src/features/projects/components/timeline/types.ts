@@ -59,14 +59,27 @@ export const priorityColors: Record<Priority, string> = {
 
 // Helper to convert Project to ProjectTimelineItem with dates
 export function projectToTimelineItem(project: Project): ProjectTimelineItem {
-  // Parse the dueDate and create a start date 30 days before
-  const dueDate = new Date(project.dueDate);
-  const startDate = new Date(dueDate);
-  startDate.setDate(startDate.getDate() - 30); // Default 30-day duration
-  
+  const parseRaw = (raw?: string | null): Date | null => {
+    if (!raw) return null;
+    // Parse YYYY-MM-DD as local date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const [y, m, d] = raw.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const endDate = parseRaw(project.dueDateRaw) ?? new Date();
+  const startDate = parseRaw(project.startDateRaw) ?? (() => {
+    const d = new Date(endDate);
+    d.setDate(d.getDate() - 30);
+    return d;
+  })();
+
   return {
     ...project,
     startDate,
-    endDate: dueDate,
+    endDate,
   };
 }

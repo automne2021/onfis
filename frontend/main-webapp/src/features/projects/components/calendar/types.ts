@@ -7,6 +7,7 @@ export interface ProjectCalendarEvent {
   endDate?: Date;
   project: Project;
   color: "planning" | "in_progress" | "on_hold" | "completed";
+  eventType?: "start" | "end";
 }
 
 export interface CalendarDay {

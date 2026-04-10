@@ -22,7 +22,9 @@ public record TaskUpsertRequest(
         BigDecimal actualEffort,
         UUID parentTaskId,
         UUID stageId,
+        UUID milestoneId,
         String tags,
-        @NotNull List<UUID> assigneeIds
+        @NotNull List<UUID> assigneeIds,
+        String blockedReason
 ) {
 }

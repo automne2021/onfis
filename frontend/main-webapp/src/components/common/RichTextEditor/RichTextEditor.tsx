@@ -4,7 +4,6 @@ import { StarterKit } from '@tiptap/starter-kit'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Highlight } from '@tiptap/extension-highlight'
 import { Color } from '@tiptap/extension-color'
-import { Link } from '@tiptap/extension-link'
 import { Placeholder } from '@tiptap/extension-placeholder'
 import { CharacterCount } from '@tiptap/extension-character-count'
 import { TextSelection } from '@tiptap/pm/state'
@@ -42,7 +41,20 @@ export function RichTextEditor({ limit = 5000, onChange, initialContent = '' } :
 
   const editor = useEditor({
     extensions: [
-      StarterKit, TextStyle, Color, 
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+          autolink: true,
+          defaultProtocol: 'https',
+          HTMLAttributes: {
+            class: 'text-blue-500 underline hover:text-blue-700',
+            target: '_blank',
+            rel: 'noopener noreferrer'
+          }
+        }
+      }),
+      TextStyle,
+      Color,
       Highlight.configure({ multicolor: true }), 
       Placeholder.configure({
         placeholder: 'Enter message content...',
@@ -50,17 +62,6 @@ export function RichTextEditor({ limit = 5000, onChange, initialContent = '' } :
       }),
       CharacterCount.configure({
         limit: limit,
-      }),
-      Link.configure({
-        openOnClick: false,           // To open: Ctrl + Click instead of only click
-        autolink: true,               // Automatically recognize link when typing
-        defaultProtocol: 'https',
-        HTMLAttributes: {
-          class: 'text-blue-500 underline hover:text-blue-700',
-          target: '_blank',           // Always open on new tab
-          rel: 'noopener noreferrer'  // Security when open new tab
-        }
-
       })
     ],
     content: initialContent,

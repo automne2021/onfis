@@ -12,4 +12,6 @@ public interface TaskSubtaskRepository extends JpaRepository<TaskSubtaskEntity, 
     List<TaskSubtaskEntity> findByTaskIdOrderByCreatedAtAsc(UUID taskId);
 
     Optional<TaskSubtaskEntity> findByIdAndTaskId(UUID id, UUID taskId);
+
+    void deleteByTaskId(UUID taskId);
 }

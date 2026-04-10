@@ -8,15 +8,22 @@ import java.util.UUID;
 
 public record TaskResponse(
         UUID id,
+        UUID projectId,
+        UUID stageId,
+        UUID milestoneId,
+        String projectTitle,
+        String projectSlug,
         String title,
         String description,
         String priority,
         String status,
         int progress,
+        LocalDate startDate,
         LocalDate dueDate,
         List<UserSummaryResponse> assignees,
         String tags,
         UUID reporterId,
+        String reporterName,
         BigDecimal estimatedEffort,
         BigDecimal actualEffort,
         List<UUID> blockedBy,
@@ -25,6 +32,7 @@ public record TaskResponse(
         OffsetDateTime updatedAt,
         String key,
         boolean canEdit,
-        boolean canReview
+        boolean canReview,
+        String blockedReason
 ) {
 }

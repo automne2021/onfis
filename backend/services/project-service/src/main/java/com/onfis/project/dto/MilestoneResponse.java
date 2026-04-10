@@ -6,6 +6,9 @@ public record MilestoneResponse(
         String id,
         String title,
         LocalDate targetDate,
-        String status
+        String status,
+        int progress,
+        int suggestedProgress,
+        boolean progressOverridden
 ) {
 }

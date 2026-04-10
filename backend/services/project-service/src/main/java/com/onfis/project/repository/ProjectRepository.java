@@ -14,6 +14,8 @@ public interface ProjectRepository extends JpaRepository<ProjectEntity, UUID> {
 
     Optional<ProjectEntity> findByIdAndTenantId(UUID id, UUID tenantId);
 
+    Optional<ProjectEntity> findByTenantIdAndSlug(UUID tenantId, String slug);
+
     @Query("""
         select p from ProjectEntity p
         where p.tenantId = :tenantId and exists (
