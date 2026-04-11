@@ -109,6 +109,7 @@ export interface PositionDetailData {
   level?: string;
   role?: string;
   email?: string;
+  departmentName?: string;
 }
 
 interface PositionDetailModalProps {
@@ -296,16 +297,16 @@ export default function PositionDetailModal({
                   <p className="text-sm text-primary font-medium mt-0.5">{data.title}</p>
                 )}
 
-                {/* Badges */}
+                {/* Badges — role + department */}
                 <div className="flex items-center gap-2 flex-wrap justify-center mt-2">
-                  {data.level && (
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${getLevelColor(data.level)}`}>
-                      {data.level}
-                    </span>
-                  )}
                   {data.role && (
                     <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200">
                       {data.role}
+                    </span>
+                  )}
+                  {data.departmentName && (
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      {data.departmentName}
                     </span>
                   )}
                 </div>
@@ -318,27 +319,6 @@ export default function PositionDetailModal({
               </div>
             )}
           </div>
-
-          {/* Level indicator */}
-          {!data.isVacant && data.level && levelN > 0 && (
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-medium text-neutral-500">Authority Level</span>
-                <span className="text-xs font-bold text-neutral-700">{data.level} / L6</span>
-              </div>
-              <div className="h-2 rounded-full bg-neutral-100 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all"
-                  style={{ width: `${(levelN / 6) * 100}%` }}
-                />
-              </div>
-              {!canManage && curLevelN > 0 && levelN > curLevelN && (
-                <p className="text-xs text-amber-600 mt-1.5">
-                  This person has a higher level than you — view only.
-                </p>
-              )}
-            </div>
-          )}
 
           {/* Hint for editable fields */}
           {canManage && !editingTitle && (

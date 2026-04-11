@@ -25,6 +25,7 @@ import {
   createPosition,
   movePosition,
   assignUserToPosition,
+  removeUnassignedUser,
   getCurrentUserPositionInfo,
   type PositionTreeNode,
   type DepartmentWithEmployees,
@@ -85,7 +86,7 @@ function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false)
     });
 
     return {
-      id: node.id ?? node.positionId,
+      id: node.positionId ?? node.id,
       name: node.name,
       title: node.title,
       avatar: node.avatar ?? undefined,
@@ -97,7 +98,7 @@ function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false)
   }
 
   return {
-    id: node.id ?? node.positionId,
+    id: node.positionId ?? node.id,
     name: node.name,
     title: node.title,
     avatar: node.avatar ?? undefined,
@@ -126,6 +127,7 @@ function mapDepartments(deps: DepartmentWithEmployees[]): Department[] {
         ? { id: e.manager.id, name: e.manager.name, avatar: e.manager.avatar ?? undefined }
         : undefined,
       isVacant: e.isVacant,
+      departmentName: d.name,
     })),
   }));
 }
@@ -136,6 +138,7 @@ function mapUnassigned(users: UnassignedUser[]): UnassignedEmployee[] {
     name: u.name,
     avatar: u.avatar ?? undefined,
     role: u.role ?? undefined,
+    email: u.email ?? undefined,
   }));
 }
 
@@ -216,6 +219,15 @@ export default function PositionTreePage() {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
+  // ── Displaced user dialog state (assign to occupied position) ───────────────
+  const [displacedDialog, setDisplacedDialog] = useState<{
+    isOpen: boolean;
+    employeeId: string;
+    employeeName: string;
+    targetPositionId: string;
+    currentUserName: string;
+  }>({ isOpen: false, employeeId: "", employeeName: "", targetPositionId: "", currentUserName: "" });
+
   // ── Fetch data ──────────────────────────────────────────────────────────────
 
   const fetchTreeData = useCallback(async () => {
@@ -264,6 +276,20 @@ export default function PositionTreePage() {
   const handleRefreshAll = useCallback(async () => {
     await Promise.all([fetchTreeData(), fetchListData()]);
   }, [fetchTreeData, fetchListData]);
+
+  const handleDisplacedAction = useCallback(async (action: "unassign" | "remove") => {
+    const { employeeId, employeeName, targetPositionId } = displacedDialog;
+    setDisplacedDialog((prev) => ({ ...prev, isOpen: false }));
+    try {
+      await assignUserToPosition(targetPositionId, employeeId, action);
+      showToast(`${employeeName} assigned successfully`, "success");
+      await fetchTreeData();
+    } catch (err) {
+      console.error("Failed to assign employee:", err);
+      showToast("Failed to assign employee", "error");
+      await fetchTreeData();
+    }
+  }, [displacedDialog, fetchTreeData, showToast]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -320,6 +346,7 @@ export default function PositionTreePage() {
         level: rawNode?.level,
         role: rawNode?.role,
         email: rawNode?.email,
+        departmentName: rawNode?.departmentName,
       },
     });
   };
@@ -337,6 +364,7 @@ export default function PositionTreePage() {
         level: employee.level,
         role: employee.role,
         email: employee.workEmail,
+        departmentName: employee.departmentName,
       },
     });
   };
@@ -370,26 +398,42 @@ export default function PositionTreePage() {
       const employeeName = unassignedEmployees.find((e) => e.id === employeeId)?.name || "this employee";
 
       if (mode === "replace") {
-        // Replace: assign user directly to the target position
-        setConfirmDialog({
-          isOpen: true,
-          title: "Assign Employee",
-          message: `Are you sure you want to assign "${employeeName}" to this position?`,
-          variant: "info",
-          confirmLabel: "Assign",
-          onConfirm: async () => {
-            closeConfirm();
-            try {
-              await assignUserToPosition(targetPositionId, employeeId);
-              showToast(`${employeeName} assigned successfully`, "success");
-              await fetchTreeData();
-            } catch (err) {
-              console.error("Failed to assign employee:", err);
-              showToast("Failed to assign employee", "error");
-              await fetchTreeData(); // refresh to revert UI
-            }
-          },
-        });
+        // Check if the target position is already occupied
+        const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetPositionId) : null;
+        const isOccupied = targetRawNode && !targetRawNode.isVacant && targetRawNode.id;
+        const currentOccupantName = isOccupied ? (targetRawNode?.name ?? "current occupant") : null;
+
+        if (isOccupied) {
+          // Show 3-choice dialog: unassign / remove / cancel
+          setDisplacedDialog({
+            isOpen: true,
+            employeeId,
+            employeeName,
+            targetPositionId,
+            currentUserName: currentOccupantName!,
+          });
+        } else {
+          // Vacant position: simple confirm
+          setConfirmDialog({
+            isOpen: true,
+            title: "Assign Employee",
+            message: `Are you sure you want to assign "${employeeName}" to this position?`,
+            variant: "info",
+            confirmLabel: "Assign",
+            onConfirm: async () => {
+              closeConfirm();
+              try {
+                await assignUserToPosition(targetPositionId, employeeId);
+                showToast(`${employeeName} assigned successfully`, "success");
+                await fetchTreeData();
+              } catch (err) {
+                console.error("Failed to assign employee:", err);
+                showToast("Failed to assign employee", "error");
+                await fetchTreeData();
+              }
+            },
+          });
+        }
       } else {
         // Subordinate: create a new child position, then assign user to it
         setConfirmDialog({
@@ -428,6 +472,28 @@ export default function PositionTreePage() {
     },
     [unassignedEmployees, rawTreeData, fetchTreeData, showToast, closeConfirm]
   );
+
+  const handleRemoveUnassignedUser = useCallback((employeeId: string) => {
+    const employeeName = unassignedEmployees.find((e) => e.id === employeeId)?.name || "this person";
+    setConfirmDialog({
+      isOpen: true,
+      title: "Remove from Organization",
+      message: `Remove "${employeeName}" from the organization? They will no longer appear in any lists.`,
+      variant: "danger",
+      confirmLabel: "Remove",
+      onConfirm: async () => {
+        closeConfirm();
+        try {
+          await removeUnassignedUser(employeeId);
+          showToast(`${employeeName} removed`, "success");
+          await fetchTreeData();
+        } catch (err) {
+          console.error("Failed to remove user:", err);
+          showToast("Failed to remove user", "error");
+        }
+      },
+    });
+  }, [unassignedEmployees, fetchTreeData, showToast, closeConfirm]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -503,6 +569,7 @@ export default function PositionTreePage() {
             onPositionMove={handlePositionMove}
             unassignedEmployees={isManager ? unassignedEmployees : []}
             onEmployeeAssign={handleEmployeeAssign}
+            onEmployeeRemove={isManager ? handleRemoveUnassignedUser : undefined}
           />
         </div>
       ) : (
@@ -567,6 +634,45 @@ export default function PositionTreePage() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
       />
+
+      {/* Displaced User Dialog (assign to occupied position) */}
+      {displacedDialog.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDisplacedDialog((p) => ({ ...p, isOpen: false }))} />
+          <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-[420px] border border-neutral-200 overflow-hidden">
+            <div className="p-6 flex flex-col items-center text-center gap-3">
+              <div className="w-14 h-14 rounded-full flex items-center justify-center bg-amber-50">
+                <span className="material-symbols-rounded text-amber-500" style={{ fontSize: 28 }}>swap_horiz</span>
+              </div>
+              <h3 className="text-lg font-bold text-neutral-900">Position Already Occupied</h3>
+              <p className="text-sm text-neutral-500 leading-relaxed">
+                This position is currently held by <span className="font-semibold text-neutral-700">{displacedDialog.currentUserName}</span>.
+                What would you like to do with them when assigning <span className="font-semibold text-neutral-700">{displacedDialog.employeeName}</span>?
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 px-6 pb-6 pt-1">
+              <button
+                onClick={() => handleDisplacedAction("unassign")}
+                className="w-full px-4 py-2.5 text-sm font-medium rounded-xl bg-primary text-white hover:bg-primary/90 transition-colors"
+              >
+                Move {displacedDialog.currentUserName} to Unassigned List
+              </button>
+              <button
+                onClick={() => handleDisplacedAction("remove")}
+                className="w-full px-4 py-2.5 text-sm font-medium rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition-colors"
+              >
+                Remove {displacedDialog.currentUserName} from Organization
+              </button>
+              <button
+                onClick={() => setDisplacedDialog((p) => ({ ...p, isOpen: false }))}
+                className="w-full px-4 py-2.5 text-sm font-medium rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -577,6 +683,9 @@ interface TreeNodeWithDept {
   id?: string;
   positionId?: string;
   departmentId?: string;
+  departmentName?: string;
+  name?: string;
+  isVacant?: boolean;
   level?: string;
   role?: string;
   email?: string;

@@ -48,6 +48,7 @@ export interface UnassignedUser {
   name: string;
   avatar?: string;
   role?: string;
+  email?: string;
 }
 
 export interface PositionCreateData {
@@ -131,11 +132,19 @@ export async function movePosition(id: string, newParentId: string | null) {
   return res.data;
 }
 
-export async function assignUserToPosition(positionId: string, userId: string) {
-  await api.post(`/positions/${positionId}/assign`, { userId });
+export async function assignUserToPosition(
+  positionId: string,
+  userId: string,
+  displacedAction?: 'unassign' | 'remove'
+) {
+  await api.post(`/positions/${positionId}/assign`, { userId, displacedAction: displacedAction ?? null });
 }
 
 export async function unassignUserFromPosition(positionId: string, userId: string) {
   await api.delete(`/positions/${positionId}/users/${userId}`);
+}
+
+export async function removeUnassignedUser(userId: string) {
+  await api.delete(`/positions/unassigned-users/${userId}`);
 }
 

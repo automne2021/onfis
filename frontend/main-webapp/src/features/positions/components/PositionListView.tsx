@@ -72,6 +72,7 @@ export interface Employee {
     avatar?: string;
   };
   isVacant?: boolean;
+  departmentName?: string;
 }
 
 export interface Department {

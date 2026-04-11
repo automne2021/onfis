@@ -115,6 +115,14 @@ public class PositionController {
         return ResponseEntity.ok().build();
     }
 
+    // ── Remove user from unassigned list ──────────────────────────────────────
+
+    @DeleteMapping("/unassigned-users/{userId}")
+    public ResponseEntity<Void> removeUnassignedUser(@PathVariable UUID userId) {
+        positionService.removeUnassignedUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Unassign user ─────────────────────────────────────────────────────────
 
     @DeleteMapping("/{id}/users/{userId}")

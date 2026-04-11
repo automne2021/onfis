@@ -304,7 +304,8 @@ public class PositionService {
                         u.getId().toString(),
                         fullName(u),
                         u.getAvatarUrl(),
-                        u.getRole()))
+                        u.getRole(),
+                        u.getEmail()))
                 .toList();
     }
 
@@ -428,8 +429,41 @@ public class PositionService {
             throw new BadRequestException("User does not belong to this tenant");
         }
 
+        // Handle displaced occupant when assigning to an already-occupied position
+        if (request.displacedAction() != null) {
+            List<AppUserEntity> currentOccupants = appUserRepository.findByTenantIdAndPositionId(tenantId, positionId);
+            for (AppUserEntity occupant : currentOccupants) {
+                if (!occupant.getId().equals(request.userId())) {
+                    if ("remove".equals(request.displacedAction())) {
+                        appUserRepository.delete(occupant);
+                    } else {
+                        // "unassign" — move to unassigned list
+                        occupant.setPositionId(null);
+                        appUserRepository.save(occupant);
+                    }
+                }
+            }
+        }
+
         user.setPositionId(positionId);
         appUserRepository.save(user);
+    }
+
+    @Transactional
+    public void removeUnassignedUser(UUID userId) {
+        UUID tenantId = tenantId();
+        AppUserEntity user = appUserRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        if (!tenantId.equals(user.getTenantId())) {
+            throw new BadRequestException("User does not belong to this tenant");
+        }
+
+        if (user.getPositionId() != null) {
+            throw new BadRequestException("User is still assigned to a position");
+        }
+
+        appUserRepository.delete(user);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

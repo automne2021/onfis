@@ -10,6 +10,7 @@ interface PositionTreeViewProps {
   onPositionClick?: (position: Position) => void;
   unassignedEmployees?: UnassignedEmployee[];
   onEmployeeAssign?: (employeeId: string, targetPositionId: string, mode: DropMode) => void;
+  onEmployeeRemove?: (employeeId: string) => void;
 }
 
 export interface UnassignedEmployee {
@@ -17,6 +18,7 @@ export interface UnassignedEmployee {
   name: string;
   avatar?: string;
   role?: string;
+  email?: string;
 }
 
 // ===================== ICONS =====================
@@ -558,11 +560,13 @@ const UnassignedEmployeeCard = ({
   onDragStart,
   onDragEnd,
   isDragging,
+  onRemove,
 }: {
   employee: UnassignedEmployee;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   isDragging: boolean;
+  onRemove?: (id: string) => void;
 }) => {
   const handleDragStart = (e: DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
@@ -576,19 +580,30 @@ const UnassignedEmployeeCard = ({
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       className={`
-        flex items-center gap-2.5 px-3 py-2 bg-white rounded-lg border border-neutral-100
+        group flex items-center gap-2.5 px-3 py-2 bg-white rounded-lg border border-neutral-100
         cursor-grab active:cursor-grabbing hover:shadow-sm hover:border-neutral-200
         transition-all duration-150 select-none
         ${isDragging ? "opacity-40 scale-95" : ""}
       `}
     >
       <Avatar name={employee.name} avatar={employee.avatar} size={32} />
-      <div className="flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 flex-1">
         <p className="text-xs font-semibold text-neutral-900 truncate">{employee.name}</p>
         {employee.role && (
           <p className="text-[10px] text-neutral-400 truncate">{employee.role}</p>
         )}
       </div>
+      {onRemove && (
+        <button
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onRemove(employee.id); }}
+          className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded text-neutral-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+          title="Remove from organization"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };
@@ -600,6 +615,7 @@ export default function PositionTreeView({
   onPositionClick,
   unassignedEmployees = [],
   onEmployeeAssign,
+  onEmployeeRemove,
 }: PositionTreeViewProps) {
   // Start with ALL nodes collapsed (only root visible)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(() => {
@@ -618,6 +634,7 @@ export default function PositionTreeView({
   const [dragType, setDragType] = useState<"position" | "employee" | null>(null);
   const [manualZoomOffset, setManualZoomOffset] = useState(0);
   const [showPanel, setShowPanel] = useState(true);
+  const [unassignedSearch, setUnassignedSearch] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const treeContentRef = useRef<HTMLDivElement>(null);
   const edgeScrollIntervalRef = useRef<number | null>(null);
@@ -830,6 +847,12 @@ export default function PositionTreeView({
   const handleZoomOut = () => setManualZoomOffset((v) => Math.max(v - 1, -5));
 
   const hasUnassigned = unassignedEmployees.length > 0;
+  const filteredUnassigned = unassignedSearch.trim()
+    ? unassignedEmployees.filter((e) =>
+        e.name.toLowerCase().includes(unassignedSearch.toLowerCase()) ||
+        (e.role ?? "").toLowerCase().includes(unassignedSearch.toLowerCase())
+      )
+    : unassignedEmployees;
 
   return (
     <div className="flex gap-3 w-full" style={{ height: "calc(100vh - 200px)" }}>
@@ -929,18 +952,46 @@ export default function PositionTreeView({
             <UsersIcon />
             <span className="text-xs font-semibold text-neutral-700">Unassigned</span>
             <span className="ml-auto text-[10px] font-bold text-neutral-400 bg-neutral-100 rounded-full px-1.5 py-0.5">
-              {unassignedEmployees.length}
+              {filteredUnassigned.length}/{unassignedEmployees.length}
             </span>
           </div>
 
+          {/* Search bar */}
+          <div className="px-2 pt-2 pb-1">
+            <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-neutral-400 shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                value={unassignedSearch}
+                onChange={(e) => setUnassignedSearch(e.target.value)}
+                placeholder="Search..."
+                className="flex-1 text-[11px] bg-transparent outline-none text-neutral-700 placeholder-neutral-400"
+              />
+              {unassignedSearch && (
+                <button onClick={() => setUnassignedSearch("")} className="text-neutral-400 hover:text-neutral-600">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
-            {unassignedEmployees.map((emp) => (
+            {filteredUnassigned.length === 0 && (
+              <p className="text-[10px] text-neutral-400 text-center py-2">No results</p>
+            )}
+            {filteredUnassigned.map((emp) => (
               <UnassignedEmployeeCard
                 key={emp.id}
                 employee={emp}
                 onDragStart={handleEmployeeDragStart}
                 onDragEnd={handleDragEnd}
                 isDragging={draggedId === emp.id}
+                onRemove={onEmployeeRemove}
               />
             ))}
           </div>
