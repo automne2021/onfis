@@ -58,11 +58,14 @@ const UnassignedAvatar = () => (
 // ========== TYPES ==========
 export interface Employee {
   id: string;
+  positionId?: string;
   name: string;
   avatar?: string;
   workPhone?: string;
   workEmail?: string;
   jobPosition: string;
+  level?: string;
+  role?: string;
   manager?: {
     id: string;
     name: string;

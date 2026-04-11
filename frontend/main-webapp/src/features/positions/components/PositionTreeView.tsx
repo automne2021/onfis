@@ -166,11 +166,13 @@ function calculateZoomScale(visibleCount: number): number {
 // ===================== TREE LAYOUT =====================
 const NODE_W = 200;
 const ROOT_W = 250;
+const DEPT_W = 220;
 const H_GAP = 32;
 const LEVEL_H = 120;
 const STEM = 20;
 const CARD_H_REG = 72;
 const CARD_H_ROOT = 78;
+const CARD_H_DEPT = 52;
 
 interface LayoutEntry {
   position: Position;
@@ -194,7 +196,7 @@ function computeLayout(root: Position, collapsedNodes: Set<string>) {
 
   function subtreeWidth(node: Position, level: number): number {
     if (widthCache.has(node.id)) return widthCache.get(node.id)!;
-    const w = level === 0 ? ROOT_W : NODE_W;
+    const w = level === 0 ? ROOT_W : node.isDeptHeader ? DEPT_W : NODE_W;
     const children = node.children || [];
     if (children.length === 0 || collapsedNodes.has(node.id)) {
       widthCache.set(node.id, w);
@@ -227,7 +229,7 @@ function computeLayout(root: Position, collapsedNodes: Set<string>) {
     const totalChildW =
       childWidths.reduce((a, b) => a + b, 0) +
       (children.length - 1) * H_GAP;
-    const cardH = isRoot ? CARD_H_ROOT : CARD_H_REG;
+    const cardH = isRoot ? CARD_H_ROOT : node.isDeptHeader ? CARD_H_DEPT : CARD_H_REG;
     const stemTopY = y + cardH;
     const connectorY = stemTopY + STEM;
     const childTopY = (level + 1) * LEVEL_H;
@@ -403,6 +405,52 @@ const NodeCard = ({
       : dropZone === "subordinate"
         ? "ring-2 ring-emerald-400 ring-offset-2"
         : "";
+
+  // ── Department header card ────────────────────────────────────
+  if (position.isDeptHeader) {
+    return (
+      <div style={style}>
+        <div
+          ref={cardRef}
+          onClick={() => onPositionClick?.(position)}
+          className={`
+            relative cursor-pointer select-none
+            transition-all duration-200
+          `}
+        >
+          <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2.5 hover:bg-neutral-100 transition-colors"
+            style={{ width: DEPT_W }}>
+            {/* Dept colour stripe */}
+            <div className="w-1 h-6 rounded-full bg-primary/60 shrink-0" />
+            <span className="text-xs font-bold text-neutral-600 uppercase tracking-wide truncate flex-1">
+              {position.deptName ?? position.name}
+            </span>
+            {hasChildren && (
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-[10px] font-bold text-primary shrink-0">
+                {childCount}
+              </div>
+            )}
+          </div>
+          {/* Expand/collapse toggle */}
+          {hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(position.id);
+              }}
+              className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10
+                w-6 h-6 rounded-full bg-white border border-neutral-200 shadow-sm
+                flex items-center justify-center
+                hover:bg-neutral-50 hover:border-neutral-300
+                transition-all duration-200"
+            >
+              <ChevronIcon expanded={!isCollapsed} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={style}>
@@ -845,7 +893,7 @@ export default function PositionTreeView({
             >
               <TreeConnectors connectors={layout.connectors} />
               {layout.entries.map((entry) => {
-                const cardW = entry.isRoot ? ROOT_W : NODE_W;
+                const cardW = entry.isRoot ? ROOT_W : entry.position.isDeptHeader ? DEPT_W : NODE_W;
                 return (
                   <NodeCard
                     key={entry.position.id}

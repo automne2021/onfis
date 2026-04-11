@@ -3,14 +3,20 @@ import api from '../../../services/api';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface PositionTreeNode {
-  id: string;
+  id: string;       // user ID (null/undefined if vacant)
+  positionId: string;
   name: string;
   title: string;
   avatar?: string;
   isVacant: boolean;
   status?: string;
+  level?: string;
+  role?: string;
+  email?: string;
   subordinateCount?: number;
   children?: PositionTreeNode[];
+  departmentId?: string;
+  departmentName?: string;
 }
 
 export interface DepartmentWithEmployees {
@@ -21,11 +27,14 @@ export interface DepartmentWithEmployees {
 
 export interface EmployeeData {
   id: string;
+  positionId: string;
   name: string;
   avatar?: string;
   workPhone?: string;
   workEmail?: string;
   jobPosition: string;
+  level?: string;
+  role?: string;
   manager?: {
     id: string;
     name: string;
@@ -48,9 +57,32 @@ export interface PositionCreateData {
   parentId?: string;
 }
 
+export interface PositionResponseData {
+  id: string;
+  title: string;
+  description?: string;
+  departmentId?: string;
+  departmentName?: string;
+  parentId?: string;
+  assignedUserId?: string;
+  assignedUserName?: string;
+  assignedUserLevel?: string;
+  assignedUserRole?: string;
+  isVacant: boolean;
+  createdAt: string;
+}
+
 export interface DepartmentItem {
   id: string;
   name: string;
+}
+
+export interface CurrentUserPositionInfo {
+  userId: string;
+  level: string | null;
+  role: string;
+  positionId: string | null;
+  positionTitle: string | null;
 }
 
 // ── API Functions ─────────────────────────────────────────────────────────────
@@ -75,7 +107,12 @@ export async function getUnassignedUsers(): Promise<UnassignedUser[]> {
   return res.data;
 }
 
-export async function createPosition(data: PositionCreateData) {
+export async function getCurrentUserPositionInfo(): Promise<CurrentUserPositionInfo> {
+  const res = await api.get('/positions/me');
+  return res.data;
+}
+
+export async function createPosition(data: PositionCreateData): Promise<PositionResponseData> {
   const res = await api.post('/positions', data);
   return res.data;
 }
@@ -97,3 +134,8 @@ export async function movePosition(id: string, newParentId: string | null) {
 export async function assignUserToPosition(positionId: string, userId: string) {
   await api.post(`/positions/${positionId}/assign`, { userId });
 }
+
+export async function unassignUserFromPosition(positionId: string, userId: string) {
+  await api.delete(`/positions/${positionId}/users/${userId}`);
+}
+

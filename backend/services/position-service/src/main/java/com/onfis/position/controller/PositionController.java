@@ -4,6 +4,7 @@ import com.onfis.position.dto.AssignUserRequest;
 import com.onfis.position.dto.DepartmentResponse;
 import com.onfis.position.dto.DepartmentWithEmployeesResponse;
 import com.onfis.position.dto.MovePositionRequest;
+import com.onfis.position.dto.PositionMeResponse;
 import com.onfis.position.dto.PositionResponse;
 import com.onfis.position.dto.PositionTreeResponse;
 import com.onfis.position.dto.PositionUpsertRequest;
@@ -34,8 +35,17 @@ public class PositionController {
         response.put("service", "position-service");
         response.put("status", "UP");
         response.put("port", "8083");
-        if (companyId != null) response.put("companyId", companyId);
+        if (companyId != null)
+            response.put("companyId", companyId);
         return ResponseEntity.ok(response);
+    }
+
+    // ── Current user ──────────────────────────────────────────────────────────
+
+    @GetMapping("/me")
+    public ResponseEntity<PositionMeResponse> me(
+            @RequestHeader("X-User-ID") String userId) {
+        return ResponseEntity.ok(positionService.getCurrentUser(userId));
     }
 
     // ── Tree view ─────────────────────────────────────────────────────────────
@@ -103,5 +113,15 @@ public class PositionController {
             @RequestBody AssignUserRequest request) {
         positionService.assignUserToPosition(id, request);
         return ResponseEntity.ok().build();
+    }
+
+    // ── Unassign user ─────────────────────────────────────────────────────────
+
+    @DeleteMapping("/{id}/users/{userId}")
+    public ResponseEntity<Void> unassignUserFromPosition(
+            @PathVariable UUID id,
+            @PathVariable UUID userId) {
+        positionService.unassignUserFromPosition(id, userId);
+        return ResponseEntity.noContent().build();
     }
 }

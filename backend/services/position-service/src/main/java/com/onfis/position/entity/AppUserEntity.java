@@ -37,6 +37,9 @@ public class AppUserEntity {
     @Column(name = "role", nullable = false)
     private String role;
 
+    @Column(name = "level")
+    private String level;
+
     @Column(name = "position_id")
     private UUID positionId;
 }

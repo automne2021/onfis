@@ -6,7 +6,7 @@ import { useToast } from "../../../../contexts/useToast";
 
 interface StatusSelectorProps {
   value: TaskStatus;
-  task: Pick<Task, "assignees" | "reporterId">;
+  task: Pick<Task, "assignees" | "reporterId" | "progress" | "actualEffort">;
   onChange: (status: TaskStatus) => void;
   disabled?: boolean;
 }
