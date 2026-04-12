@@ -11,6 +11,8 @@ interface PositionTreeViewProps {
   unassignedEmployees?: UnassignedEmployee[];
   onEmployeeAssign?: (employeeId: string, targetPositionId: string, mode: DropMode) => void;
   onEmployeeRemove?: (employeeId: string) => void;
+  /** When true (search/filter active), auto-expand all visible nodes */
+  searchActive?: boolean;
 }
 
 export interface UnassignedEmployee {
@@ -149,6 +151,15 @@ function countVisibleNodes(tree: Position, collapsedNodes: Set<string>): number 
     for (const child of tree.children) {
       count += countVisibleNodes(child, collapsedNodes);
     }
+  }
+  return count;
+}
+
+/** Count employees (non-vacant positions) recursively in a subtree */
+function countEmployeesInSubtree(node: Position): number {
+  let count = (!node.isDeptHeader && node.isVacant === false) ? 1 : 0;
+  for (const child of node.children ?? []) {
+    count += countEmployeesInSubtree(child);
   }
   return count;
 }
@@ -365,7 +376,8 @@ const NodeCard = ({
       if (el) nodeRefs.current.set(position.id, el);
       else nodeRefs.current.delete(position.id);
     },
-    [position.id, nodeRefs],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [position.id],
   );
 
   const handleDragStart = (e: DragEvent) => {
@@ -410,6 +422,7 @@ const NodeCard = ({
 
   // ── Department header card ────────────────────────────────────
   if (position.isDeptHeader) {
+    const employeeCount = countEmployeesInSubtree(position);
     return (
       <div style={style}>
         <div
@@ -427,9 +440,9 @@ const NodeCard = ({
             <span className="text-xs font-bold text-neutral-600 uppercase tracking-wide truncate flex-1">
               {position.deptName ?? position.name}
             </span>
-            {hasChildren && (
+            {(hasChildren || employeeCount > 0) && (
               <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-[10px] font-bold text-primary shrink-0">
-                {childCount}
+                {employeeCount}
               </div>
             )}
           </div>
@@ -616,6 +629,7 @@ export default function PositionTreeView({
   unassignedEmployees = [],
   onEmployeeAssign,
   onEmployeeRemove,
+  searchActive = false,
 }: PositionTreeViewProps) {
   // Start with ALL nodes collapsed (only root visible)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(() => {
@@ -638,12 +652,19 @@ export default function PositionTreeView({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const treeContentRef = useRef<HTMLDivElement>(null);
   const edgeScrollIntervalRef = useRef<number | null>(null);
+  const edgeScrollCleanupRef = useRef<{ onMouseMove: (e: MouseEvent) => void; onDragOver: (e: globalThis.DragEvent) => void } | null>(null);
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // When search/filter is active, expand all nodes
+  const effectiveCollapsedNodes = useMemo(
+    () => (searchActive ? new Set<string>() : collapsedNodes),
+    [searchActive, collapsedNodes]
+  );
 
   // ---- Calculate visible node count & auto-zoom ----
   const visibleNodeCount = useMemo(
-    () => countVisibleNodes(positions, collapsedNodes),
-    [positions, collapsedNodes]
+    () => countVisibleNodes(positions, effectiveCollapsedNodes),
+    [positions, effectiveCollapsedNodes]
   );
 
   const autoScale = calculateZoomScale(visibleNodeCount);
@@ -652,8 +673,8 @@ export default function PositionTreeView({
 
   // ---- Compute tree layout ----
   const layout = useMemo(
-    () => computeLayout(positions, collapsedNodes),
-    [positions, collapsedNodes],
+    () => computeLayout(positions, effectiveCollapsedNodes),
+    [positions, effectiveCollapsedNodes],
   );
 
   // ---- Center on root on mount ----
@@ -704,7 +725,7 @@ export default function PositionTreeView({
       else if (mouseY > rect.bottom - EDGE_THRESHOLD) container.scrollTop += SCROLL_SPEED;
     }, 16);
 
-    (window as any).__edgeScrollCleanup = { onMouseMove, onDragOver };
+    edgeScrollCleanupRef.current = { onMouseMove, onDragOver };
   }, []);
 
   const stopEdgeScrolling = useCallback(() => {
@@ -712,11 +733,11 @@ export default function PositionTreeView({
       clearInterval(edgeScrollIntervalRef.current);
       edgeScrollIntervalRef.current = null;
     }
-    const cleanup = (window as any).__edgeScrollCleanup;
+    const cleanup = edgeScrollCleanupRef.current;
     if (cleanup) {
       window.removeEventListener("mousemove", cleanup.onMouseMove);
       window.removeEventListener("dragover", cleanup.onDragOver);
-      delete (window as any).__edgeScrollCleanup;
+      edgeScrollCleanupRef.current = null;
     }
   }, []);
 
@@ -922,7 +943,7 @@ export default function PositionTreeView({
                     key={entry.position.id}
                     position={entry.position}
                     isRoot={entry.isRoot}
-                    collapsedNodes={collapsedNodes}
+                    collapsedNodes={effectiveCollapsedNodes}
                     onToggle={handleToggle}
                     draggedId={draggedId}
                     dragType={dragType}

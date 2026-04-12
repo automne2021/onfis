@@ -345,7 +345,9 @@ public class PositionService {
         if (request.departmentId() != null) {
             entity.setDepartmentId(request.departmentId());
         }
-        entity.setParentId(request.parentId());
+        if (request.parentId() != null) {
+            entity.setParentId(request.parentId());
+        }
 
         PositionEntity saved = positionRepository.save(entity);
         return toPositionResponse(saved);

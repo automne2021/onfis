@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   PositionToolbar,
   PositionTreeView,
@@ -12,6 +12,7 @@ import {
   type PositionDetailData,
 } from "../components";
 import type { AddPositionFormData, DepartmentOption, PositionOption } from "../components/AddPositionModal";
+import type { ActiveFilters } from "../../../components/common/FilterDropdown";
 import { Add } from '@mui/icons-material';
 import { Button } from "../../../components/common/Buttons/Button";
 import { useRole } from "../../../hooks/useRole";
@@ -169,6 +170,60 @@ function flattenTreeToOptions(node: PositionTreeNode): PositionOption[] {
   return result;
 }
 
+// ── Tree filter helpers ───────────────────────────────────────────────────────
+
+function filterPositionTree(node: Position, query: string, deptIds: string[]): Position {
+  const q = query.trim().toLowerCase();
+  const hasDeptFilter = deptIds.length > 0;
+  const hasTextFilter = q.length > 0;
+
+  if (!hasDeptFilter && !hasTextFilter) return node;
+
+  const filteredChildren = (node.children ?? []).reduce<Position[]>((acc, child) => {
+    // Dept header: apply department filter
+    if (child.isDeptHeader) {
+      if (hasDeptFilter) {
+        const deptId = child.id.replace("dept-header-", "");
+        if (!deptIds.includes(deptId)) return acc; // filtered out
+      }
+      if (!hasTextFilter) {
+        acc.push(child);
+        return acc;
+      }
+      // Text filter: keep dept header only if any child matches
+      const filteredKids = (child.children ?? []).filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.title.toLowerCase().includes(q) ||
+          (c.children ?? []).some((gc) => gc.name.toLowerCase().includes(q) || gc.title.toLowerCase().includes(q))
+      );
+      if (filteredKids.length > 0) {
+        acc.push({ ...child, children: filteredKids });
+      }
+      return acc;
+    }
+
+    // Regular node: match name or title
+    if (hasTextFilter) {
+      const matches =
+        child.name.toLowerCase().includes(q) || child.title.toLowerCase().includes(q);
+      if (!matches) {
+        // Check descendants
+        const filteredSub = filterPositionTree(child, query, []);
+        if ((filteredSub.children ?? []).length > 0) {
+          acc.push(filteredSub);
+        }
+        return acc;
+      }
+    }
+    acc.push(child);
+    return acc;
+  }, []);
+
+  return { ...node, children: filteredChildren };
+}
+
+
 // ── Fallback mock data (shown only while loading or on error) ─────────────────
 
 const fallbackTree: Position = {
@@ -188,6 +243,8 @@ export default function PositionTreePage() {
   const [departmentList, setDepartmentList] = useState<DepartmentItem[]>([]);
   const [unassignedEmployees, setUnassignedEmployees] = useState<UnassignedEmployee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [toolbarFilters, setToolbarFilters] = useState<ActiveFilters>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentUserLevel, setCurrentUserLevel] = useState<string | null>(null);
   const { isManager } = useRole();
   const { showToast } = useToast();
@@ -293,9 +350,9 @@ export default function PositionTreePage() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  const handleFilter = () => {
-    console.log("Filter clicked");
-  };
+  const handleFilter = useCallback((filters: ActiveFilters) => {
+    setToolbarFilters(filters);
+  }, []);
 
   const handleAddPosition = () => {
     setIsAddModalOpen(true);
@@ -303,16 +360,15 @@ export default function PositionTreePage() {
 
   const handleCreatePosition = async (data: AddPositionFormData) => {
     try {
-      await createPosition({
+      const newPosition = await createPosition({
         title: data.jobTitle,
         departmentId: data.departmentId || undefined,
         parentId: data.parentId || undefined,
       });
 
-      // If not vacant and a user is assigned, assign the user to the new position
+      // If not vacant and a user is selected, assign them to the new position
       if (!data.isVacant && data.assignedUser) {
-        // We need the position ID — re-fetch and find the new one
-        // For simplicity, we'll just refresh; the user can be assigned later
+        await assignUserToPosition(newPosition.id, data.assignedUser);
       }
 
       setIsAddModalOpen(false);
@@ -512,6 +568,21 @@ export default function PositionTreePage() {
     name: e.name,
   }));
 
+  // Filter list-view departments by active filters
+  const filteredDepartments = useMemo(() => {
+    const selectedDeptIds = toolbarFilters.department;
+    if (!selectedDeptIds || selectedDeptIds.length === 0) return departments;
+    return departments.filter((d) => selectedDeptIds.includes(d.id));
+  }, [departments, toolbarFilters]);
+
+  // Filter tree view by active department/search filters
+  const filteredPositionTree = useMemo(() => {
+    const deptIds = toolbarFilters.department ?? [];
+    return filterPositionTree(positionTree, searchQuery, deptIds);
+  }, [positionTree, searchQuery, toolbarFilters]);
+
+  const treeSearchActive = searchQuery.trim().length > 0 || (toolbarFilters.department ?? []).length > 0;
+
   const { total: totalPositions, vacant: vacantPositions } = countPositions(positionTree);
 
   if (loading) {
@@ -530,6 +601,9 @@ export default function PositionTreePage() {
           onFilter={handleFilter}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          departments={departmentList}
+          activeFilters={toolbarFilters}
+          onSearchQueryChange={setSearchQuery}
         />
       </div>
 
@@ -564,12 +638,13 @@ export default function PositionTreePage() {
 
           {/* Tree View */}
           <PositionTreeView
-            positions={positionTree}
+            positions={filteredPositionTree}
             onPositionClick={handlePositionClick}
             onPositionMove={handlePositionMove}
             unassignedEmployees={isManager ? unassignedEmployees : []}
             onEmployeeAssign={handleEmployeeAssign}
             onEmployeeRemove={isManager ? handleRemoveUnassignedUser : undefined}
+            searchActive={treeSearchActive}
           />
         </div>
       ) : (
@@ -596,7 +671,7 @@ export default function PositionTreePage() {
           </div>
 
           <PositionListView
-            departments={departments}
+            departments={filteredDepartments}
             onEmployeeClick={handleEmployeeClick}
             selectedEmployees={selectedEmployees}
             onSelectionChange={setSelectedEmployees}

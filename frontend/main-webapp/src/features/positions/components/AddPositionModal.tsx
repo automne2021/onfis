@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { CloseIcon, SearchIcon } from "../../../components/common/Icons";
 
@@ -58,6 +58,15 @@ export default function AddPositionModal({
 
   const [reportsToSearch, setReportsToSearch] = useState("");
   const [showReportsToDropdown, setShowReportsToDropdown] = useState(false);
+  const reportsToContainerRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const updateDropdownRect = useCallback(() => {
+    if (reportsToContainerRef.current) {
+      const rect = reportsToContainerRef.current.getBoundingClientRect();
+      setDropdownRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+  }, []);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -205,7 +214,7 @@ export default function AddPositionModal({
               <label className="block text-sm font-medium text-neutral-900">
                 Reports To
               </label>
-              <div className="relative">
+              <div className="relative" ref={reportsToContainerRef}>
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
                   <SearchIcon size={20} />
                 </div>
@@ -215,9 +224,11 @@ export default function AddPositionModal({
                   onChange={(e) => {
                     setReportsToSearch(e.target.value);
                     setFormData({ ...formData, parentId: "" });
+                    updateDropdownRect();
                     setShowReportsToDropdown(true);
                   }}
-                  onFocus={() => setShowReportsToDropdown(true)}
+                  onFocus={() => { updateDropdownRect(); setShowReportsToDropdown(true); }}
+                  onBlur={() => setTimeout(() => setShowReportsToDropdown(false), 150)}
                   placeholder="Search position..."
                   className="w-full h-9 pl-10 pr-3 bg-neutral-50 border border-neutral-200 rounded-lg
                     text-sm text-neutral-900 placeholder:text-neutral-400
@@ -236,9 +247,13 @@ export default function AddPositionModal({
                     ×
                   </button>
                 )}
-                {/* Reports To Dropdown */}
-                {showReportsToDropdown && !formData.parentId && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg max-h-[180px] overflow-y-auto z-20">
+                {/* Reports To Dropdown — rendered via portal to escape overflow clipping */}
+                {showReportsToDropdown && !formData.parentId && dropdownRect && createPortal(
+                  <div
+                    className="fixed bg-white border border-neutral-200 rounded-lg shadow-lg max-h-[180px] overflow-y-auto z-[9999]"
+                    style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
                     <button
                       type="button"
                       onClick={() => {
@@ -274,7 +289,8 @@ export default function AddPositionModal({
                         No positions found
                       </div>
                     )}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             </div>

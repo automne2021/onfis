@@ -14,15 +14,6 @@ function levelToNum(level: string | null | undefined): number {
   return match ? parseInt(match[1], 10) : 0;
 }
 
-function getLevelColor(level: string | null | undefined): string {
-  const n = levelToNum(level);
-  if (n >= 6) return "bg-purple-100 text-purple-700 border-purple-200";
-  if (n >= 5) return "bg-blue-100 text-blue-700 border-blue-200";
-  if (n >= 4) return "bg-amber-100 text-amber-700 border-amber-200";
-  if (n >= 3) return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  return "bg-neutral-100 text-neutral-600 border-neutral-200";
-}
-
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
 function Avatar({
@@ -134,6 +125,7 @@ export default function PositionDetailModal({
 }: PositionDetailModalProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
+  const [localTitle, setLocalTitle] = useState(data?.title ?? "");
   const [savingTitle, setSavingTitle] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"remove" | "deletePosition" | null>(null);
@@ -155,6 +147,7 @@ export default function PositionDetailModal({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen && data) {
+      setLocalTitle(data.title);
       setEditTitle(data.title);
       setEditingTitle(false);
       setError(null);
@@ -164,17 +157,18 @@ export default function PositionDetailModal({
 
   const handleTitleClick = () => {
     if (!canManage) return;
-    setEditTitle(data!.title);
+    setEditTitle(localTitle);
     setEditingTitle(true);
   };
 
   const handleTitleSave = async () => {
     if (!data || !editTitle.trim()) { setEditingTitle(false); return; }
-    if (editTitle.trim() === data.title) { setEditingTitle(false); return; }
+    if (editTitle.trim() === localTitle) { setEditingTitle(false); return; }
     setSavingTitle(true);
     setError(null);
     try {
       await updatePosition(data.positionId, { title: editTitle.trim() });
+      setLocalTitle(editTitle.trim()); // update displayed title immediately
       await onRefresh();
       setEditingTitle(false);
     } catch {
@@ -224,9 +218,6 @@ export default function PositionDetailModal({
 
   if (!isOpen || !data) return null;
 
-  const levelN = levelToNum(data.level);
-  const curLevelN = levelToNum(currentUserLevel);
-
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -261,7 +252,7 @@ export default function PositionDetailModal({
                 {/* Click-to-edit title even for vacant */}
                 {canManage ? (
                   <ClickToEditTitle
-                    value={editingTitle ? editTitle : data.title}
+                    value={editingTitle ? editTitle : localTitle}
                     isEditing={editingTitle}
                     saving={savingTitle}
                     inputRef={titleInputRef}
@@ -272,7 +263,7 @@ export default function PositionDetailModal({
                     className="text-sm text-neutral-400 mt-0.5"
                   />
                 ) : (
-                  <p className="text-sm text-neutral-400 mt-0.5">{data.title}</p>
+                  <p className="text-sm text-neutral-400 mt-0.5">{localTitle}</p>
                 )}
               </div>
             ) : (
@@ -283,7 +274,7 @@ export default function PositionDetailModal({
                 {/* Position title — click to edit */}
                 {canManage ? (
                   <ClickToEditTitle
-                    value={editingTitle ? editTitle : data.title}
+                    value={editingTitle ? editTitle : localTitle}
                     isEditing={editingTitle}
                     saving={savingTitle}
                     inputRef={titleInputRef}
@@ -294,7 +285,7 @@ export default function PositionDetailModal({
                     className="text-sm text-primary font-medium mt-0.5"
                   />
                 ) : (
-                  <p className="text-sm text-primary font-medium mt-0.5">{data.title}</p>
+                  <p className="text-sm text-primary font-medium mt-0.5">{localTitle}</p>
                 )}
 
                 {/* Badges — role + department */}
