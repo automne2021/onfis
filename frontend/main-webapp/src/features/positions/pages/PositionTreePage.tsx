@@ -611,8 +611,76 @@ export default function PositionTreePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-neutral-500">Loading positions...</div>
+      <div className="relative w-full mx-auto animate-pulse">
+        {/* Toolbar skeleton */}
+        <div className="mb-2 navbar-style">
+          <div className="h-4 w-24 bg-neutral-200 rounded" />
+          <div className="flex-1 h-9 bg-neutral-100 rounded-xl max-w-xs" />
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-24 bg-neutral-100 rounded-xl" />
+            <div className="h-9 w-20 bg-neutral-100 rounded-xl" />
+          </div>
+        </div>
+
+        {/* Stats bar + button skeleton */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="bg-white border border-neutral-200 rounded-[8px] px-3 py-1.5 flex items-center gap-4">
+            <div className="h-4 w-36 bg-neutral-200 rounded" />
+            <div className="h-4 w-24 bg-neutral-200 rounded" />
+          </div>
+          <div className="h-9 w-32 bg-neutral-200 rounded-xl" />
+        </div>
+
+        {/* Tree node skeletons */}
+        <div className="flex flex-col gap-2">
+          {/* Level 0 — root node */}
+          <div className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl w-56">
+            <div className="w-8 h-8 rounded-full bg-neutral-200 flex-shrink-0" />
+            <div className="flex flex-col gap-1.5 flex-1">
+              <div className="h-3 bg-neutral-200 rounded w-3/4" />
+              <div className="h-2.5 bg-neutral-100 rounded w-1/2" />
+            </div>
+          </div>
+
+          {/* Level 1 */}
+          <div className="pl-10 flex flex-col gap-2">
+            {[0.85, 0.7, 0.9].map((w, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl" style={{ width: `${w * 220}px` }}>
+                <div className="w-7 h-7 rounded-full bg-neutral-200 flex-shrink-0" />
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <div className="h-3 bg-neutral-200 rounded w-3/4" />
+                  <div className="h-2.5 bg-neutral-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+
+            {/* Level 2 */}
+            <div className="pl-10 flex flex-col gap-2">
+              {[0.75, 0.8].map((w, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl" style={{ width: `${w * 200}px` }}>
+                  <div className="w-6 h-6 rounded-full bg-neutral-100 flex-shrink-0" />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="h-3 bg-neutral-100 rounded w-2/3" />
+                    <div className="h-2.5 bg-neutral-100 rounded w-5/12" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Another level-1 branch */}
+          <div className="pl-10 flex flex-col gap-2">
+            {[0.8, 0.65].map((w, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl" style={{ width: `${w * 220}px` }}>
+                <div className="w-7 h-7 rounded-full bg-neutral-200 flex-shrink-0" />
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <div className="h-3 bg-neutral-200 rounded w-3/4" />
+                  <div className="h-2.5 bg-neutral-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -674,15 +742,17 @@ export default function PositionTreePage() {
       ) : (
         // List View Layout
         <div className="w-full bg-white rounded-[12px] overflow-hidden">
-          <div className="bg-neutral-50 border border-neutral-200 flex flex-wrap items-center gap-4 p-2">
-            <span className="text-sm font-bold text-neutral-500">
-              Total Position:{" "}
-              <span className="text-primary">{totalPositions}</span>
-            </span>
-            <span className="text-sm font-bold text-neutral-500">
-              Vacant:{" "}
-              <span className="text-status-off_track">{vacantPositions}</span>
-            </span>
+          <div className="bg-neutral-50 border border-neutral-200 flex items-center justify-between p-2">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-bold text-neutral-500">
+                Total Position:{" "}
+                <span className="text-primary">{totalPositions}</span>
+              </span>
+              <span className="text-sm font-bold text-neutral-500">
+                Vacant:{" "}
+                <span className="text-status-off_track">{vacantPositions}</span>
+              </span>
+            </div>
             {isManager && (
               <Button
                 title="Add Position"

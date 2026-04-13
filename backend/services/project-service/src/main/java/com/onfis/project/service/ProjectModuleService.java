@@ -1520,6 +1520,7 @@ public class ProjectModuleService {
                 project.getDueDate(),
                 safeTags(project.getTags()),
                 asOffset(project.getCreatedAt()),
+                asOffset(project.getUpdatedAt()),
                 assignees,
                 canManageProject(currentUser, project.getId())
         );
@@ -2791,7 +2792,7 @@ public class ProjectModuleService {
             case DESIGNER -> "Designer";
             case QA -> "QA";
             case ANALYST -> "Analyst";
-            case MEMBER -> "Developer";
+            case MEMBER -> "Member";
         };
     }
 

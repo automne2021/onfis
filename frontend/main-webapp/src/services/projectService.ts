@@ -60,6 +60,8 @@ export interface ApiProject {
   startDate: string | null;
   dueDate: string | null;
   tags: string;
+  createdAt: string | null;
+  updatedAt: string | null;
   assignees: ApiUserSummary[];
   canManage: boolean;
 }

@@ -18,63 +18,6 @@ import {
 } from "../../../services/projectService";
 import { useToast } from "../../../contexts/useToast";
 
-// ── Mock data ──────────────────────────────────────────────────────────────────
-const MOCK_MEMBERS: ProjectMember[] = [
-  {
-    id: "1",
-    name: "Sarah Jenkins",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-    projectRole: "Lead",
-    joinedAt: "Jan 1, 2026",
-    taskCount: 5,
-    customRoles: [],
-  },
-  {
-    id: "2",
-    name: "John Doe",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-    projectRole: "Developer",
-    joinedAt: "Jan 5, 2026",
-    taskCount: 3,
-    customRoles: [],
-  },
-  {
-    id: "3",
-    name: "Alice Smith",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-    projectRole: "Designer",
-    joinedAt: "Jan 10, 2026",
-    taskCount: 4,
-    customRoles: [],
-  },
-  {
-    id: "4",
-    name: "Bob Wilson",
-    projectRole: "QA",
-    joinedAt: "Jan 15, 2026",
-    taskCount: 2,
-    customRoles: [],
-  },
-  {
-    id: "5",
-    name: "Carol Brown",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carol",
-    projectRole: "Analyst",
-    joinedAt: "Feb 1, 2026",
-    taskCount: 1,
-    customRoles: [],
-  },
-  {
-    id: "6",
-    name: "David Kim",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-    projectRole: "Developer",
-    joinedAt: "Feb 10, 2026",
-    taskCount: 3,
-    customRoles: [],
-  },
-];
-
 // ── Avatar util ────────────────────────────────────────────────────────────────
 function Avatar({ name, avatar, size = 48 }: { name: string; avatar?: string; size?: number }) {
   return (
@@ -596,7 +539,7 @@ export default function ProjectMembersPage() {
         })));
       } catch {
         showToast("Failed to load project members", "error");
-        setMembers(MOCK_MEMBERS);
+        setMembers([]);
       } finally {
         setLoading(false);
       }

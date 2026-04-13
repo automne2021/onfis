@@ -18,6 +18,7 @@ public record ProjectResponse(
         LocalDate dueDate,
         String tags,
         OffsetDateTime createdAt,
+        OffsetDateTime updatedAt,
         List<UserSummaryResponse> assignees,
         boolean canManage
 ) {

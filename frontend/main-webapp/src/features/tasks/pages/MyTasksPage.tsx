@@ -399,6 +399,7 @@ export default function MyTasksPage() {
   });
 
   const topRef = useRef<HTMLDivElement>(null);
+  const loadCounterRef = useRef(0);
 
   const isKanbanView = activeTab === "assigned";
 
@@ -413,6 +414,8 @@ export default function MyTasksPage() {
 
   const loadTasks = useCallback(async () => {
     if (isAuthLoading || !currentUser.id) return;
+
+    const loadId = ++loadCounterRef.current;
 
     try {
       setLoading(true);
@@ -430,6 +433,7 @@ export default function MyTasksPage() {
         sortDir,
       });
 
+      if (loadId !== loadCounterRef.current) return;
       setTasks(response.content.map(toTaskView));
       setPageMeta({
         totalElements: response.totalElements,
@@ -438,10 +442,12 @@ export default function MyTasksPage() {
         hasNext: response.hasNext,
       });
     } catch {
+      if (loadId !== loadCounterRef.current) return;
       setError("Failed to load tasks from server.");
       setTasks([]);
       setPageMeta({ totalElements: 0, totalPages: 0, size: 10, hasNext: false });
     } finally {
+      if (loadId !== loadCounterRef.current) return;
       setLoading(false);
     }
   }, [activeTab, currentUser.id, isAuthLoading, isKanbanView, page, priorityFilter, searchQuery, sortBy, sortDir, statusFilter]);
