@@ -568,12 +568,36 @@ export default function PositionTreePage() {
     name: e.name,
   }));
 
-  // Filter list-view departments by active filters
+  // Filter list-view departments by active filters + search query
   const filteredDepartments = useMemo(() => {
     const selectedDeptIds = toolbarFilters.department;
-    if (!selectedDeptIds || selectedDeptIds.length === 0) return departments;
-    return departments.filter((d) => selectedDeptIds.includes(d.id));
-  }, [departments, toolbarFilters]);
+    let filtered = departments;
+
+    if (selectedDeptIds && selectedDeptIds.length > 0) {
+      filtered = filtered.filter((d) => selectedDeptIds.includes(d.id));
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.reduce<Department[]>((acc, dept) => {
+        const matchedEmps = dept.employees.filter(
+          (e) =>
+            e.name.toLowerCase().includes(q) ||
+            e.jobPosition.toLowerCase().includes(q) ||
+            (e.workEmail?.toLowerCase().includes(q) ?? false) ||
+            (e.workPhone?.toLowerCase().includes(q) ?? false)
+        );
+        if (matchedEmps.length > 0) {
+          acc.push({ ...dept, employees: matchedEmps });
+        } else if (dept.name.toLowerCase().includes(q)) {
+          acc.push(dept);
+        }
+        return acc;
+      }, []);
+    }
+
+    return filtered;
+  }, [departments, toolbarFilters, searchQuery]);
 
   // Filter tree view by active department/search filters
   const filteredPositionTree = useMemo(() => {

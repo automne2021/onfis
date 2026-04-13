@@ -17,7 +17,7 @@ export default function CalendarHeader({
   onToday,
 }: CalendarHeaderProps) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-200">
+    <div className="flex items-center px-3 py-2 border-b border-neutral-200">
       <div className="flex items-center gap-4">
         <h2 className="font-bold text-base text-neutral-900">{getMonthYear(year, month)}</h2>
 
@@ -36,15 +36,14 @@ export default function CalendarHeader({
           >
             <ChevronRightIcon />
           </button>
+          <button
+            onClick={onToday}
+            className="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
+          >
+            Today
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={onToday}
-        className="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 rounded-lg transition-colors"
-      >
-        Today
-      </button>
     </div>
   );
 }
