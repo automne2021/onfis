@@ -1,34 +1,32 @@
 package com.onfis.shared.security;
 
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.annotation.RequestScope;
 
 /**
  * Thread-safe context holder for multi-tenancy
  */
 @Component
-@RequestScope
 public class TenantContext {
 
-    private String tenantId;
+    private static final ThreadLocal<String> TENANT_ID = new ThreadLocal<>();
 
     public String getTenantId() {
-        return tenantId;
+        return TENANT_ID.get();
     }
 
     public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
+        TENANT_ID.set(tenantId);
     }
 
     public String getCompanyId() {
-        return tenantId;
+        return TENANT_ID.get();
     }
 
     public void setCompanyId(String companyId) {
-        this.tenantId = companyId;
+        TENANT_ID.set(companyId);
     }
 
     public void clear() {
-        this.tenantId = null;
+        TENANT_ID.remove();
     }
 }

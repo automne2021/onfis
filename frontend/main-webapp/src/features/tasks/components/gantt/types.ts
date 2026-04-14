@@ -7,6 +7,7 @@ export type GanttViewMode = "day" | "week" | "month";
 
 export interface GanttTask {
   id: string;
+  taskKey?: string;
   name: string;
   owner: Assignee;
   status: GanttTaskStatus;

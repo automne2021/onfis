@@ -13,10 +13,11 @@ export interface SearchResult {
 interface SearchBarProps {
   scope: 'projects' | 'tasks' | 'announcement' | 'discuss' | 'users' | 'positions' | 'documents' // tùy chỉnh sau (Nhớ chỉnh này nếu chưa thấy hợp lý nhé)
   onSearch: (value: SearchResult[]) => void // Xử lý data khác nhau tùy nơi gọi
+  onQueryChange?: (query: string) => void // Exposes raw query string for local filtering
   width?: string
 }
 
-export function SearchBar({ scope, onSearch, width = 'w-[220px] md:w-[400px] lg:w-[520px]' }: SearchBarProps) {
+export function SearchBar({ scope, onSearch, onQueryChange, width = 'w-[220px] md:w-[400px] lg:w-[520px]' }: SearchBarProps) {
 
   // State Managements
   const [searchTerm, setSearchTerm] = useState("")
@@ -44,7 +45,10 @@ export function SearchBar({ scope, onSearch, width = 'w-[220px] md:w-[400px] lg:
       <input
         type="text"
         placeholder={`Search...`}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={(e) => {
+          setSearchTerm(e.target.value);
+          onQueryChange?.(e.target.value);
+        }}
         className="outline-none w-full body-4-regular"
         maxLength={250}
       />

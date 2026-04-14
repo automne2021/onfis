@@ -40,9 +40,7 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     if (error.response && error.response.status === 401) {
-      console.error("Unauthorized! Redirecting to login...");
-      // localStorage.removeItem('token');
-      // window.location.href = '/login';
+      console.warn('Unauthorized API response', error.config?.url);
     }
     return Promise.reject(error);
   }

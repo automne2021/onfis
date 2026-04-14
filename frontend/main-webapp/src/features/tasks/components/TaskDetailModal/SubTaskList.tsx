@@ -1,14 +1,17 @@
 import { useState } from "react";
 import type { SubTask } from "./types";
 import { CheckboxIconModal as CheckboxIcon, PlusIcon } from "../../../../components/common/Icons";
+import { createSubtask, updateSubtask, deleteSubtask } from "../../../../services/taskService";
+import ConfirmDialog from "../../../../components/common/ConfirmDialog";
 
 interface SubTaskItemProps {
   subTask: SubTask;
   onToggle: (id: string) => void;
   onUpdate: (id: string, title: string) => void;
+  onDelete: (id: string) => void;
 }
 
-function SubTaskItem({ subTask, onToggle, onUpdate }: SubTaskItemProps) {
+function SubTaskItem({ subTask, onToggle, onUpdate, onDelete }: SubTaskItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(subTask.title);
 
@@ -50,37 +53,91 @@ function SubTaskItem({ subTask, onToggle, onUpdate }: SubTaskItemProps) {
           {subTask.title}
         </span>
       )}
+
+      {/* Delete button – visible on hover */}
+      <button
+        onClick={() => onDelete(subTask.id)}
+        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600"
+        aria-label="Delete subtask"
+      >
+        <span className="material-symbols-rounded" style={{ fontSize: 16 }}>close</span>
+      </button>
     </div>
   );
 }
 
 interface SubTaskListProps {
+  taskId: string;
   subTasks: SubTask[];
   onChange: (subTasks: SubTask[]) => void;
 }
 
-export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
-  const handleToggle = (id: string) => {
+export default function SubTaskList({ taskId, subTasks, onChange }: SubTaskListProps) {
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleToggle = async (id: string) => {
+    const subTask = subTasks.find((st) => st.id === id);
+    if (!subTask) return;
+    const newCompleted = !subTask.completed;
+
+    // Optimistic UI update
     const updated = subTasks.map((st) =>
-      st.id === id ? { ...st, completed: !st.completed } : st
+      st.id === id ? { ...st, completed: newCompleted } : st
     );
     onChange(updated);
+
+    try {
+      await updateSubtask(taskId, id, { title: subTask.title, completed: newCompleted });
+    } catch {
+      // Revert on failure
+      onChange(subTasks);
+    }
   };
 
-  const handleUpdate = (id: string, title: string) => {
+  const handleUpdate = async (id: string, title: string) => {
+    const subTask = subTasks.find((st) => st.id === id);
+    if (!subTask) return;
+
     const updated = subTasks.map((st) =>
       st.id === id ? { ...st, title } : st
     );
     onChange(updated);
+
+    try {
+      await updateSubtask(taskId, id, { title, completed: subTask.completed });
+    } catch {
+      onChange(subTasks);
+    }
   };
 
-  const handleAdd = () => {
-    const newSubTask: SubTask = {
-      id: `subtask-${Date.now()}`,
-      title: "New sub-task",
-      completed: false,
-    };
-    onChange([...subTasks, newSubTask]);
+  const handleAdd = async () => {
+    if (isAdding) return;
+    setIsAdding(true);
+
+    try {
+      const created = await createSubtask(taskId, { title: "New sub-task", completed: false });
+      onChange([...subTasks, { id: created.id, title: created.title, completed: created.completed }]);
+    } catch {
+      // silently fail – toast could be added via context
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget;
+    setDeleteTarget(null);
+
+    const prev = subTasks;
+    onChange(subTasks.filter((st) => st.id !== id));
+
+    try {
+      await deleteSubtask(taskId, id);
+    } catch {
+      onChange(prev);
+    }
   };
 
   return (
@@ -92,19 +149,33 @@ export default function SubTaskList({ subTasks, onChange }: SubTaskListProps) {
           <SubTaskItem
             key={subTask.id}
             subTask={subTask}
-            onToggle={handleToggle}
-            onUpdate={handleUpdate}
+            onToggle={(id) => void handleToggle(id)}
+            onUpdate={(id, title) => void handleUpdate(id, title)}
+            onDelete={(id) => setDeleteTarget(id)}
           />
         ))}
       </div>
 
       <button
-        onClick={handleAdd}
-        className="flex items-center gap-2 py-2 text-primary hover:text-primary-hover transition-colors"
+        onClick={() => void handleAdd()}
+        disabled={isAdding}
+        className="flex items-center gap-2 py-2 text-primary hover:text-primary-hover transition-colors disabled:opacity-50"
       >
         <PlusIcon />
-        <span className="text-sm font-medium">Add item</span>
+        <span className="text-sm font-medium">{isAdding ? "Adding..." : "Add item"}</span>
       </button>
+
+      {/* Confirmation dialog for deleting a subtask */}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Sub-task"
+        message="Are you sure you want to delete this sub-task? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => void handleDeleteConfirmed()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

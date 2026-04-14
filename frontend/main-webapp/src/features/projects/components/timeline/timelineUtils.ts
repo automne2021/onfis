@@ -77,7 +77,7 @@ export function generateTimelineConfig(
   }
 
   const totalDays = weeks.length * 7;
-  const dayWidth = viewMode === "day" ? 60 : viewMode === "week" ? 30 : 15;
+  const dayWidth = viewMode === "day" ? 60 : viewMode === "week" ? 30 : 12;
 
   return {
     viewMode,

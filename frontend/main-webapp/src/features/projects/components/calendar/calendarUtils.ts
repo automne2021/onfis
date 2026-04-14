@@ -2,6 +2,20 @@ import type { Project } from "../../types";
 import type { CalendarDay, ProjectCalendarEvent } from "./types";
 
 /**
+ * Parse a raw ISO date string (YYYY-MM-DD or ISO timestamp) as a local Date.
+ * Returns null when the value is empty or unparseable.
+ */
+function parseRawDate(raw?: string | null): Date | null {
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [y, m, d] = raw.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * Get all days for a calendar month view (includes days from prev/next months)
  */
 export function getCalendarDays(
@@ -21,14 +35,32 @@ export function getCalendarDays(
   const endDate = new Date(lastDay);
   endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
 
-  // Convert projects to calendar events
-  const events: ProjectCalendarEvent[] = projects.map((project) => ({
-    id: project.id,
-    title: project.title,
-    date: new Date(project.dueDate),
-    project,
-    color: project.status,
-  }));
+  // Generate start + end events from raw ISO dates
+  const events: ProjectCalendarEvent[] = [];
+  projects.forEach((project) => {
+    const startRaw = parseRawDate(project.startDateRaw);
+    if (startRaw) {
+      events.push({
+        id: `${project.id}-start`,
+        title: project.title,
+        date: startRaw,
+        project,
+        color: project.status,
+        eventType: "start",
+      });
+    }
+    const dueRaw = parseRawDate(project.dueDateRaw);
+    if (dueRaw) {
+      events.push({
+        id: `${project.id}-end`,
+        title: project.title,
+        date: dueRaw,
+        project,
+        color: project.status,
+        eventType: "end",
+      });
+    }
+  });
 
   const days: CalendarDay[] = [];
   const currentDate = new Date(startDate);

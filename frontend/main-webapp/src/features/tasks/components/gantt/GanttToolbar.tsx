@@ -1,8 +1,5 @@
-import { useState } from "react";
 import type { GanttViewMode } from "./types";
 import {
-  FilterIcon,
-  GroupByIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "../../../../components/common/Icons";
@@ -12,8 +9,6 @@ interface GanttToolbarProps {
   onDateChange: (date: Date) => void;
   viewMode: GanttViewMode;
   onViewModeChange: (mode: GanttViewMode) => void;
-  onFilter?: () => void;
-  onGroupBy?: () => void;
 }
 
 const monthNames = [
@@ -26,11 +21,7 @@ export default function GanttToolbar({
   onDateChange,
   viewMode,
   onViewModeChange,
-  onFilter,
-  onGroupBy,
 }: GanttToolbarProps) {
-  const [isGroupByOpen, setIsGroupByOpen] = useState(false);
-
   const handlePrevMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() - 1);
@@ -54,60 +45,7 @@ export default function GanttToolbar({
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-neutral-200">
-      {/* Left Section: Filter & Group By */}
-      <div className="flex items-center gap-2">
-        {/* Filter Button */}
-        <button
-          onClick={onFilter}
-          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-neutral-500 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
-        >
-          <FilterIcon />
-          <span>Filter</span>
-        </button>
-
-        {/* Group By Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setIsGroupByOpen(!isGroupByOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-neutral-500 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
-          >
-            <GroupByIcon />
-            <span>Group By</span>
-          </button>
-          {isGroupByOpen && (
-            <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-neutral-200 rounded-lg shadow-lg z-10">
-              <button
-                onClick={() => {
-                  onGroupBy?.();
-                  setIsGroupByOpen(false);
-                }}
-                className="w-full px-2.5 py-1.5 text-left text-xs hover:bg-neutral-50 transition-colors"
-              >
-                By Status
-              </button>
-              <button
-                onClick={() => {
-                  onGroupBy?.();
-                  setIsGroupByOpen(false);
-                }}
-                className="w-full px-2.5 py-1.5 text-left text-xs hover:bg-neutral-50 transition-colors"
-              >
-                By Assignee
-              </button>
-              <button
-                onClick={() => {
-                  onGroupBy?.();
-                  setIsGroupByOpen(false);
-                }}
-                className="w-full px-2.5 py-1.5 text-left text-xs hover:bg-neutral-50 transition-colors"
-              >
-                By Priority
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="flex flex-wrap items-center justify-end gap-2 py-2 border-b border-neutral-200">
 
       {/* Center Section: Date Navigation */}
       <div className="flex items-center gap-2">

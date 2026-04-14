@@ -9,11 +9,30 @@ import { generateTimelineConfig } from "./timelineUtils";
 interface ProjectTimelineViewProps {
   projects: Project[];
   onProjectClick?: (project: Project) => void;
+  currentDate?: Date;
+  onCurrentDateChange?: (date: Date) => void;
 }
 
-export default function ProjectTimelineView({ projects, onProjectClick }: ProjectTimelineViewProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+export default function ProjectTimelineView({
+  projects,
+  onProjectClick,
+  currentDate,
+  onCurrentDateChange,
+}: ProjectTimelineViewProps) {
+  const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<TimelineViewMode>("week");
+  const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
+
+  const effectiveCurrentDate = currentDate ?? internalCurrentDate;
+
+  const handleDateChange = (nextDate: Date) => {
+    if (currentDate) {
+      onCurrentDateChange?.(nextDate);
+      return;
+    }
+    setInternalCurrentDate(nextDate);
+    onCurrentDateChange?.(nextDate);
+  };
 
   // Convert projects to timeline items
   const timelineProjects: ProjectTimelineItem[] = useMemo(
@@ -23,51 +42,43 @@ export default function ProjectTimelineView({ projects, onProjectClick }: Projec
 
   // Generate timeline configuration
   const timelineConfig = useMemo(
-    () => generateTimelineConfig(currentDate, viewMode, timelineProjects),
-    [currentDate, viewMode, timelineProjects]
+    () => generateTimelineConfig(effectiveCurrentDate, viewMode, timelineProjects),
+    [effectiveCurrentDate, viewMode, timelineProjects]
   );
 
   const handleProjectClick = (timelineProject: ProjectTimelineItem) => {
+    setSelectedProjectId(timelineProject.id);
     const originalProject = projects.find((p) => p.id === timelineProject.id);
     if (originalProject && onProjectClick) {
       onProjectClick(originalProject);
     }
   };
 
-  const handleFilter = () => {
-    // TODO: Implement filter modal
-    console.log("Open filter modal");
-  };
-
-  const handleGroupBy = () => {
-    // TODO: Implement group by functionality
-    console.log("Group by selected");
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden">
+    <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto">
       {/* Toolbar */}
       <TimelineToolbar
-        currentDate={currentDate}
-        onDateChange={setCurrentDate}
+        currentDate={effectiveCurrentDate}
+        onDateChange={handleDateChange}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onFilter={handleFilter}
-        onGroupBy={handleGroupBy}
       />
 
-      {/* Timeline Grid */}
-      {timelineProjects.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-neutral-400">
-          No projects to display
-        </div>
-      ) : (
-        <ProjectTimelineGrid
-          projects={timelineProjects}
-          config={timelineConfig}
-          onProjectClick={handleProjectClick}
-        />
-      )}
+      {/* Timeline Grid + Detail Panel */}
+      <div className="flex flex-1 mt-2 overflow-hidden">
+        {timelineProjects.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center text-sm text-neutral-500 bg-white border border-neutral-200 rounded-lg">
+            No projects to display
+          </div>
+        ) : (
+          <ProjectTimelineGrid
+            projects={timelineProjects}
+            config={timelineConfig}
+            selectedProjectId={selectedProjectId}
+            onProjectClick={handleProjectClick}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { ReactElement } from "react";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 import { SearchIcon, KanbanIcon, ListIcon, TimelineIcon, CalendarViewIcon as CalendarIcon } from "../../../components/common/Icons";
@@ -24,6 +23,7 @@ const FILTER_CATEGORIES: FilterCategory[] = [
     key: "priority",
     label: "Priority",
     options: [
+      { value: "urgent", label: "Urgent", color: "bg-[#E7000B]" },
       { value: "high", label: "High", color: "bg-[#FF6900]" },
       { value: "medium", label: "Medium", color: "bg-[#FFD230]" },
       { value: "low", label: "Low", color: "bg-neutral-400" },
@@ -35,6 +35,8 @@ interface ProjectToolbarProps {
   onNewProject?: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  activeFilters: ActiveFilters;
+  onFiltersChange: (filters: ActiveFilters) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }
@@ -43,11 +45,11 @@ export default function ProjectToolbar({
   onNewProject,
   searchQuery,
   onSearchChange,
+  activeFilters,
+  onFiltersChange,
   viewMode,
   onViewModeChange,
 }: ProjectToolbarProps) {
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
-  
   const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
     { mode: "kanban", icon: (active) => <KanbanIcon active={active} /> },
     { mode: "list", icon: (active) => <ListIcon active={active} /> },
@@ -87,7 +89,7 @@ export default function ProjectToolbar({
         <FilterDropdown
           categories={FILTER_CATEGORIES}
           activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
+          onFiltersChange={onFiltersChange}
         />
 
         <ViewToggle 

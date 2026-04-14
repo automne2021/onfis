@@ -46,6 +46,7 @@ export default function ProjectListView({ projects, onProjectClick }: ProjectLis
         bValue = statusOrder[b.status];
       }
 
+      if (aValue == null || bValue == null) return 0;
       if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
