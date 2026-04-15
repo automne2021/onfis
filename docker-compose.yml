@@ -7,8 +7,10 @@ services:
     container_name: onfis-api-gateway
     ports:
       - "8080:8080"
+    env_file:         
+      - .env
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_PROFILES_ACTIVE=docker
     networks:
       - onfis-network
 
@@ -83,9 +85,13 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
     networks:
       - onfis-network
+    depends_on:
+      - redis
 
   # Announcement Service
   announcement-service:
@@ -114,6 +120,14 @@ services:
       - onfis-network
     depends_on:
       - api-gateway
+  redis:
+    image: redis:7-alpine
+    container_name: onfis-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - onfis-network
+    command: redis-server --appendonly yes
 
 networks:
   onfis-network:
