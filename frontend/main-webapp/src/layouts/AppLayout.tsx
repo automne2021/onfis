@@ -25,7 +25,7 @@ export default function AppLayout() {
 
               {/* Main Content Area */}
               <main className="flex-1 overflow-auto">
-                <div key={location.pathname} className="animate-page-enter">
+                <div key={location.pathname} className="animate-page-enter h-full">
                   <Outlet />
                 </div>
               </main>

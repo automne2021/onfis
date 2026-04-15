@@ -1,10 +1,10 @@
 import { useState } from "react";
-import type { UserProfile } from "../../../../types/userType";
+import type { FullUserProfile } from "../../../../types/userType";
 import { DocumentCard } from "../../components/Documents/DocumentCard";
 import { NavBar } from "../../components/navigation/NavBar";
 import { UploadDocumentModal } from "../../components/Documents/UploadDocumentModal";
 
-export function Documents({ userInfo } : { userInfo: UserProfile }) {
+export function Documents({ userInfo } : { userInfo: FullUserProfile }) {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   return(

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   PositionToolbar,
   PositionTreeView,
@@ -12,193 +12,63 @@ import {
 import { Add } from '@mui/icons-material';
 import { Button } from "../../../components/common/Buttons/Button";
 import { useRole } from "../../../hooks/useRole";
+import {
+  getPositionTree,
+  getDepartmentsWithEmployees,
+  getUnassignedUsers,
+  createPosition,
+  movePosition,
+  assignUserToPosition,
+  type PositionTreeNode,
+  type DepartmentWithEmployees,
+  type UnassignedUser,
+} from "../services/positionApi";
 
-// Mock unassigned employees (new hires waiting to be placed)
-const initialUnassignedEmployees: UnassignedEmployee[] = [
-  { id: "new-1", name: "Alex Rivera", role: "Software Engineer" },
-  { id: "new-2", name: "Priya Patel", role: "Product Designer" },
-  { id: "new-3", name: "Marcus Chang", role: "Data Analyst" },
-  { id: "new-4", name: "Elena Volkov", role: "Marketing Specialist" },
-  { id: "new-5", name: "Jamal Thompson", role: "DevOps Engineer" },
-];
+// ── Mapper helpers ────────────────────────────────────────────────────────────
 
-// Richer mock data for Tree View - realistic org chart
-const initialPositionTree: Position = {
-  id: "ceo",
-  name: "Sarah Johnson",
-  title: "Chief Executive Officer",
-  status: "primary",
-  subordinateCount: 5,
-  children: [
-    {
-      id: "cto",
-      name: "Michael Chen",
-      title: "Chief Technology Officer",
-      status: "on_track",
-      children: [
-        {
-          id: "dev-lead",
-          name: "Emily Davis",
-          title: "Development Lead",
-          status: "on_track",
-          children: [
-            {
-              id: "fe-dev",
-              name: "James Wilson",
-              title: "Frontend Developer",
-              status: "on_track",
-            },
-            {
-              id: "be-dev",
-              name: "Lisa Park",
-              title: "Backend Developer",
-              status: "on_track",
-            },
-            {
-              id: "vacant-dev",
-              name: "Vacant",
-              title: "Full-stack Developer",
-              isVacant: true,
-            },
-          ],
-        },
-        {
-          id: "qa-lead",
-          name: "David Brown",
-          title: "QA Engineer",
-          status: "off_track",
-        },
-      ],
-    },
-    {
-      id: "cfo",
-      name: "Robert Taylor",
-      title: "Chief Financial Officer",
-      status: "on_track",
-      children: [
-        {
-          id: "accountant",
-          name: "Jennifer Lee",
-          title: "Senior Accountant",
-          status: "on_track",
-        },
-        {
-          id: "vacant-finance",
-          name: "Vacant",
-          title: "Financial Analyst",
-          isVacant: true,
-        },
-      ],
-    },
-    {
-      id: "cmo",
-      name: "Amanda White",
-      title: "Chief Marketing Officer",
-      status: "on_track",
-      children: [
-        {
-          id: "mkt-lead",
-          name: "Chris Martinez",
-          title: "Marketing Lead",
-          status: "on_track",
-        },
-        {
-          id: "designer",
-          name: "Sophia Kim",
-          title: "UI/UX Designer",
-          status: "on_track",
-        },
-      ],
-    },
-  ],
-};
-
-// Mock data for List View
-const mockDepartments: Department[] = [
-  {
-    id: "marketing",
-    name: "Marketing",
-    employees: [
-      {
-        id: "emp-1",
-        name: "John Nguyen",
-        workPhone: "0987654321",
-        workEmail: "john.nguyen@gmail.com",
-        jobPosition: "Manager",
-        manager: { id: "mgr-1", name: "Alex Nguyen" },
-      },
-      {
-        id: "emp-2",
-        name: "Unassigned",
-        jobPosition: "Marketing Design",
-        isVacant: true,
-        manager: { id: "mgr-1", name: "Alex Nguyen" },
-      },
-    ],
-  },
-  {
-    id: "it",
-    name: "IT",
-    employees: [
-      {
-        id: "emp-3",
-        name: "Sarah Chen",
-        workPhone: "0912345678",
-        workEmail: "sarah.chen@gmail.com",
-        jobPosition: "Senior Developer",
-        manager: { id: "mgr-2", name: "Mike Wilson" },
-      },
-      {
-        id: "emp-4",
-        name: "Tom Brown",
-        workPhone: "0923456789",
-        workEmail: "tom.brown@gmail.com",
-        jobPosition: "Junior Developer",
-        manager: { id: "mgr-2", name: "Mike Wilson" },
-      },
-    ],
-  },
-];
-
-// Helper: recursively find and remove a node from the tree
-function removeNode(tree: Position, id: string): { tree: Position; removed: Position | null } {
-  if (tree.id === id) return { tree, removed: null }; // can't remove root
-
-  const newChildren: Position[] = [];
-  let removed: Position | null = null;
-
-  for (const child of tree.children || []) {
-    if (child.id === id) {
-      removed = child;
-    } else {
-      const result = removeNode(child, id);
-      if (result.removed) removed = result.removed;
-      newChildren.push(result.removed ? result.tree : child);
-    }
-  }
-
+function mapTreeNode(node: PositionTreeNode): Position {
   return {
-    tree: { ...tree, children: newChildren.length > 0 ? newChildren : undefined },
-    removed,
+    id: node.id,
+    name: node.name,
+    title: node.title,
+    avatar: node.avatar ?? undefined,
+    isVacant: node.isVacant,
+    status: (node.status as Position["status"]) ?? undefined,
+    subordinateCount: node.subordinateCount ?? undefined,
+    children: node.children?.map(mapTreeNode),
   };
 }
 
-// Helper: recursively insert a node as child of target
-function insertNode(tree: Position, targetId: string, node: Position): Position {
-  if (tree.id === targetId) {
-    return {
-      ...tree,
-      children: [...(tree.children || []), node],
-    };
-  }
-
-  return {
-    ...tree,
-    children: tree.children?.map((child) => insertNode(child, targetId, node)),
-  };
+function mapDepartments(deps: DepartmentWithEmployees[]): Department[] {
+  return deps.map((d) => ({
+    id: d.id,
+    name: d.name,
+    employees: d.employees.map((e) => ({
+      id: e.id,
+      name: e.name,
+      avatar: e.avatar ?? undefined,
+      workPhone: e.workPhone ?? undefined,
+      workEmail: e.workEmail ?? undefined,
+      jobPosition: e.jobPosition,
+      manager: e.manager
+        ? { id: e.manager.id, name: e.manager.name, avatar: e.manager.avatar ?? undefined }
+        : undefined,
+      isVacant: e.isVacant,
+    })),
+  }));
 }
 
-// Helper: count all positions recursively
+function mapUnassigned(users: UnassignedUser[]): UnassignedEmployee[] {
+  return users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    avatar: u.avatar ?? undefined,
+    role: u.role ?? undefined,
+  }));
+}
+
+// ── Helper: count all positions recursively ───────────────────────────────────
+
 function countPositions(tree: Position): { total: number; vacant: number } {
   let total = 1;
   let vacant = tree.isVacant ? 1 : 0;
@@ -210,14 +80,57 @@ function countPositions(tree: Position): { total: number; vacant: number } {
   return { total, vacant };
 }
 
+// ── Fallback mock data (shown only while loading or on error) ─────────────────
+
+const fallbackTree: Position = {
+  id: "loading",
+  name: "Loading...",
+  title: "Organization",
+  status: "primary",
+};
+
 export default function PositionTreePage() {
-  // const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"tree" | "list">("tree");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [positionTree, setPositionTree] = useState<Position>(initialPositionTree);
-  const [unassignedEmployees, setUnassignedEmployees] = useState<UnassignedEmployee[]>(initialUnassignedEmployees);
+  const [positionTree, setPositionTree] = useState<Position>(fallbackTree);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [unassignedEmployees, setUnassignedEmployees] = useState<UnassignedEmployee[]>([]);
+  const [loading, setLoading] = useState(true);
   const { isManager } = useRole();
+
+  // ── Fetch data ──────────────────────────────────────────────────────────────
+
+  const fetchTreeData = useCallback(async () => {
+    try {
+      const [treeData, unassignedData] = await Promise.all([
+        getPositionTree(),
+        getUnassignedUsers(),
+      ]);
+      setPositionTree(mapTreeNode(treeData));
+      setUnassignedEmployees(mapUnassigned(unassignedData));
+    } catch (err) {
+      console.error("Failed to fetch position tree:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchListData = useCallback(async () => {
+    try {
+      const depsData = await getDepartmentsWithEmployees();
+      setDepartments(mapDepartments(depsData));
+    } catch (err) {
+      console.error("Failed to fetch departments:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTreeData();
+    fetchListData();
+  }, [fetchTreeData, fetchListData]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleFilter = () => {
     console.log("Filter clicked");
@@ -227,7 +140,7 @@ export default function PositionTreePage() {
     setIsAddModalOpen(true);
   };
 
-  const handleCreatePosition = (data: {
+  const handleCreatePosition = async (data: {
     jobTitle: string;
     department: string;
     reportsTo: string;
@@ -235,8 +148,19 @@ export default function PositionTreePage() {
     isVacant: boolean;
     assignedUser: string;
   }) => {
-    console.log("Creating position:", data);
-    setIsAddModalOpen(false);
+    try {
+      await createPosition({
+        title: data.jobTitle,
+        departmentId: data.department || undefined,
+        parentId: data.reportsTo || undefined,
+      });
+      setIsAddModalOpen(false);
+      // Refresh data
+      await fetchTreeData();
+      await fetchListData();
+    } catch (err) {
+      console.error("Failed to create position:", err);
+    }
   };
 
   const handlePositionClick = (position: Position) => {
@@ -248,43 +172,40 @@ export default function PositionTreePage() {
   };
 
   // Drag and drop: move a position under a new parent
-  const handlePositionMove = useCallback((draggedId: string, targetId: string) => {
-    setPositionTree((prev) => {
-      const { tree: treeWithout, removed } = removeNode(prev, draggedId);
-      if (!removed) return prev;
-      return insertNode(treeWithout, targetId, removed);
-    });
-  }, []);
+  const handlePositionMove = useCallback(async (draggedId: string, targetId: string) => {
+    try {
+      await movePosition(draggedId, targetId);
+      await fetchTreeData();
+    } catch (err) {
+      console.error("Failed to move position:", err);
+    }
+  }, [fetchTreeData]);
 
   // Assign an unassigned employee to a position
-  const handleEmployeeAssign = useCallback((employeeId: string, targetPositionId: string) => {
-    const employee = unassignedEmployees.find((e) => e.id === employeeId);
-    if (!employee) return;
-
-    // Update position tree: fill the target with the employee's name
-    const fillPosition = (tree: Position): Position => {
-      if (tree.id === targetPositionId) {
-        return { ...tree, name: employee.name, isVacant: false, status: "on_track" };
-      }
-      return {
-        ...tree,
-        children: tree.children?.map(fillPosition),
-      };
-    };
-
-    setPositionTree((prev) => fillPosition(prev));
-    setUnassignedEmployees((prev) => prev.filter((e) => e.id !== employeeId));
-  }, [unassignedEmployees]);
+  const handleEmployeeAssign = useCallback(async (employeeId: string, targetPositionId: string) => {
+    try {
+      await assignUserToPosition(targetPositionId, employeeId);
+      await fetchTreeData();
+    } catch (err) {
+      console.error("Failed to assign employee:", err);
+    }
+  }, [fetchTreeData]);
 
   const { total: totalPositions, vacant: vacantPositions } = countPositions(positionTree);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-neutral-500">Loading positions...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full mx-auto">
       {/* Toolbar */}
       <div className="mb-2">
         <PositionToolbar
-          // searchQuery={searchQuery}
-          // onSearchChange={setSearchQuery}
           onFilter={handleFilter}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -353,7 +274,7 @@ export default function PositionTreePage() {
           </div>
 
           <PositionListView
-            departments={mockDepartments}
+            departments={departments}
             onEmployeeClick={handleEmployeeClick}
             selectedEmployees={selectedEmployees}
             onSelectionChange={setSelectedEmployees}

@@ -1,5 +1,3 @@
-// Định nghĩa cấu trúc cho thông tin chi tiết của nhân viên
-
 export interface UserDocument {
   id: string;
   fileName: string;
@@ -9,71 +7,83 @@ export interface UserDocument {
   fileUrl?: string;
 }
 
-export interface UserProfile {
-  id: string | number;
-  name: string;
-  position: string;
-  department: string;
-  email: string; // Work Email
-  phone?: string; // Work Phone
-  location?: string;
-  avatarUrl?: string;
+export interface HomeAddress {
+  line1: string;
+  cityStateZip: string;
+  country: string;
+}
 
-  // --- THÔNG TIN TỪ TAB OVERVIEW ---
-  team?: string;
-  reportsTo?: string | number;
-  reportsToName?: string; // Tên của quản lý
-  reportsToAvatar?: string;
+export interface FullUserProfile {
+  id: string | number;
+  tenantId?: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+  email: string;
+  role?: string;
+  positionId?: string;
+  positionName?: string; 
+  departmentName?: string; 
+
+  managerId?: string;
+  reportsToName?: string;
+  reportsToAvatar?: string; 
+  workLocation?: string;
   bio?: string;
   skills?: string[];
-
-  // --- THÔNG TIN TỪ TAB PERSONAL DETAILS ---
-  officeLocation?: string;
+  workPhone?: string;
+  personalEmail?: string;
+  phoneNumber?: string; 
+  address?: string;
+  dob?: string;
+  nationId?: string; 
   nationality?: string;
   gender?: string;
-  nationalId?: string; // SSN / CCCD
-  personalEmail?: string;
-  personalPhone?: string;
-  homeAddress?: {
-    line1: string;
-    cityStateZip: string;
-    country: string;
-  };
-  emergencyContact?: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  education?: {
-    degree: string;
-    major: string;
-    institution: string;
-    graduationYear: string | number;
-  };
 
-  // --- THÔNG TIN TỪ BẢO MẬT / HR & SALARY ---
-  banking?: {
-    bankName: string;
-    accountNumber: string;
-    taxId: string;
-  };
-  compensation?: {
-    baseSalary: string;
-    payFrequency: string;
-    bonusTarget: string;
-    nextReview: string;
-  };
-  contract?: {
-    type: string;
-    schedule: string;
-    startDate: string;
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+  } | null;
+
+  educationInfo?: {
+    degree?: string;
+    major?: string;
+    institution?: string;
+    graduationYear?: string | number;
+  } | null;
+
+  bankingInfo?: {
+    bankName?: string;
+    accountNumber?: string;
+    taxId?: string;
+  } | null;
+
+  taxInfo?: {
+    taxCode?: string;         
+    taxAuthority?: string;    
+    dependents?: number;    
+  } | null;
+
+  compensationInfo?: {
+    baseSalary?: string;
+    payFrequency?: string;
+    bonusTarget?: string;
+    nextReview?: string;
+  } | null;
+
+  contractInfo?: {
+    type?: string;
+    schedule?: string;
+    startDate?: string;
     endDate?: string | null;
-    noticePeriod: string;
-    probationPeriod: string;
+    noticePeriod?: string;
+    probationPeriod?: string;
     fileName?: string;
     fileSize?: string;
     fileUrl?: string;
     uploadDate?: string;
-  };
+  } | null;
+
   documents?: UserDocument[];
 }

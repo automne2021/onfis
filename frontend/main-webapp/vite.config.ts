@@ -24,5 +24,8 @@ export default defineConfig({
         ws: true,
       }
     }
-  }
+  },
+  define: {
+    global: 'window',
+  },
 })

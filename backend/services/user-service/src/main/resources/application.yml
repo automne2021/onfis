@@ -17,7 +17,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-
 management:
   endpoints:
     web:
@@ -31,3 +30,7 @@ logging:
   level:
     com.onfis: DEBUG
     org.springframework.web: INFO
+app:
+  services:
+    user: ${USER_SERVICE_URL:http://onfis-user-service:8081}
+    position: ${POSITION_SERVICE_URL:http://onfis-position-service:8083}

@@ -1,66 +1,48 @@
-import { Close, Groups, Business, KeyboardArrowDown, KeyboardArrowUp, PushPinOutlined, PushPin } from '@mui/icons-material';
+import { Close, Groups, Business, PushPinOutlined, PushPin } from '@mui/icons-material';
 import { Button } from '../../../components/common/Buttons/Button';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { OptionCard } from './Card/OptionCard';
-import Dropdown from '../../../components/common/Dropdown/Dropdown';
-import { ContentList, type ContentItem } from '../../../components/common/Dropdown/ContentList';
-import { OptionTag } from './Tags/OptionTag';
 import { RichTextEditor } from '../../../components/common/RichTextEditor/RichTextEditor';
 import { AttachmentSection } from '../../../components/common/Attachment/AttachmentSection';
-
-// MOCK DATA
-const DEPARTMENT_NAMES = [
-  'Development',
-  'Human Resources',
-  'Marketing',
-  'ABC',
-  'DEF',
-  'XYZ',
-  'GHI'
-];
+import { announcementApi } from '../services/announcementApi';
+import type { DepartmentType } from '../types/AnnouncementTypes';
 
 interface AnnouncementFormProps {
-  onClose: () => void
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
-export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
+export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) {
 
   // State Managements
-  const [isPinned, setIsPinned] = useState(false)
-  const [selectedOption, setSelectedOption] = useState('department')
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
-  const [title, setTitle] = useState<string>('')
-  const [messageContent, setMessageContent] = useState<string | null>(null)
-  const [attachmentFile, setAttachmentFile] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPinned, setIsPinned] = useState(false);
+  const [selectedOption, setSelectedOption] = useState('department');
+  const [myDepartment, setMyDepartment] = useState<DepartmentType | null>(null);
 
-  const [errors, setErrors] = useState<{ title?: string; content?: string }>({})
+  const [title, setTitle] = useState<string>('');
+  const [messageContent, setMessageContent] = useState<string | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const data = await announcementApi.getMyDepartments();
+        if (data && data.length > 0) {
+          setMyDepartment(data[0]); 
+        }
+      } catch (error) {
+        console.error("No department available", error);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   // Functions
   const handleSelectOption = (id: string) => {
-    setSelectedOption(id)
-    console.log("Select: ", id)
-    if (id !== "department") setActiveMenu(null)
-  }
-
-  const toggleMenu = (menuId: string) => {
-    setActiveMenu(prev => prev === menuId ? null : menuId)
-  }
-
-  const handleSelectedDepartment = (deptName: string) => {
-    setSelectedDepartments(prev => {
-      if (prev.includes(deptName)) {
-        return prev
-      }
-      return [...prev, deptName];
-    });
-  };
-
-  const handleDeleteSelectedDepartment = (deptName: string) => {
-    setSelectedDepartments(prev => {
-      return prev.filter(name => name !== deptName)
-    })
+    setSelectedOption(id);
   }
 
   const handleContentChange = useCallback((html: string) => {
@@ -69,7 +51,9 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
   }, []);
 
   const submitAnnouncement = async (status: 'draft' | 'published') => {
-    // Check basic validation before publishing
+    
+    const cleanContent = messageContent ? messageContent.replace(/<\/?p[^>]*>/g, "") : '';
+
     if (status === 'published') {
       const newErrors: { title?: string; content?: string } = {};
 
@@ -77,7 +61,7 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
         newErrors.title = "Subject is required when publishing.";
       }
 
-      if (!messageContent || messageContent.replace(/<[^>]*>/g, '').trim().length === 0) {
+      if (!cleanContent || cleanContent.trim().length === 0) {
         newErrors.content = "Message content is required when publishing.";
       }
 
@@ -89,45 +73,49 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
 
     setIsSubmitting(true);
 
-    const formData = new FormData()
-    formData.append('title', title)
-    formData.append('content', messageContent || '')
-    formData.append('scope', selectedOption)
-    formData.append('status', status)
-    formData.append('departments', JSON.stringify(selectedDepartments))
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('content', cleanContent.trim());
+    formData.append('scope', selectedOption);
+    formData.append('status', status);
+    
+    // 🌟 3. NẾU CHỌN "DEPARTMENT", TỰ ĐỘNG GỬI ID PHÒNG BAN CỦA USER XUỐNG BACKEND
+    if (selectedOption === 'department' && myDepartment) {
+      formData.append('departments', JSON.stringify([myDepartment.id]));
+    } else {
+      formData.append('departments', JSON.stringify([]));
+    }
 
     attachmentFile.forEach((file) => {
-      formData.append('attachments', file)
-    })
-    formData.append('isPinned', isPinned.toString())
+      formData.append('attachments', file);
+    });
+    formData.append('isPinned', isPinned.toString());
 
     try {
-      console.log(`Action: ${status}`, Object.fromEntries(formData));
-
-      // Gọi API thực tế ở đây
-      // const response = await api.post('/announcements', formData);
+      await announcementApi.createAnnouncement(formData);
 
       alert(status === 'published' ? "Announcement published!" : "Draft saved successfully!");
+      
+      if (onSuccess) {
+        onSuccess();
+      }
       onClose();
     } catch (error) {
       console.error("Failed to process announcement", error);
+      alert("Đã có lỗi xảy ra khi lưu thông báo!");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Derived data
-  const departmentListItems: ContentItem[] = DEPARTMENT_NAMES.map((name) => ({ content: name, onClick: () => handleSelectedDepartment(name) }))
-
   // Data
   const optionItems = [
     {
       id: 'department',
-      title: 'My Departments',
-      description: 'Visible to Departments',
+      title: 'My Department',
+      description: 'Visible to your department',
       icon: <Groups />,
       permission: true,
-      content: <ContentList data={departmentListItems} emptyLabel='No department available' onItemClick={() => toggleMenu} />
     },
     {
       id: 'company',
@@ -136,7 +124,7 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
       icon: <Business />,
       permission: false
     },
-  ]
+  ];
 
   return (
     <form className="bg-white rounded-xl w-[420px] md:w-[590px] lg:w-[732px] shadow-xl border border-neutral-200">
@@ -185,31 +173,13 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
               />
             ))}
           </div>
-          {selectedOption === "department" && (
-            <>
-              <div className='relative w-fit'>
-                <p className='body-4-regular text-neutral-500 mb-2'>Choose departments</p>
-                <Dropdown
-                  key={"department"}
-                  isOpen={activeMenu === "department"}
-                  trigger={
-                    <Button
-                      title='Your Departments'
-                      iconRight={activeMenu === "department" ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                      onClick={() => toggleMenu("department")}
-                      style='sub'
-                    />
-                  }
-                  children={optionItems.find(i => i.id === "department")?.content}
-                  onClose={() => setActiveMenu(null)}
-                />
-              </div>
-              <div className='flex flex-wrap items-center gap-2 w-fit max-w-full max-h-[88px] overflow-y-auto'>
-                {selectedDepartments.map((item) => (
-                  <OptionTag label={item} onDelete={() => handleDeleteSelectedDepartment(item)} />
-                ))}
-              </div>
-            </>
+          
+          {selectedOption === "department" && myDepartment && (
+            <div className="mt-1 pl-1">
+              <p className="body-4-regular text-neutral-500">
+                Targeting: <span className="body-4-regular text-primary bg-secondary px-2 py-0.5 rounded-md border border-primary">{myDepartment.name}</span>
+              </p>
+            </div>
           )}
         </div>
 
@@ -218,7 +188,6 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
           <p className="body-3-medium text-neutral-900">
             Subject <span className='text-red-500'>*</span>
           </p>
-          {/* Input */}
           <input
             name='subject'
             type="text"

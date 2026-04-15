@@ -3,7 +3,7 @@ import avatarImg from "../../../../assets/images/user-profile-img.png"
 import { useState } from "react";
 import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
 import { findUserById } from "../../../../data/mockUserData";
-import type { UserProfile } from "../../../../types/userType";
+import type { FullUserProfile } from "../../../../types/userType";
 
 export function WorkIdentity({ icon, userInfo }: OverviewProps) {
   // Đưa useState lên đầu cho đúng chuẩn React Hooks
@@ -11,23 +11,23 @@ export function WorkIdentity({ icon, userInfo }: OverviewProps) {
 
   if (!userInfo) return <div className="body-2-regular text-neutral-500">No user available!</div>
 
-  const managerProfile = userInfo.reportsTo ? findUserById(userInfo.reportsTo) : undefined;
+  const managerProfile = userInfo.reportsToName ? findUserById(userInfo.reportsToName) : undefined;
   const managerName = managerProfile?.name || userInfo.reportsToName || 'N/A';
   const managerAvatar = managerProfile?.avatarUrl || userInfo.reportsToAvatar || avatarImg;
 
   const workIdentityItems = [
-    { label: 'Job title', content: userInfo?.position || 'N/A' },
-    { label: 'Team', content: userInfo?.team || 'N/A' },
+    { label: 'Job title', content: userInfo?.positionName || 'N/A' },
+    { label: 'Team', content: userInfo?.departmentName || 'N/A' },
     {
       label: 'Reports to',
       content: managerName,
       avatarUrl: managerAvatar,
       isClickable: true
     },
-    { label: 'Location', content: userInfo?.officeLocation || userInfo?.location || 'N/A' },
+    { label: 'Location', content: userInfo?.workLocation || 'N/A' },
   ]
 
-  const profileCardData: UserProfile = managerProfile || {
+  const profileCardData: FullUserProfile = managerProfile || {
     id: "unknown",
     name: managerName,
     position: "Manager",

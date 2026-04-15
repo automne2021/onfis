@@ -45,13 +45,13 @@ public class TenantContextFilter extends OncePerRequestFilter {
             return;
         }
 
-        tenantContext.setTenantId(tenantId);
         Session session = entityManager.unwrap(Session.class);
-        Filter filter = session.enableFilter("tenantFilter");
-        filter.setParameter("tenantId", tenantId);
-        setJwtClaims(session, tenantId, userId);
-
         try {
+            tenantContext.setTenantId(tenantId);
+    
+            Filter filter = session.enableFilter("tenantFilter");
+            filter.setParameter("tenantId", tenantId);
+            setJwtClaims(session, tenantId, userId);
             filterChain.doFilter(request, response);
         } finally {
             tenantContext.clear();

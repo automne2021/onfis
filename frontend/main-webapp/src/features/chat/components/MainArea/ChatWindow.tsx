@@ -1,54 +1,44 @@
 import { ChatHeader } from "./ChatHeader";
-import { MOCK_CHANNELS, MOCK_USERS, MOCK_MESSAGES } from "../../../../data/mockChatData"; // Đường dẫn tuỳ project của bạn
+// import { MOCK_CHANNELS, MOCK_USERS, MOCK_MESSAGES } from "../../../../data/mockChatData"; // Đường dẫn tuỳ project của bạn
 import { ChatInput } from "./ChatInput/ChatInput";
 import { MessageArea } from "./MessageList/MessageArea";
+import type { ChatChannel } from "../../types/chatTypes";
+import { useChat } from "../../hooks/useChat";
 
 interface ChatWindowProps {
   activeChannelId: string;
+  currentChannel: ChatChannel | null;
 }
 
-export function ChatWindow({ activeChannelId }: ChatWindowProps) {
-  const currentChannel = MOCK_CHANNELS.find(c => c.id === activeChannelId);
-
-  let avatarUrl = undefined;
-  let userStatus: "online" | "busy" | "offline" = "offline";
-
-  if (currentChannel?.type === 'direct') {
-    const userKey = currentChannel.id.replace('dm-', '');
-    const targetUser = MOCK_USERS[userKey];
-    if (targetUser) {
-      avatarUrl = targetUser.avatarUrl;
-      userStatus = targetUser.status; // Lấy trực tiếp status từ mock data mới
-    }
-  }
-
-  const currentMessages = MOCK_MESSAGES.filter(m => m.channelId === activeChannelId);
+export function ChatWindow({ activeChannelId, currentChannel }: ChatWindowProps) {
+  
+  // Gọi hook quản lý logic tin nhắn
+  const { messages, isConnected, sendMessage } = useChat(activeChannelId);
+  console.log("isConnected: ", isConnected);
 
   return (
     <div className="flex flex-col h-full w-full bg-white relative">
-
-      {/* HEADER */}
       {currentChannel ? (
         <ChatHeader
           name={currentChannel.name}
           type={currentChannel.type}
           memberCount={currentChannel.membersCount}
           isPinned={currentChannel.isPinned}
-          avatarUrl={avatarUrl}
-          status={userStatus} // Đã sửa thành status={userStatus}
+          avatarUrl={currentChannel.avatarUrl} 
+          status={currentChannel.status} 
         />
       ) : (
-        <div className="h-[48px] border-b border-neutral-200 flex items-center px-4 text-neutral-500 text-sm">
-          Start a chat now!
-        </div>
+         <div className="h-[48px]">Start a chat now!</div>
       )}
 
-      {/* === TẦNG 2: MESSAGE AREA (BODY) === */}
-      <MessageArea channel={currentChannel} messages={currentMessages} />
+      {/* Truyền messages thật vào */}
+      <MessageArea channel={currentChannel} messages={messages} />
 
-      {/* === CHAT INPUT === */}
-      <ChatInput label={currentChannel?.name || "conversation"} />
-
+      <ChatInput 
+        label={currentChannel?.name || "conversation"} 
+        onSendMessage={sendMessage}
+        disabled={!isConnected}
+      />
     </div>
   )
 }

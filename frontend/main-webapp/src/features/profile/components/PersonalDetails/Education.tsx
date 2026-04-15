@@ -9,9 +9,9 @@ import { TitleHeader } from "../TitleHeader";
 export function Education({ icon, userInfo }: OverviewProps) {
 
   const educationInfo = [
-    { label: 'Highest Degree', icon: <WorkspacePremium />, content: userInfo.education?.degree, subcontent: userInfo.education?.major },
-    { label: 'Institution', icon: <DomainOutlined />, content: userInfo.education?.institution },
-    { label: 'Graduation year', icon: <CalendarMonthOutlined />, content: userInfo.education?.graduationYear },
+    { label: 'Highest Degree', icon: <WorkspacePremium />, content: userInfo.educationInfo?.degree, subcontent: userInfo.educationInfo?.major },
+    { label: 'Institution', icon: <DomainOutlined />, content: userInfo.educationInfo?.institution },
+    { label: 'Graduation year', icon: <CalendarMonthOutlined />, content: userInfo.educationInfo?.graduationYear },
   ]
 
   return (

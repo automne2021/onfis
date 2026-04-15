@@ -5,7 +5,7 @@ import { Button } from '../../../../components/common/Buttons/Button';
 
 interface ChatHeaderProps {
   name: string;
-  type: 'group' | 'direct';
+  type: 'group' | 'direct' | 'self';
   memberCount?: number;
   isPinned?: boolean;
   avatarUrl?: string;

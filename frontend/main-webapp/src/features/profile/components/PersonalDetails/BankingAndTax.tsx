@@ -8,9 +8,9 @@ import { CopyArea } from "../Copy/CopyArea";
 export function BankingAndTax({ icon, userInfo }: OverviewProps) {
 
   const bankingInfo = [
-    { label: "Bank name", icon: <AccountBalanceOutlined />, content: userInfo.banking?.bankName },
-    { label: "Account number", content: userInfo.banking?.accountNumber },
-    { label: "Tax ID", content: userInfo.banking?.taxId },
+    { label: "Bank name", icon: <AccountBalanceOutlined />, content: userInfo.bankingInfo?.bankName },
+    { label: "Account number", content: userInfo.bankingInfo?.accountNumber },
+    { label: "Tax ID", content: userInfo.bankingInfo?.taxId },
   ]
 
   return (

@@ -6,14 +6,13 @@ import {
   CloseOutlined
 } from '@mui/icons-material';
 import { Link, useParams } from "react-router-dom"; 
-// Thêm các hook cần thiết từ React
 import { useRef, useLayoutEffect, useState } from "react"; 
 
 import userProfileImg from "../../../assets/images/user-profile-img.png";
-import type { UserProfile } from '../../../types/userType';
+import type { FullUserProfile } from '../../../types/userType';
 
 interface ProfileCardProps {
-  user: UserProfile;
+  user: FullUserProfile;
   onClose: () => void;
 }
 
@@ -21,17 +20,14 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
   const avatarImg = user.avatarUrl || userProfileImg;
   const { tenant } = useParams<{ tenant: string }>();
   const profilePath = tenant ? `/${tenant}/profile/${user.id}` : `/profile/${user.id}`;
+  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
   
-  // 1. Khởi tạo các State và Ref để tự động tính toán vị trí
   const cardRef = useRef<HTMLDivElement>(null);
-  const [positionClass, setPositionClass] = useState("top-12"); // Mặc định rớt xuống dưới
-  const [isVisible, setIsVisible] = useState(false); // Ẩn lúc mới render để đo đạc tránh giật khung hình
-
+  const [positionClass, setPositionClass] = useState("top-12");
+  const [isVisible, setIsVisible] = useState(false); 
   useLayoutEffect(() => {
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
-      
-      // Chờ trình duyệt rảnh tay một chút rồi mới update state
       requestAnimationFrame(() => {
         if (rect.bottom > window.innerHeight - 20) {
           setPositionClass("bottom-12 mb-2"); 
@@ -54,7 +50,6 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
       {/* Nội dung chính của Profile Card */}
       <div 
         ref={cardRef}
-        // 2. Nhúng positionClass và visibility vào Tailwind
         className={`absolute z-50 left-0 w-72 bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden transition-all duration-200 ${positionClass} ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
       >
         
@@ -74,7 +69,7 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
           <Link to={profilePath} onClick={onClose}>
             <img 
               src={avatarImg} 
-              alt={user.name} 
+              alt={fullName} 
               className="w-16 h-16 rounded-full border-4 border-white object-cover bg-white hover:opacity-90 transition shadow-sm"
             />
           </Link>
@@ -88,9 +83,9 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
             onClick={onClose}
             className="body-1-medium text-neutral-900 hover:text-blue-600 hover:underline transition"
           >
-            {user.name}
+            {fullName}
           </Link>
-          <p className="body-3-regular text-blue-600">{user.position}</p>
+          <p className="body-3-regular text-blue-600">{user.positionName}</p>
 
           {/* Đường kẻ ngang */}
           <hr className="my-3 border-neutral-100 w-full" />
@@ -99,22 +94,22 @@ export function ProfileCard({ user, onClose }: ProfileCardProps) {
           <div className="flex flex-col gap-3 w-full text-left text-neutral-600 body-3-regular">
             <div className="flex items-center gap-3">
               <BusinessOutlined sx={{ fontSize: 18 }} className="text-neutral-400" />
-              <span>{user.department}</span>
+              <span>{user.departmentName}</span>
             </div>
             <div className="flex items-center gap-3">
               <EmailOutlined sx={{ fontSize: 18 }} className="text-neutral-400" />
               <span className="truncate">{user.email}</span>
             </div>
-            {user.phone && (
+            {user.phoneNumber && (
               <div className="flex items-center gap-3">
                 <LocalPhoneOutlined sx={{ fontSize: 18 }} className="text-neutral-400" />
-                <span>{user.phone}</span>
+                <span>{user.phoneNumber}</span>
               </div>
             )}
-            {user.location && (
+            {user.workLocation && (
               <div className="flex items-center gap-3">
                 <LocationOnOutlined sx={{ fontSize: 18 }} className="text-neutral-400" />
-                <span>{user.location}</span>
+                <span>{user.workLocation}</span>
               </div>
             )}
           </div>

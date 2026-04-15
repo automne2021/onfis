@@ -5,15 +5,15 @@ import { FILE_ICONS, FILE_COLORS, getFileType } from "../../../../config/fileCon
 export function EmploymentContract({ icon, userInfo }: OverviewProps) {
 
   const contractInfo = [
-    { label: "Contract Type", content: userInfo.contract?.type },
-    { label: "Working Schedule", content: userInfo.contract?.schedule },
-    { label: "Start Date", content: userInfo.contract?.startDate },
-    { label: "Notice Period", content: userInfo.contract?.noticePeriod },
-    { label: "End Date", content: userInfo.contract?.endDate },
-    { label: "Probation Period", content: userInfo.contract?.probationPeriod },
+    { label: "Contract Type", content: userInfo.contractInfo?.type },
+    { label: "Working Schedule", content: userInfo.contractInfo?.schedule },
+    { label: "Start Date", content: userInfo.contractInfo?.startDate },
+    { label: "Notice Period", content: userInfo.contractInfo?.noticePeriod },
+    { label: "End Date", content: userInfo.contractInfo?.endDate },
+    { label: "Probation Period", content: userInfo.contractInfo?.probationPeriod },
   ]
 
-  const fileName = userInfo.contract?.fileName || "N/A";
+  const fileName = userInfo.contractInfo?.fileName || "N/A";
   const fileExt = getFileType(fileName);
   const fileIcon = FILE_ICONS[fileExt] || FILE_ICONS.pdf;
   const fileColor = FILE_COLORS[fileExt] || FILE_COLORS.default;
@@ -53,7 +53,7 @@ export function EmploymentContract({ icon, userInfo }: OverviewProps) {
                 {fileName}
               </p>
               <p className="body-4-regular text-neutral-500 mt-1">
-                {userInfo.contract?.fileSize || "2.4 MB"} • Uploaded on {userInfo.contract?.uploadDate || "Oct 12, 2020"}
+                {userInfo.contractInfo?.fileSize || "2.4 MB"} • Uploaded on {userInfo.contractInfo?.uploadDate || "Oct 12, 2020"}
               </p>
             </div>
           </div>
@@ -61,7 +61,7 @@ export function EmploymentContract({ icon, userInfo }: OverviewProps) {
           <button
             type="button"
             className={`body-3-regular transition-colors text-neutral-500 hover:text-primary hover:underline`}
-            onClick={() => window.open(userInfo.contract?.fileUrl, '_blank')}
+            onClick={() => window.open(userInfo.contractInfo?.fileUrl, '_blank')}
           >
             Download
           </button>

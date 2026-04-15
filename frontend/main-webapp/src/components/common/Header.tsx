@@ -1,5 +1,5 @@
-import { useState } from 'react';
-
+import { useState, useMemo, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Chat, Notifications } from '@mui/icons-material';
 
 import logo from "../../assets/logo-without-text.svg"
@@ -7,9 +7,7 @@ import userProfileImg from "../../assets/images/user-profile-img.png"
 import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
-import { findUserById } from '../../data/mockUserData';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
   companyName: string
@@ -18,27 +16,31 @@ interface HeaderProps {
 }
 
 export function Header({ companyName, messageContents, notificationContents }: HeaderProps) {
-
-  // MOCK DATA
-  const currentUser = findUserById(105)
-  const { currentUser: authUser, toggleRole } = useAuth();
+  
+  const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
+  
+  const { user: authUser } = useAuth();
 
-  const navigate = useNavigate()
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  // States management
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const toggleMenu = useCallback((menuId: string) => {
+    setActiveMenu((prev) => prev === menuId ? null : menuId);
+  }, []);
 
-  // Functions
-  const toggleMenu = (menuId: string) => {
-    setActiveMenu(activeMenu === menuId ? null : menuId)
-  }
+  const closeMenu = useCallback(() => setActiveMenu(null), []);
 
-  const closeMenu = () => setActiveMenu(null);
+  // 🌟 ĐÃ XÓA 'any': Tìm avatar_url trong metadata của Supabase trước, 
+  // nếu không có thì ép kiểu an toàn (Safe Type Assertion) để tìm ở root
+  const avatarImg = 
+    authUser?.user_metadata?.avatar_url || 
+    authUser?.user_metadata?.avatarUrl || 
+    (authUser as { avatarUrl?: string } | null)?.avatarUrl || 
+    userProfileImg;
 
-  // Data 
-  const avatarImg = currentUser?.avatarUrl ? currentUser.avatarUrl : userProfileImg
-  const iconButtons = [
+  const authUserId = authUser?.id;
+
+  const iconButtons = useMemo(() => [
     {
       id: 'chat',
       icon: <Chat />,
@@ -49,27 +51,33 @@ export function Header({ companyName, messageContents, notificationContents }: H
       icon: <Notifications />,
       content: <ContentList data={notificationContents} emptyLabel='No notifications available' onItemClick={closeMenu} />
     }
-  ]
-  const profileContents: ContentItem[] = [
+  ], [messageContents, notificationContents, closeMenu]);
+
+  const profileContents: ContentItem[] = useMemo(() => [
     {
       content: "User Profile",
       onClick: () => {
-        closeMenu()
-        console.log("User profile")
-        if (tenant) {
-          navigate(`/${tenant}/profile/${currentUser?.id || 105}`)
+        closeMenu();
+        if (tenant && authUserId) {
+          navigate(`/${tenant}/profile/${authUserId}`);
         }
       }
     },
     {
       content: "Settings",
-      onClick: () => console.log("Settings")
+      onClick: () => {
+        closeMenu();
+        console.log("Settings");
+      }
     },
     {
       content: "Log out",
-      onClick: () => console.log("Log out")
+      onClick: () => {
+        closeMenu();
+        console.log("Log out");
+      }
     },
-  ]
+  ], [tenant, authUserId, navigate, closeMenu]);
 
   return (
     <header className="flex items-center justify-between w-full px-3 py-1.5 transition-all duration-300 ease-in-out bg-white shadow-md border-b border-neutral-200">
@@ -81,22 +89,6 @@ export function Header({ companyName, messageContents, notificationContents }: H
 
       {/* Right side */}
       <div className="flex items-center gap-2 text-neutral-500">
-
-        {/* Role toggle — dev/demo only */}
-        {import.meta.env.DEV && (
-          <button
-            type="button"
-            onClick={toggleRole}
-            title={`Currently: ${authUser.role}. Click to switch.`}
-            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full border transition-colors cursor-pointer select-none ${
-              authUser.role === "MANAGER"
-                ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
-                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-            }`}
-          >
-            {authUser.role === "MANAGER" ? "Manager" : "Employee"}
-          </button>
-        )}
 
         {/* Icons */}
         {iconButtons.map((item) => (
@@ -110,7 +102,7 @@ export function Header({ companyName, messageContents, notificationContents }: H
               />
             }
             children={item.content}
-            onClose={() => setActiveMenu(null)}
+            onClose={closeMenu}
           />
         ))}
 
@@ -137,10 +129,9 @@ export function Header({ companyName, messageContents, notificationContents }: H
             />
           }
           widthClass='w-32'
-          onClose={() => setActiveMenu(null)}
+          onClose={closeMenu}
         />
       </div>
-
     </header>
   );
 }

@@ -1,21 +1,21 @@
 import { Button } from "../../../../components/common/Buttons/Button";
-import { CURRENT_USER, MOCK_CHANNELS, MOCK_USERS } from "../../../../data/mockChatData";
+import type { ChatChannel } from "../../types/chatTypes";
 import { ChatGroup } from "./ChatGroup";
 import { ChatItem } from "./ChatItem";
 import { CurrentUserFooter } from "./CurrentUserFooter";
 
 interface ChatSidebarProps {
+  channels: ChatChannel[];
   activeChannelId: string;
   onChannelSelect: (id: string) => void;
   icons?: Record<string, React.ReactNode>
 }
 
-export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSidebarProps) {
+export function ChatSidebar({ channels, activeChannelId, onChannelSelect, icons }: ChatSidebarProps) {
 
-  const currentUser = CURRENT_USER
-  const projectGroups = MOCK_CHANNELS.filter(channel => channel.type === 'group');
-  const directMessages = MOCK_CHANNELS.filter(channel => channel.type === 'direct');
-  const userData = MOCK_USERS
+  const projectGroups = channels.filter(channel => channel.type === 'group');
+  const directMessages = channels.filter(channel => channel.type === 'direct');
+  const selfChats = channels.filter(channel => channel.type === 'self');
 
   return (
     <div className="flex flex-col h-full w-full justify-between bg-white">
@@ -36,7 +36,7 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
 
         {/* Channel */}
         <div className="flex flex-col gap-2">
-          {/* Project Groups */}
+
           <ChatGroup title="Project Groups">
             {projectGroups.map((channel) => (
               <ChatItem
@@ -49,32 +49,37 @@ export function ChatSidebar({ activeChannelId, onChannelSelect, icons }: ChatSid
             ))}
           </ChatGroup>
 
-          {/* Direct Messages */}
           <ChatGroup title="Direct Messages">
-            {directMessages.map((channel) => {
-              const userKey = channel.id.replace('dm-', '');
-              const user = userData[userKey];
-
-              return (
-                <ChatItem
-                  key={channel.id}
-                  name={channel.name}
-                  isActive={activeChannelId === channel.id}
-                  onClick={() => onChannelSelect(channel.id)}
-                  avatarUrl={user?.avatarUrl}
-                  status={user?.status}
-                />
-              );
-            })}
+            {directMessages.map((channel) => (
+              <ChatItem
+                key={channel.id}
+                name={channel.name} 
+                avatarUrl={channel.avatarUrl} 
+                status={channel.status} 
+                isActive={activeChannelId === channel.id}
+                onClick={() => onChannelSelect(channel.id)}
+              />
+            ))}
           </ChatGroup>
+          
+          <ChatGroup title="Saved Messages">
+            {selfChats.map((channel) => (
+              <ChatItem
+                key={channel.id}
+                name={channel.name} 
+                avatarUrl={channel.avatarUrl} 
+                status={channel.status || "online"} 
+                isActive={activeChannelId === channel.id}
+                onClick={() => onChannelSelect(channel.id)}
+              />
+            ))}
+          </ChatGroup>
+
         </div>
       </div>
 
       {/* Current User Footer */}
-      <CurrentUserFooter
-        name={currentUser.name}
-        avatarUrl={currentUser.avatarUrl}
-      />
+      <CurrentUserFooter />
     </div>
   )
 }

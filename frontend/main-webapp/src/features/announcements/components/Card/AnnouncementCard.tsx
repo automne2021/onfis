@@ -1,17 +1,16 @@
 import userProfileImg from "../../../../assets/images/user-profile-img.png"
-import { Public, PushPinOutlined, ArrowForwardOutlined, ThumbUpOutlined, ThumbUp, CommentOutlined } from '@mui/icons-material';
+import { Public, PushPinOutlined, ArrowForwardOutlined, ThumbUpOutlined, ThumbUp, CommentOutlined, Groups } from '@mui/icons-material';
 import { Tags } from "../Tags/Tags";
-import Dropdown from "../../../../components/common/Dropdown/Dropdown";
-import { useState } from "react";
-import { ContentList } from "../../../../components/common/Dropdown/ContentList";
+import { useEffect, useState } from "react";
 import { getFileType } from "../../../../config/fileConfig";
 import { SmallTags } from "../Tags/SmallTags";
 import { Link } from "react-router-dom";
 import { generateSlug } from "../../../../utils/generateSlug";
 import { getTimeAgo } from "../../../../utils/getTime";
 import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
-import { findUserById } from "../../../../data/mockUserData";
-import type { UserProfile } from "../../../../types/userType";
+import type { FullUserProfile } from "../../../../types/userType";
+import { announcementApi } from "../../services/announcementApi";
+import { userApi } from "../../../profile/services/userApi";
 
 export interface AttachmentITem {
   id: string | number
@@ -29,7 +28,7 @@ interface AnnouncementCardProps {
   avatarUrl?: string
   isPinned?: boolean
   scope: string
-  departments?: string[]
+  targetDepartmentName?: string
   title: string
   content: string
   attachments: AttachmentITem[]
@@ -42,39 +41,64 @@ interface AnnouncementCardProps {
   onToggleProfile?: () => void;
 }
 
-export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, departments, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment, isProfileOpen = false, onToggleProfile }: AnnouncementCardProps) {
+export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, targetDepartmentName, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment, isProfileOpen = false, onToggleProfile }: AnnouncementCardProps) {
 
-  const [activeMenu, setActiveMenu] = useState(false)
   const [isLiked, setIsLiked] = useState(initialIsLike)
   const [likeCount, setLikeCount] = useState(numberOfLike)
+  const [authorProfile, setAuthorProfile] = useState<FullUserProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   const avatarImg = avatarUrl ? avatarUrl : userProfileImg
-  const remainingCount = departments ? departments.length - 2 : 0
   const slug = generateSlug(title)
-  const timeAgoString = date ? getTimeAgo(date) : "";
+  const safeUtcDate = date ? (date.endsWith('Z') ? date : `${date}Z`) : "";
+  const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
 
-  const authorProfile = findUserById(authId)
-  const profileCardData: UserProfile = authorProfile || {
+  useEffect(() => {
+    if (isProfileOpen && !authorProfile) {
+      const fetchAuthorProfile = async () => {
+        setIsLoadingProfile(true);
+        try {
+          const data = await userApi.getFullUserProfile(String(authId));
+          setAuthorProfile(data);
+        } catch (error) {
+          console.error(`Lỗi khi lấy thông tin user ${authId}:`, error);
+        } finally {
+          setIsLoadingProfile(false);
+        }
+      };
+
+      fetchAuthorProfile();
+    }
+  }, [isProfileOpen, authId, authorProfile]);
+
+  const profileCardData: FullUserProfile = authorProfile || {
     id: "unknown",
-    name: "N/A",
-    position: "N/A",
-    department: "Company",
-    email: "unknown@company.com",
+    firstName: "N/A",
+    lastName: "N/A",
+    positionName: "N/A",
+    departmentName: "Company",
+    email: isLoadingProfile ? "Loading details..." : "Unknown",
     avatarUrl: userProfileImg
   };
 
-  // Functions
-  const toggleMenu = () => setActiveMenu(prev => !prev);
-  const closeMenu = () => setActiveMenu(false);
+  console.log("author profile: ", authorProfile)
 
-  const handleLike = () => {
-    const newStatus = !isLiked;
-    setIsLiked(newStatus)
-    setLikeCount(prev => newStatus ? prev + 1 : prev - 1);
-    if (onToggleLike) {
-      onToggleLike(id, newStatus)
+  const handleLike = async () => {
+    try {
+      const isNowLiked = await announcementApi.toggleAnnouncementLike(id);
+      
+      setIsLiked(isNowLiked);
+      setLikeCount(prev => isNowLiked ? prev + 1 : Math.max(0, prev - 1));
+      
+      if (onToggleLike) {
+        onToggleLike(id, isNowLiked);
+      }
+    } catch (error) {
+      console.error("Lỗi khi toggle like ở Card:", error);
     }
   }
+
+  const displayDeptName = targetDepartmentName || "My Department";
 
   return (
     <div
@@ -123,50 +147,15 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
               icon={<PushPinOutlined sx={{ fontSize: 16 }} />}
             />
           )}
-          {scope === 'company' && (
+          {scope === 'company' ? (
+            <Tags label="Global" icon={<Public sx={{ fontSize: 16 }} />} />
+          ) : (
             <Tags
-              label="Global"
-              icon={<Public sx={{ fontSize: 16 }} />}
+              label={displayDeptName}
+              icon={<Groups sx={{ fontSize: 16 }} />}
+              bgColor="bg-cyan-100"
+              textColor="text-cyan-500"
             />
-          )}
-          {scope === 'department' && departments && departments.length > 0 && (
-            <>
-              {departments.slice(0, 2).map((dept, index) => (
-                <Tags
-                  key={index}
-                  label={dept}
-                  bgColor="bg-cyan-100"
-                  textColor="text-cyan-500"
-                />
-              ))}
-              {remainingCount > 0 && (
-                <Dropdown
-                  isOpen={activeMenu}
-                  trigger={
-                    <div onClick={toggleMenu} >
-                      <Tags
-                        label={`+${remainingCount}`}
-                        bgColor="bg-neutral-200"
-                        textColor="text-neutral-500"
-                        canClick={true}
-                        hoverBgColor="bg-neutral-300"
-                        hoverTextColor="text-neutral-600"
-                      />
-                    </div>
-                  }
-                  children={
-                    <ContentList
-                      data={departments.slice(2).map((dept) => ({
-                        content: dept
-                      }))}
-                      emptyLabel="No result found"
-                      onItemClick={closeMenu}
-                    />
-                  }
-                  onClose={closeMenu}
-                />
-              )}
-            </>
           )}
         </div>
       </div>
@@ -174,9 +163,11 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
       {/* Body */}
       <div className="flex flex-col gap-0">
         <p className="header-h6 leading-relaxed text-neutral-900 mt-3">{title}</p>
-        <p className="body-3-regular text-neutral-500 mb-3 line-clamp-2 overflow-hidden text-ellipsis">
-          {content}
-        </p>
+        
+        <div 
+          className="body-3-regular text-neutral-500 mb-3 line-clamp-2 overflow-hidden text-ellipsis"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
 
         {/* Attachments (Optional) */}
         {attachments && attachments.length > 0 && (
@@ -222,7 +213,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
           >
             {isLiked ? <ThumbUp fontSize="small" /> : <ThumbUpOutlined fontSize="small" />}
             <span>
-              {likeCount}
+              {likeCount === 0 ? "Like" : likeCount}
             </span>
           </button>
 
@@ -233,7 +224,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
           >
             <CommentOutlined fontSize="small" />
             <span>
-              {numberOfComments}
+              {numberOfComments === 0 ? "Comment" : numberOfComments}
             </span>
           </button>
         </div>

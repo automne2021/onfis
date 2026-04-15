@@ -1,12 +1,12 @@
-// src/features/announcements/components/Comment/CommentItem.tsx
 import { useState } from "react";
 import { ThumbUp, ThumbUpOutlined, ReplyOutlined } from '@mui/icons-material';
 import { getTimeAgo } from "../../../../utils/getTime";
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
-import { CommentInput } from "./CommentInput"; // 1. IMPORT COMMENT INPUT VÀO ĐÂY
+import { CommentInput } from "./CommentInput"; 
 import { findUserById } from "../../../../data/mockUserData";
 import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
 import type { UserProfile } from "../../../../types/userType";
+import { announcementApi } from "../../services/announcementApi";
 
 export interface CommentItemProps {
   id: string | number;
@@ -15,6 +15,7 @@ export interface CommentItemProps {
   name: string;
   date: string;
   content: string;
+  replyingToName?: string;
   likes?: number[];
   replies?: CommentItemProps[]; 
   isReply?: boolean; 
@@ -33,17 +34,21 @@ export function CommentItem({
   name, 
   date, 
   content, 
-  likes = [], 
-  replies = [], 
+  replyingToName,
+  likes, 
+  replies, 
   isReply = false, 
   onReply,
   activeReplyId,   
   onCancelReply,
   onSubmitReply
 }: CommentItemProps) {
+
+  const safeLikes = likes || [];
+  const safeReplies = replies || [];
   
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(likes.length);
+  const [likeCount, setLikeCount] = useState(safeLikes.length);
 
   const [isRepliesExpanded, setIsRepliesExpanded] = useState(false);
   const [visibleRepliesCount, setVisibleRepliesCount] = useState(REPLIES_PER_PAGE);
@@ -53,10 +58,15 @@ export function CommentItem({
     setIsProfileOpen(prev => !prev);
   }
 
-  const handleLike = () => {
-    const newStatus = !isLiked;
-    setIsLiked(newStatus);
-    setLikeCount(prev => newStatus ? prev + 1 : prev - 1);
+  const handleLike = async () => {
+    try {
+      const isNowLiked = await announcementApi.toggleCommentLike(id);
+      
+      setIsLiked(isNowLiked);
+      setLikeCount(prev => isNowLiked ? prev + 1 : Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Toggle like comment error:", error);
+    }
   }
 
   const handleViewReplies = () => {
@@ -67,7 +77,8 @@ export function CommentItem({
     setVisibleRepliesCount(prev => prev + REPLIES_PER_PAGE);
   };
 
-  const timeAgoString = date ? getTimeAgo(date) : "";
+  const safeUtcDate = date ? (date.endsWith('Z') ? date : `${date}Z`) : "";
+  const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
   const avatarImg = avatarUrl ? avatarUrl : userProfileImg;
 
   const commentAuthorProfile = findUserById(userId);
@@ -81,11 +92,9 @@ export function CommentItem({
   };
 
   return(
-    <div className={`flex flex-col gap-2 ${isReply ? 'ml-12 mt-4' : 'mt-6'}`}>
+    <div className={`flex flex-col gap-2 ${isReply ? 'ml-12 mt-2' : 'mt-3'}`}>
       
-      {/* Khối Comment Chính */}
       <div className="flex items-start gap-3">
-        {/* Avatar */}
         <div className="relative">
           <div 
             onClick={togglePersonalInformationCard}
@@ -102,7 +111,6 @@ export function CommentItem({
           )}
         </div>
 
-        {/* Name + Position + Content + Basic information */}
         <div className="flex flex-col items-start w-full">
           <div className="w-full bg-white rounded-2xl rounded-tl-sm px-5 py-3.5 shadow-md">
             <div className="flex items-center justify-between mb-1.5">
@@ -112,12 +120,16 @@ export function CommentItem({
               <p className="body-4-regular text-neutral-500">{timeAgoString}</p>
             </div>
             <p className="body-3-regular text-neutral-700 whitespace-pre-line">
+              {replyingToName && (
+                <span className="text-primary font-medium mr-1.5 cursor-pointer hover:underline">
+                  @{replyingToName}
+                </span>
+              )}
               {content}
             </p>
           </div>
 
           <div className="flex items-center gap-4 mt-1 ml-2">
-             {/* Nút Like giữ nguyên */}
             <div className="flex items-center gap-1">
               <button 
                 type="button"
@@ -138,7 +150,10 @@ export function CommentItem({
             {/* Nút Reply */}
             <button 
               type="button"
-              onClick={() => onReply?.(id, name)}
+              onClick={() => {
+                onReply?.(id, name);
+                setIsRepliesExpanded(true);
+              }}
               className="flex items-center gap-1.5 body-4-medium text-neutral-500 hover:text-primary transition"
             >
               <ReplyOutlined sx={{ fontSize: 16 }} />
@@ -148,7 +163,6 @@ export function CommentItem({
         </div>
       </div>
 
-      {/* 3. ĐÂY LÀ ĐIỂM QUAN TRỌNG NHẤT: HIỆN INPUT Ở NGAY DƯỚI COMMENT NÀY */}
       {activeReplyId === id && (
         <div className="ml-12 mt-1 mb-2 pr-4">
           <CommentInput 
@@ -159,17 +173,16 @@ export function CommentItem({
         </div>
       )}
 
-      {/* KHU VỰC HIỂN THỊ REPLIES */}
-      {replies && replies.length > 0 && (
+      {safeReplies && safeReplies.length > 0 && (
         <div className="flex flex-col">
           {!isRepliesExpanded ? (
             <button onClick={handleViewReplies} className="ml-12 mt-2 flex items-center gap-2 text-neutral-500 body-4-medium hover:underline w-fit">
               <ReplyOutlined sx={{ fontSize: 16, transform: "scaleX(-1)" }} /> 
-              View {replies.length} replies
+              View {safeReplies.length} replies
             </button>
           ) : (
             <>
-              {replies.slice(0, visibleRepliesCount).map((reply: CommentItemProps, index: number) => (
+              {safeReplies.slice(0, visibleRepliesCount).map((reply: CommentItemProps, index: number) => (
                 <CommentItem 
                   key={index}
                   id={reply.id}
@@ -178,8 +191,10 @@ export function CommentItem({
                   name={reply.name}
                   date={reply.date}
                   content={reply.content}
+                  replyingToName={reply.replyingToName}
                   likes={reply.likes}
                   isReply={true} 
+                  replies={reply.replies}
                   onReply={onReply}
                   activeReplyId={activeReplyId}
                   onCancelReply={onCancelReply}
@@ -187,10 +202,10 @@ export function CommentItem({
                 />
               ))}
 
-              {visibleRepliesCount < replies.length && (
+              {visibleRepliesCount < safeReplies.length && (
                 <button onClick={handleViewMoreReplies} className="ml-12 mt-4 flex items-center gap-2 text-neutral-500 body-4-medium hover:underline w-fit">
                   <ReplyOutlined sx={{ fontSize: 16, transform: "scaleX(-1)" }} /> 
-                  View {replies.length - visibleRepliesCount} more replies
+                  View {safeReplies.length - visibleRepliesCount} more replies
                 </button>
               )}
             </>

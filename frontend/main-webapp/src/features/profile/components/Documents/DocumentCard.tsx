@@ -19,7 +19,6 @@ export function DocumentCard({ document }: DocumentCardProps) {
     e.stopPropagation(); 
     
     console.log("Open file menu:", document.fileName);
-    // TODO: Gọi hàm mở Dropdown menu ở đây
   };
 
   return (

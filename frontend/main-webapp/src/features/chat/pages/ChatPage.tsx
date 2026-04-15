@@ -3,20 +3,24 @@ import { Menu } from '@mui/icons-material';
 import { ChatSidebar } from "../components/Sidebar/ChatSidebar";
 import { SquarePen, Hash } from 'lucide-react';
 import { ChatWindow } from "../components/MainArea/ChatWindow";
+import { useConversations } from "../hooks/useConversations";
 
 export function ChatPage() {
 
   // useState
-  const [activeChannelId, setActiveChannelId] = useState('proj-alpha')
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const { channels } = useConversations();
+
+  const currentChannel = channels.find(c => c.id === activeChannelId) || null;
+
+  if (!activeChannelId && channels.length > 0) {
+    setActiveChannelId(channels[0].id);
+  }
 
   // Functions
   const toggleMenu = () => setIsMobileMenuOpen(prev => !prev)
-
-  const handleChannelSelect = (id: string) => {
-    setActiveChannelId(id);
-    setIsMobileMenuOpen(false);
-  };
 
   return (
     <section className="chat-section">
@@ -36,8 +40,9 @@ export function ChatPage() {
       `}
       >
         <ChatSidebar
-          activeChannelId={activeChannelId}
-          onChannelSelect={handleChannelSelect}
+          channels={channels} // Truyền data thật
+          activeChannelId={activeChannelId || ""}
+          onChannelSelect={(id) => { setActiveChannelId(id); setIsMobileMenuOpen(false); }}
           icons={{ 'edit': <SquarePen size={18} />, 'hash': <Hash /> }}
         />
       </div>
@@ -56,7 +61,13 @@ export function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-hidden min-h-0">
-          <ChatWindow activeChannelId={activeChannelId} />
+          {/* Truyền currentChannel xuống ChatWindow */}
+          {activeChannelId && (
+             <ChatWindow 
+               activeChannelId={activeChannelId} 
+               currentChannel={currentChannel} 
+             />
+          )}
         </div>
 
       </div>

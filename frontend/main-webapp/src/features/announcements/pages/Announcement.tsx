@@ -1,17 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Navbar } from "../components/Navbar";
 import { Button } from '../../../components/common/Buttons/Button';
-
-import { Add, PushPin } from '@mui/icons-material';
+import { Add, PushPin } from '@mui/icons-material'; 
 import { TabGroup } from '../../../components/common/Tab/TabGroup';
-import { AnnouncementForm } from '../components/AnnouncementForm';
-import { MOCK_ANNOUNCEMENTS } from '../../../data/mockAnnouncement';
 import { AnnouncementCard } from '../components/Card/AnnouncementCard';
 import { useSearchParams } from 'react-router-dom';
 import { useRole } from '../../../hooks/useRole';
+import { announcementApi } from '../services/announcementApi';
+import { type AnnouncementData } from '../types/AnnouncementTypes';
+import { useAuth } from '../../../hooks/useAuth';
+import { formatAnnouncementData } from '../utils/announcementFormatter';
 
+import { Pagination } from '../components/Pagination';
+import { AnnouncementLoading } from '../components/Loadings/AnnouncementLoading';
+import { AnnouncementFormLoading } from '../components/Loadings/AnnouncementFormLoading';
+
+// 🌟 1. ÁP DỤNG LAZY LOAD CHO FORM (Vì form này chứa bộ Rich Text Editor rất nặng)
+const AnnouncementForm = React.lazy(() => import('../components/AnnouncementForm').then(m => ({ default: m.AnnouncementForm })));
 
 const tabItems = [
   { id: 'all', label: "All News", isDisplay: true },
@@ -22,112 +29,105 @@ const tabItems = [
 
 export function Announcement() {
 
-  // State Managements
-  const [openAddForm, setOpenAddForm] = useState(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [openAddForm, setOpenAddForm] = useState(false);
   const [openProfileId, setOpenProfileId] = useState<string | number | null>(null);
+  const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
+  
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
+
   const { isManager } = useRole();
-
-  const [searchParams] = useSearchParams()
-  const currentView = searchParams.get('view') || 'all'
-
-  // Escape key + body scroll lock (matching Modal.tsx pattern)
-  useEffect(() => {
-    if (openAddForm) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [openAddForm]);
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const currentView = searchParams.get('view') || 'all';
+  const currentUserId = user?.id || "";
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpenAddForm(false);
-    };
-    if (openAddForm) {
-      document.addEventListener('keydown', handleEscape);
-    }
-    return () => { document.removeEventListener('keydown', handleEscape); };
-  }, [openAddForm]);
+    setCurrentPage(0);
+  }, [currentView]);
 
-  // Functions
-  const handleToggleAddForm = () => {
-    setOpenAddForm((prev) => !prev);
-  };
+  const fetchMyAnnouncements = useCallback(async (isMounted: boolean = true) => {
+    try {
+      setIsLoading(true);
+      let responseData;
 
-  const handleLike = (id: string | number, status: boolean) => {
-    console.log(`User liked post ${id}: ${status}`);
-    // Logic gọi API update like ở đây
-  }
+      if (currentView === 'department' && !currentUserId) {
+         setIsLoading(false);
+         return;
+      }
 
-  const handleComment = (id: string | number) => {
-    console.log(`Open comment for post ${id}`);
-  }
-
-  const handleToggleProfile = (id: string | number) => {
-    setOpenProfileId((prevId) => (prevId === id ? null : id));
-  };
-
-  const filteredAnnouncement = useMemo(() => {
-    // Lọc dữ liệu theo Tab (View)
-    const filtered = MOCK_ANNOUNCEMENTS.filter((item) => {
       switch (currentView) {
         case 'company':
-          return item.scope === 'company'
+          responseData = await announcementApi.getCompanyAnnouncements(currentPage);
+          break;
         case 'department':
-          return item.scope === 'department'
+          responseData = await announcementApi.getDepartmentAnnouncements(currentUserId, currentPage);
+          break;
         case 'pinned':
-          return item.isPinned === true
+          responseData = await announcementApi.getPinnedAnnouncements(currentPage); 
+          break;
         case 'all':
         default:
-          return true
-      }
-    });
-
-    // Duyệt qua mảng đã lọc để tính toán số Like và Comment
-    return filtered.map((item) => {
-      // Tính tổng số Like
-      const calculatedLikes = Array.isArray(item.likes)
-        ? item.likes.length
-        : 0;
-
-      // Tính tổng số Comment + Replies
-      let calculatedComments = 0;
-      if (item.comments && Array.isArray(item.comments)) {
-        calculatedComments = item.comments.reduce((total, comment) => {
-          const repliesCount = comment.replies ? comment.replies.length : 0;
-          return total + 1 + repliesCount;
-        }, 0);
+          responseData = await announcementApi.getAll(currentPage);
+          break;
       }
 
-      // Trả về item gốc kèm theo 2 biến mới chứa kết quả đã tính
-      return {
-        ...item,
-        calculatedLikes,
-        calculatedComments
-      };
-    });
-  }, [currentView])
+      const formattedData = formatAnnouncementData(responseData.content);
+
+      if (isMounted) {
+        setAnnouncements(formattedData);
+        setTotalPages(responseData.totalPages); 
+      }
+    } catch (error) {
+      console.error("Announcement Errors:", error);
+    } finally {
+      if (isMounted) setIsLoading(false);
+    }
+  }, [currentView, currentUserId, currentPage]); 
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchMyAnnouncements(isMounted);
+    return () => { isMounted = false; };
+  }, [fetchMyAnnouncements]);
+
+  useEffect(() => {
+    document.body.style.overflow = openAddForm ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [openAddForm]);
+
+  const handleToggleAddForm = () => setOpenAddForm((prev) => !prev);
+  const handleToggleProfile = (id: string | number) => setOpenProfileId((prevId) => (prevId === id ? null : id));
+
+  const handleLike = (id: string | number, newStatus: boolean) => {
+    setAnnouncements(prev => prev.map(item => {
+      if (item.id === id) {
+        const currentLikes = item.numberOfLike || 0;
+        return {
+          ...item,
+          initialIsLike: newStatus,
+          numberOfLike: newStatus ? currentLikes + 1 : Math.max(0, currentLikes - 1)
+        };
+      }
+      return item;
+    }));
+  }
 
   return (
     <>
-      <section className="onfis-section">
+      <section className="onfis-section flex flex-col min-h-screen">
         <Navbar />
-        <div className="w-full md:px-6 lg:px-8">
-          {/* Title text */}
+        <div className="w-full md:px-6 lg:px-8 flex-1 flex flex-col">
           <p className="header-h6 text-neutral-900 mt-5 mb-2 leading-none">
             Announcements & News
           </p>
           <p className="body-4-regular text-neutral-500">
-            Stay updated with the latest company-wide and department-specific news, updates, and events.
+            Stay updated with the latest company-wide and department-specific news.
           </p>
 
-          {/* Navigation Tabs */}
           <div className="flex items-center justify-between border-b border-neutral-300 px-3 py-1.5 mt-3">
-            {/* Tab group*/}
             <TabGroup tabItems={tabItems} defaultTab='all' />
-
-            {/* Add button — manager only */}
             {isManager && (
               <Button
                 title='Post Announcement'
@@ -138,34 +138,45 @@ export function Announcement() {
             )}
           </div>
 
-          {/* Body */}
-          <div className='flex flex-col gap-3 mt-3'>
-            {filteredAnnouncement.length > 0 ? (
-              filteredAnnouncement.map((item) => (
-                <AnnouncementCard
-                  key={item.id}
-                  id={item.id}
-                  authId={item.authId}
-                  authName={item.authName}
-                  position={item.position}
-                  date={item.date}
-                  avatarUrl={item.avatarUrl}
-                  isPinned={item.isPinned}
-                  scope={item.scope}
-                  departments={item.departments}
-                  title={item.title}
-                  content={item.content}
-                  attachments={item.attachments}
-                  initialIsLike={item.initialIsLike}
-                  numberOfLike={item.calculatedLikes}
-                  numberOfComments={item.calculatedComments}
-                  onToggleLike={handleLike}
-                  onToggleComment={handleComment}
-                  isProfileOpen={openProfileId === item.id}
-                  onToggleProfile={() => handleToggleProfile(item.id)}
+          <div className='flex flex-col gap-3 mt-3 pb-8'>
+            {isLoading ? (
+              <>
+                <AnnouncementLoading />
+              </>
+            ) : announcements.length > 0 ? (
+              <>
+                {announcements.map((item) => (
+                  <AnnouncementCard
+                    key={item.id}
+                    id={item.id}
+                    authId={item.authId}
+                    authName={item.authName}
+                    position={item.position}
+                    date={item.date}
+                    avatarUrl={item.avatarUrl}
+                    isPinned={item.isPinned}
+                    scope={item.scope}
+                    targetDepartmentName={item.targetDepartmentName}
+                    title={item.title}
+                    content={item.content}
+                    attachments={item.attachments || []}
+                    numberOfComments={item.numberOfComments} 
+                    numberOfLike={item.numberOfLike}
+                    initialIsLike={item.initialIsLike}
+                    onToggleLike={handleLike}
+                    isProfileOpen={openProfileId === item.id}
+                    onToggleProfile={() => handleToggleProfile(item.id)}
+                  />
+                ))}
+
+                <Pagination 
+                  currentPage={currentPage} 
+                  totalPages={totalPages} 
+                  onPageChange={setCurrentPage} 
                 />
-              ))) : (
-              <div className='text-center py-6 text-neutral-500 body-3-medium'>
+              </>
+            ) : (
+              <div className='text-center py-12 text-neutral-500 body-3-medium bg-neutral-50 rounded-xl border border-dashed border-neutral-300'>
                 No announcements found in this view
               </div>
             )}
@@ -173,18 +184,22 @@ export function Announcement() {
         </div>
       </section>
 
-      {/* Add form — portal-based modal with matching transitions */}
       {openAddForm && createPortal(
         <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
-          {/* Backdrop — animate-fadeIn matching Modal.tsx */}
-          <div
-            className='absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn'
-            onClick={handleToggleAddForm}
-          />
-
-          {/* Panel — animate-slideUp matching Modal.tsx */}
-          <div className='relative z-10 animate-slideUp'>
-            <AnnouncementForm onClose={handleToggleAddForm} />
+          <div className='absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn' onClick={handleToggleAddForm} />
+          
+          <div className='relative z-10 animate-slideUp w-full max-w-3xl'>
+            {/* 🌟 2. BỌC FORM TRONG SUSPENSE (Kèm giao diện Fallback mượt mà) */}
+            <Suspense fallback={<AnnouncementFormLoading />}>
+              <AnnouncementForm 
+                onClose={handleToggleAddForm} 
+                onSuccess={() => {
+                  handleToggleAddForm();
+                  setCurrentPage(0); 
+                  fetchMyAnnouncements();
+                }} 
+              />
+            </Suspense>
           </div>
         </div>,
         document.body
