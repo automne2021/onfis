@@ -7,6 +7,9 @@ export interface Position {
   subordinateCount?: number;
   status?: "primary" | "on_track" | "off_track";
   children?: Position[];
+  /** Department header row — renders as a labelled divider, not a person card */
+  isDeptHeader?: boolean;
+  deptName?: string;
 }
 
 interface PositionCardProps {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { TaskDetail, TaskDetailModalProps } from "./types";
+import ConfirmDialog from "../../../../components/common/ConfirmDialog";
 import type { Assignee } from "../../types";
 import SubTaskList from "./SubTaskList";
 import ActivityLog from "./ActivityLog";
@@ -18,6 +19,10 @@ import { useRole } from "../../../../hooks/useRole";
 import { RichTextEditor } from "../../../../components/common";
 import ReviewPanel from "../ReviewPanel";
 import type { ReviewComment } from "../../types";
+import { addTaskComment, getTaskDetail } from "../../../../services/taskService";
+import type { ApiTaskDetail } from "../../../../services/taskService";
+import { formatVNDate, formatVNDateTime } from "../../../../utils/getTime";
+import { getSubmitForReviewError } from "../../workflowUtils";
 
 // Mock assignee options - would come from API in real app
 const mockAssignees: Assignee[] = [
@@ -199,14 +204,70 @@ const RejectionPrompt = ({
   );
 };
 
+function apiDetailToTaskDetail(api: ApiTaskDetail): TaskDetail {
+  return {
+    id: api.id,
+    key: api.key ?? "",
+    projectTitle: api.projectTitle,
+    projectSlug: api.projectSlug,
+    stageId: api.stageId,
+    milestoneId: api.milestoneId,
+    title: api.title,
+    description: api.description,
+    priority: api.priority,
+    status: api.status,
+    progress: api.progress,
+    startDateRaw: api.startDate,
+    dueDateRaw: api.dueDate,
+    dueDate: api.dueDate ? formatVNDate(api.dueDate) : "",
+    assignees: api.assignees,
+    reporterId: api.reporterId,
+    reporterName: api.reporterName,
+    estimatedEffort: api.estimatedEffort,
+    actualEffort: api.actualEffort,
+    blockedBy: api.blockedBy,
+    blockedReason: api.blockedReason,
+    subTasks: api.subtasks,
+    activities: api.activities.map((a) => ({
+      id: a.id,
+      user: a.actorName,
+      action: a.action,
+      value: a.value ?? undefined,
+      description: a.description,
+      timestamp: a.createdAt,
+    })),
+    comments: api.comments.map((c) => ({
+      id: c.id,
+      user: { id: c.authorId, name: c.authorName, avatar: c.authorAvatar },
+      content: c.content,
+      timestamp: c.createdAt,
+    })),
+    reviews: api.reviews.map((r) => ({
+      id: r.id,
+      authorId: r.authorId,
+      authorName: r.authorName,
+      authorAvatar: r.authorAvatar,
+      action: r.action,
+      content: r.content,
+      createdAt: r.createdAt,
+    })),
+    createdAt: api.createdAt ?? "",
+    updatedAt: api.updatedAt ?? "",
+  };
+}
+
 export default function TaskDetailModal({
   task: initialTask,
   isOpen,
   onClose,
   onSave,
+  onDelete,
 }: TaskDetailModalProps) {
   const [task, setTask] = useState<TaskDetail>(initialTask);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
+  const [showBlockedPrompt, setShowBlockedPrompt] = useState(false);
+  const [blockedReasonDraft, setBlockedReasonDraft] = useState("");
   const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -222,6 +283,35 @@ export default function TaskDetailModal({
   // Get last rejection feedback
   const lastRejection = [...task.comments].reverse().find((c) => c.content.startsWith("[REJECTION]"));
   const lastRejectionReason = lastRejection?.content.replace("[REJECTION] ", "") ?? null;
+
+  // Re-sync local state whenever a different task is passed in
+  useEffect(() => {
+    if (!isOpen) return;
+    setTask(initialTask);
+    setTaskReviews(initialTask.reviews ?? []);
+    setShowRejectionPrompt(false);
+    setShowBlockedPrompt(false);
+
+    // Fetch full detail including activities, comments, subtasks
+    let alive = true;
+    getTaskDetail(initialTask.id)
+      .then((detail) => {
+        if (!alive) return;
+        const full = apiDetailToTaskDetail(detail);
+        // Only overwrite local state if the user hasn't changed anything yet
+        setTask((prev) => (prev === initialTask ? full : prev));
+        setTaskReviews((prev) =>
+          prev === (initialTask.reviews ?? []) ? (full.reviews ?? []) : prev
+        );
+      })
+      .catch(() => {
+        // Keep the initialTask data if the detail fetch fails
+      });
+    return () => {
+      alive = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTask.id, isOpen]);
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -277,15 +367,6 @@ export default function TaskDetailModal({
         ...task,
         status: "IN_PROGRESS" as const,
         reviews: [...taskReviews, newReview],
-        comments: [
-          ...task.comments,
-          {
-            id: `cmt-${Date.now()}`,
-            user: { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
-            content: `[REJECTION] ${reason}`,
-            timestamp: "Just now",
-          },
-        ],
       };
       setTaskReviews((prev) => [...prev, newReview]);
       onSave(updated);
@@ -295,9 +376,10 @@ export default function TaskDetailModal({
     [task, taskReviews, currentUser, onSave, onClose, showToast]
   );
 
-  // Resolve reporter name from mock assignees
+  // Resolve reporter display from task payload first, then fall back to assignee list.
   const reporterAssignee = task.reporterId
-    ? mockAssignees.find((a) => a.id === task.reporterId) || { id: task.reporterId, name: `User ${task.reporterId}` }
+    ? task.assignees.find((a) => a.id === task.reporterId)
+      || (task.reporterName ? { id: task.reporterId, name: task.reporterName } : { id: task.reporterId, name: "Reviewer" })
     : null;
 
   if (!isOpen) return null;
@@ -364,6 +446,8 @@ export default function TaskDetailModal({
                     Description
                   </label>
                   <RichTextEditor
+                    key={task.id}
+                    initialContent={task.description}
                     onChange={(content) =>
                       setTask({ ...task, description: content })
                     }
@@ -372,6 +456,7 @@ export default function TaskDetailModal({
 
                 {/* Sub-tasks Section */}
                 <SubTaskList
+                  taskId={task.id}
                   subTasks={task.subTasks}
                   onChange={(subTasks) => setTask({ ...task, subTasks })}
                 />
@@ -382,17 +467,30 @@ export default function TaskDetailModal({
                     <p className="text-sm font-medium text-blue-800">
                       Ready to submit? Your manager will review and approve this task.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTask({ ...task, status: "IN_REVIEW" as const });
-                        showToast("Task submitted for review.", "info");
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors w-fit"
-                    >
-                      <span className="material-symbols-rounded" style={{ fontSize: 16 }}>upload</span>
-                      Submit for Review
-                    </button>
+                    {(() => {
+                      const submitError = getSubmitForReviewError(task);
+                      return (
+                        <>
+                          {submitError && (
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                              {submitError}
+                            </p>
+                          )}
+                          <button
+                            type="button"
+                            disabled={!!submitError}
+                            onClick={() => {
+                              setTask({ ...task, status: "IN_REVIEW" as const });
+                              showToast("Task submitted for review.", "info");
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors w-fit"
+                          >
+                            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>upload</span>
+                            Submit for Review
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -435,16 +533,24 @@ export default function TaskDetailModal({
                   activities={task.activities}
                   comments={task.comments}
                   onAddComment={(content) => {
-                    const newComment = {
-                      id: `cmt-${Date.now()}`,
-                      user: { id: currentUser.id, name: currentUser.name, avatar: currentUser.avatar },
-                      content,
-                      timestamp: "Just now",
+                    const run = async () => {
+                      try {
+                        const saved = await addTaskComment(task.id, content);
+                        const newComment = {
+                          id: saved.id,
+                          user: { id: saved.authorId, name: saved.authorName, avatar: saved.authorAvatar },
+                          content: saved.content,
+                          timestamp: saved.createdAt,
+                        };
+                        setTask((prev) => ({
+                          ...prev,
+                          comments: [...prev.comments, newComment],
+                        }));
+                      } catch {
+                        showToast("Unable to add comment", "error");
+                      }
                     };
-                    setTask({
-                      ...task,
-                      comments: [...task.comments, newComment],
-                    });
+                    void run();
                   }}
                 />
               </div>
@@ -485,9 +591,69 @@ export default function TaskDetailModal({
                 <StatusSelector
                   value={task.status}
                   task={task}
-                  onChange={(status) => setTask({ ...task, status })}
+                  onChange={(status) => {
+                    if (status === "BLOCKED") {
+                      setBlockedReasonDraft(task.blockedReason ?? "");
+                      setShowBlockedPrompt(true);
+                      return;
+                    }
+                    setTask({ ...task, status, blockedReason: undefined });
+                  }}
                   disabled={isLockedForAssignee}
                 />
+
+                {/* Blocked Reason Prompt */}
+                {showBlockedPrompt && (
+                  <div className="border border-red-200 bg-red-50 rounded-xl p-4 flex flex-col gap-3">
+                    <p className="text-sm font-medium text-red-800">
+                      Why is this task blocked?
+                    </p>
+                    <textarea
+                      value={blockedReasonDraft}
+                      onChange={(e) => setBlockedReasonDraft(e.target.value)}
+                      placeholder="Describe what is blocking this task..."
+                      className="w-full min-h-[80px] p-3 text-sm text-neutral-900 border border-red-200 rounded-lg resize-none outline-none focus:border-red-400 bg-white"
+                    />
+                    <div className="flex items-center gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setShowBlockedPrompt(false)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          if (blockedReasonDraft.trim()) {
+                            setTask({ ...task, status: "BLOCKED", blockedReason: blockedReasonDraft.trim() });
+                            setShowBlockedPrompt(false);
+                          }
+                        }}
+                        disabled={!blockedReasonDraft.trim()}
+                      >
+                        Confirm Block
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Blocked Reason Display */}
+                {task.status === "BLOCKED" && task.blockedReason && !showBlockedPrompt && (
+                  <div className="border border-red-200 bg-red-50 rounded-xl p-3">
+                    <p className="text-xs font-medium text-red-600 mb-1">Blocked Reason</p>
+                    <p className="text-sm text-red-800">{task.blockedReason}</p>
+                  </div>
+                )}
+
+                {/* Start Date */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-neutral-500">
+                    Start Date
+                  </label>
+                  <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl">
+                    <CalendarSmallIcon />
+                    <span className="flex-1 text-sm text-neutral-900">
+                      {task.startDateRaw ? formatVNDate(task.startDateRaw) : "—"}
+                    </span>
+                  </div>
+                </div>
 
                 {/* Due Date */}
                 <div className="flex flex-col gap-2">
@@ -536,13 +702,13 @@ export default function TaskDetailModal({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-neutral-400">Created</span>
                     <span className="text-sm text-neutral-500">
-                      {task.createdAt}
+                      {task.createdAt ? formatVNDateTime(task.createdAt) : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-neutral-400">Updated</span>
                     <span className="text-sm text-neutral-500">
-                      {task.updatedAt}
+                      {task.updatedAt ? formatVNDateTime(task.updatedAt) : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -555,18 +721,43 @@ export default function TaskDetailModal({
           </div>
 
           {/* Footer Actions - Fixed at bottom */}
-          <div className="flex items-center justify-end gap-3 px-6 lg:px-8 py-4 border-t border-neutral-200 bg-white">
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            {!isLockedForAssignee && (
-              <Button variant="primary" onClick={handleSave}>
-                Save Task
+          <div className="flex items-center justify-between px-6 lg:px-8 py-4 border-t border-neutral-200 bg-white">
+            <div>
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <span className="text-red-600">Delete Task</span>
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
               </Button>
-            )}
+              {!isLockedForAssignee && (
+                <Button variant="primary" onClick={handleSave}>
+                  Save Task
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {onDelete && (
+        <ConfirmDialog
+          isOpen={showDeleteConfirm}
+          title="Delete Task"
+          message="Are you sure you want to delete this task? This action cannot be undone."
+          confirmLabel="Delete Task"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={() => { setShowDeleteConfirm(false); onDelete(task.id); }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </>,
     document.body
   );

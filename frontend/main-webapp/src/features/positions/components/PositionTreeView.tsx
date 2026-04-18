@@ -10,6 +10,9 @@ interface PositionTreeViewProps {
   onPositionClick?: (position: Position) => void;
   unassignedEmployees?: UnassignedEmployee[];
   onEmployeeAssign?: (employeeId: string, targetPositionId: string, mode: DropMode) => void;
+  onEmployeeRemove?: (employeeId: string) => void;
+  /** When true (search/filter active), auto-expand all visible nodes */
+  searchActive?: boolean;
 }
 
 export interface UnassignedEmployee {
@@ -17,6 +20,7 @@ export interface UnassignedEmployee {
   name: string;
   avatar?: string;
   role?: string;
+  email?: string;
 }
 
 // ===================== ICONS =====================
@@ -151,6 +155,15 @@ function countVisibleNodes(tree: Position, collapsedNodes: Set<string>): number 
   return count;
 }
 
+/** Count employees (non-vacant positions) recursively in a subtree */
+function countEmployeesInSubtree(node: Position): number {
+  let count = (!node.isDeptHeader && node.isVacant === false) ? 1 : 0;
+  for (const child of node.children ?? []) {
+    count += countEmployeesInSubtree(child);
+  }
+  return count;
+}
+
 /** Calculate zoom scale based on visible node count */
 function calculateZoomScale(visibleCount: number): number {
   if (visibleCount <= 1) return 1;
@@ -166,11 +179,13 @@ function calculateZoomScale(visibleCount: number): number {
 // ===================== TREE LAYOUT =====================
 const NODE_W = 200;
 const ROOT_W = 250;
+const DEPT_W = 220;
 const H_GAP = 32;
 const LEVEL_H = 120;
 const STEM = 20;
 const CARD_H_REG = 72;
 const CARD_H_ROOT = 78;
+const CARD_H_DEPT = 52;
 
 interface LayoutEntry {
   position: Position;
@@ -194,7 +209,7 @@ function computeLayout(root: Position, collapsedNodes: Set<string>) {
 
   function subtreeWidth(node: Position, level: number): number {
     if (widthCache.has(node.id)) return widthCache.get(node.id)!;
-    const w = level === 0 ? ROOT_W : NODE_W;
+    const w = level === 0 ? ROOT_W : node.isDeptHeader ? DEPT_W : NODE_W;
     const children = node.children || [];
     if (children.length === 0 || collapsedNodes.has(node.id)) {
       widthCache.set(node.id, w);
@@ -227,7 +242,7 @@ function computeLayout(root: Position, collapsedNodes: Set<string>) {
     const totalChildW =
       childWidths.reduce((a, b) => a + b, 0) +
       (children.length - 1) * H_GAP;
-    const cardH = isRoot ? CARD_H_ROOT : CARD_H_REG;
+    const cardH = isRoot ? CARD_H_ROOT : node.isDeptHeader ? CARD_H_DEPT : CARD_H_REG;
     const stemTopY = y + cardH;
     const connectorY = stemTopY + STEM;
     const childTopY = (level + 1) * LEVEL_H;
@@ -361,7 +376,8 @@ const NodeCard = ({
       if (el) nodeRefs.current.set(position.id, el);
       else nodeRefs.current.delete(position.id);
     },
-    [position.id, nodeRefs],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [position.id],
   );
 
   const handleDragStart = (e: DragEvent) => {
@@ -403,6 +419,53 @@ const NodeCard = ({
       : dropZone === "subordinate"
         ? "ring-2 ring-emerald-400 ring-offset-2"
         : "";
+
+  // ── Department header card ────────────────────────────────────
+  if (position.isDeptHeader) {
+    const employeeCount = countEmployeesInSubtree(position);
+    return (
+      <div style={style}>
+        <div
+          ref={cardRef}
+          onClick={() => onPositionClick?.(position)}
+          className={`
+            relative cursor-pointer select-none
+            transition-all duration-200
+          `}
+        >
+          <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 flex items-center gap-2.5 hover:bg-neutral-100 transition-colors"
+            style={{ width: DEPT_W }}>
+            {/* Dept colour stripe */}
+            <div className="w-1 h-6 rounded-full bg-primary/60 shrink-0" />
+            <span className="text-xs font-bold text-neutral-600 uppercase tracking-wide truncate flex-1">
+              {position.deptName ?? position.name}
+            </span>
+            {(hasChildren || employeeCount > 0) && (
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-[10px] font-bold text-primary shrink-0">
+                {employeeCount}
+              </div>
+            )}
+          </div>
+          {/* Expand/collapse toggle */}
+          {hasChildren && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle(position.id);
+              }}
+              className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10
+                w-6 h-6 rounded-full bg-white border border-neutral-200 shadow-sm
+                flex items-center justify-center
+                hover:bg-neutral-50 hover:border-neutral-300
+                transition-all duration-200"
+            >
+              <ChevronIcon expanded={!isCollapsed} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={style}>
@@ -510,11 +573,13 @@ const UnassignedEmployeeCard = ({
   onDragStart,
   onDragEnd,
   isDragging,
+  onRemove,
 }: {
   employee: UnassignedEmployee;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
   isDragging: boolean;
+  onRemove?: (id: string) => void;
 }) => {
   const handleDragStart = (e: DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
@@ -528,19 +593,30 @@ const UnassignedEmployeeCard = ({
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       className={`
-        flex items-center gap-2.5 px-3 py-2 bg-white rounded-lg border border-neutral-100
+        group flex items-center gap-2.5 px-3 py-2 bg-white rounded-lg border border-neutral-100
         cursor-grab active:cursor-grabbing hover:shadow-sm hover:border-neutral-200
         transition-all duration-150 select-none
         ${isDragging ? "opacity-40 scale-95" : ""}
       `}
     >
       <Avatar name={employee.name} avatar={employee.avatar} size={32} />
-      <div className="flex flex-col min-w-0">
+      <div className="flex flex-col min-w-0 flex-1">
         <p className="text-xs font-semibold text-neutral-900 truncate">{employee.name}</p>
         {employee.role && (
           <p className="text-[10px] text-neutral-400 truncate">{employee.role}</p>
         )}
       </div>
+      {onRemove && (
+        <button
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onRemove(employee.id); }}
+          className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded text-neutral-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+          title="Remove from organization"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };
@@ -552,6 +628,8 @@ export default function PositionTreeView({
   onPositionClick,
   unassignedEmployees = [],
   onEmployeeAssign,
+  onEmployeeRemove,
+  searchActive = false,
 }: PositionTreeViewProps) {
   // Start with ALL nodes collapsed (only root visible)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(() => {
@@ -570,15 +648,23 @@ export default function PositionTreeView({
   const [dragType, setDragType] = useState<"position" | "employee" | null>(null);
   const [manualZoomOffset, setManualZoomOffset] = useState(0);
   const [showPanel, setShowPanel] = useState(true);
+  const [unassignedSearch, setUnassignedSearch] = useState("");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const treeContentRef = useRef<HTMLDivElement>(null);
   const edgeScrollIntervalRef = useRef<number | null>(null);
+  const edgeScrollCleanupRef = useRef<{ onMouseMove: (e: MouseEvent) => void; onDragOver: (e: globalThis.DragEvent) => void } | null>(null);
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // When search/filter is active, expand all nodes
+  const effectiveCollapsedNodes = useMemo(
+    () => (searchActive ? new Set<string>() : collapsedNodes),
+    [searchActive, collapsedNodes]
+  );
 
   // ---- Calculate visible node count & auto-zoom ----
   const visibleNodeCount = useMemo(
-    () => countVisibleNodes(positions, collapsedNodes),
-    [positions, collapsedNodes]
+    () => countVisibleNodes(positions, effectiveCollapsedNodes),
+    [positions, effectiveCollapsedNodes]
   );
 
   const autoScale = calculateZoomScale(visibleNodeCount);
@@ -587,8 +673,8 @@ export default function PositionTreeView({
 
   // ---- Compute tree layout ----
   const layout = useMemo(
-    () => computeLayout(positions, collapsedNodes),
-    [positions, collapsedNodes],
+    () => computeLayout(positions, effectiveCollapsedNodes),
+    [positions, effectiveCollapsedNodes],
   );
 
   // ---- Center on root on mount ----
@@ -639,7 +725,7 @@ export default function PositionTreeView({
       else if (mouseY > rect.bottom - EDGE_THRESHOLD) container.scrollTop += SCROLL_SPEED;
     }, 16);
 
-    (window as any).__edgeScrollCleanup = { onMouseMove, onDragOver };
+    edgeScrollCleanupRef.current = { onMouseMove, onDragOver };
   }, []);
 
   const stopEdgeScrolling = useCallback(() => {
@@ -647,11 +733,11 @@ export default function PositionTreeView({
       clearInterval(edgeScrollIntervalRef.current);
       edgeScrollIntervalRef.current = null;
     }
-    const cleanup = (window as any).__edgeScrollCleanup;
+    const cleanup = edgeScrollCleanupRef.current;
     if (cleanup) {
       window.removeEventListener("mousemove", cleanup.onMouseMove);
       window.removeEventListener("dragover", cleanup.onDragOver);
-      delete (window as any).__edgeScrollCleanup;
+      edgeScrollCleanupRef.current = null;
     }
   }, []);
 
@@ -782,6 +868,12 @@ export default function PositionTreeView({
   const handleZoomOut = () => setManualZoomOffset((v) => Math.max(v - 1, -5));
 
   const hasUnassigned = unassignedEmployees.length > 0;
+  const filteredUnassigned = unassignedSearch.trim()
+    ? unassignedEmployees.filter((e) =>
+        e.name.toLowerCase().includes(unassignedSearch.toLowerCase()) ||
+        (e.role ?? "").toLowerCase().includes(unassignedSearch.toLowerCase())
+      )
+    : unassignedEmployees;
 
   return (
     <div className="flex gap-3 w-full" style={{ height: "calc(100vh - 200px)" }}>
@@ -845,13 +937,13 @@ export default function PositionTreeView({
             >
               <TreeConnectors connectors={layout.connectors} />
               {layout.entries.map((entry) => {
-                const cardW = entry.isRoot ? ROOT_W : NODE_W;
+                const cardW = entry.isRoot ? ROOT_W : entry.position.isDeptHeader ? DEPT_W : NODE_W;
                 return (
                   <NodeCard
                     key={entry.position.id}
                     position={entry.position}
                     isRoot={entry.isRoot}
-                    collapsedNodes={collapsedNodes}
+                    collapsedNodes={effectiveCollapsedNodes}
                     onToggle={handleToggle}
                     draggedId={draggedId}
                     dragType={dragType}
@@ -881,18 +973,46 @@ export default function PositionTreeView({
             <UsersIcon />
             <span className="text-xs font-semibold text-neutral-700">Unassigned</span>
             <span className="ml-auto text-[10px] font-bold text-neutral-400 bg-neutral-100 rounded-full px-1.5 py-0.5">
-              {unassignedEmployees.length}
+              {filteredUnassigned.length}/{unassignedEmployees.length}
             </span>
           </div>
 
+          {/* Search bar */}
+          <div className="px-2 pt-2 pb-1">
+            <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200 rounded-lg px-2 py-1">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-neutral-400 shrink-0">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                value={unassignedSearch}
+                onChange={(e) => setUnassignedSearch(e.target.value)}
+                placeholder="Search..."
+                className="flex-1 text-[11px] bg-transparent outline-none text-neutral-700 placeholder-neutral-400"
+              />
+              {unassignedSearch && (
+                <button onClick={() => setUnassignedSearch("")} className="text-neutral-400 hover:text-neutral-600">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar">
-            {unassignedEmployees.map((emp) => (
+            {filteredUnassigned.length === 0 && (
+              <p className="text-[10px] text-neutral-400 text-center py-2">No results</p>
+            )}
+            {filteredUnassigned.map((emp) => (
               <UnassignedEmployeeCard
                 key={emp.id}
                 employee={emp}
                 onDragStart={handleEmployeeDragStart}
                 onDragEnd={handleDragEnd}
                 isDragging={draggedId === emp.id}
+                onRemove={onEmployeeRemove}
               />
             ))}
           </div>

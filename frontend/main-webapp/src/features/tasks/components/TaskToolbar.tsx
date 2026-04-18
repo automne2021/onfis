@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import type { ReactElement } from "react";
@@ -15,44 +14,14 @@ import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../.
 import { Button } from "../../../components/common/Buttons/Button";
 import { ViewToggle } from "../../../components/common/ViewToggle";
 
-const FILTER_CATEGORIES: FilterCategory[] = [
-  {
-    key: "status",
-    label: "Status",
-    options: [
-      { value: "on_track", label: "On Track", color: "bg-status-on_track" },
-      { value: "off_track", label: "Off Track", color: "bg-status-off_track" },
-      { value: "done", label: "Done", color: "bg-status-done" },
-      { value: "on_hold", label: "On Hold", color: "bg-status-on_hold" },
-    ],
-  },
-  {
-    key: "priority",
-    label: "Priority",
-    options: [
-      { value: "high", label: "High", color: "bg-[#FF6900]" },
-      { value: "medium", label: "Medium", color: "bg-[#FFD230]" },
-      { value: "low", label: "Low", color: "bg-neutral-400" },
-    ],
-  },
-  {
-    key: "assignee",
-    label: "Assignee",
-    options: [
-      { value: "alice", label: "Alice" },
-      { value: "bob", label: "Bob" },
-      { value: "charlie", label: "Charlie" },
-      { value: "david", label: "David" },
-      { value: "eve", label: "Eve" },
-    ],
-  },
-];
-
 interface TaskToolbarProps {
   projectTitle: string;
   projectId?: string;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  activeFilters: ActiveFilters;
+  onFiltersChange: (filters: ActiveFilters) => void;
+  assigneeOptions?: Array<{ value: string; label: string }>;
   onNewTask?: () => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
@@ -63,12 +32,43 @@ export default function TaskToolbar({
   projectId,
   searchQuery,
   onSearchChange,
+  activeFilters,
+  onFiltersChange,
+  assigneeOptions = [],
   // onNewTask,
   viewMode,
   onViewModeChange,
 }: TaskToolbarProps) {
   const { withTenant } = useTenantPath();
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+
+  const filterCategories: FilterCategory[] = [
+    {
+      key: "status",
+      label: "Status",
+      options: [
+        { value: "TODO", label: "To Do", color: "bg-neutral-400" },
+        { value: "IN_PROGRESS", label: "In Progress", color: "bg-primary" },
+        { value: "BLOCKED", label: "Blocked", color: "bg-status-off_track" },
+        { value: "IN_REVIEW", label: "In Review", color: "bg-status-on_track" },
+        { value: "DONE", label: "Done", color: "bg-status-done" },
+      ],
+    },
+    {
+      key: "priority",
+      label: "Priority",
+      options: [
+        { value: "urgent", label: "Urgent", color: "bg-[#E7000B]" },
+        { value: "high", label: "High", color: "bg-[#FF6900]" },
+        { value: "medium", label: "Medium", color: "bg-[#FFD230]" },
+        { value: "low", label: "Low", color: "bg-neutral-400" },
+      ],
+    },
+    {
+      key: "assignee",
+      label: "Assignee",
+      options: assigneeOptions,
+    },
+  ];
 
   const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
     { mode: "kanban", icon: (active) => <KanbanIcon active={active} /> },
@@ -124,9 +124,9 @@ export default function TaskToolbar({
           textStyle='body-4-medium'
         /> */}
         <FilterDropdown
-          categories={FILTER_CATEGORIES}
+          categories={filterCategories}
           activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
+          onFiltersChange={onFiltersChange}
         />
 
         <ViewToggle

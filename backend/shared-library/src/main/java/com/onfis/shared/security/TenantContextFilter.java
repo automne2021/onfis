@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.hibernate.Filter;
 import org.hibernate.Session;
+import com.onfis.shared.security.TenantContext;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -34,8 +35,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
         String tenantId = request.getHeader(TENANT_HEADER);
         String userId = request.getHeader(USER_HEADER);
         if (!StringUtils.hasText(tenantId)) {
@@ -46,17 +47,16 @@ public class TenantContextFilter extends OncePerRequestFilter {
         }
 
         Session session = entityManager.unwrap(Session.class);
+        Filter filter = session.enableFilter("tenantFilter");
+        filter.setParameter("tenantId", tenantId);
+        setJwtClaims(session, tenantId, userId);
+
         try {
             tenantContext.setTenantId(tenantId);
-    
-            Filter filter = session.enableFilter("tenantFilter");
-            filter.setParameter("tenantId", tenantId);
-            setJwtClaims(session, tenantId, userId);
             filterChain.doFilter(request, response);
         } finally {
             tenantContext.clear();
             clearJwtClaims(session);
-            session.disableFilter("tenantFilter");
         }
     }
 

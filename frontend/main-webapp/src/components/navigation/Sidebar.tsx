@@ -202,6 +202,7 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { withTenant } = useTenantPath();
+  const { isManager } = useRole();
 
   const projectSubItems: SubItem[] = [
     { to: withTenant("/projects"), label: "All Projects", icon: "view_kanban" },
@@ -261,12 +262,14 @@ export default function Sidebar() {
       <div className={`h-px bg-neutral-100 transition-all duration-300 ${isCollapsed ? "w-8" : "w-full"}`} />
 
       {/* Settings Button */}
-      <NavItem
-        to={withTenant("/settings")}
-        icon="settings"
-        label="Settings"
-        isCollapsed={isCollapsed}
-      />
+      {isManager && (
+        <NavItem
+          to={withTenant("/settings")}
+          icon="settings"
+          label="Settings"
+          isCollapsed={isCollapsed}
+        />
+      )}
     </aside>
   );
 }

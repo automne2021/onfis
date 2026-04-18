@@ -10,42 +10,47 @@ import { ViewToggle } from "../../../components/common/ViewToggle";
 
 type ViewMode = "tree" | "list";
 
-const FILTER_CATEGORIES: FilterCategory[] = [
-  {
-    key: "department",
-    label: "Department",
-    options: [
-      { value: "marketing", label: "Marketing" },
-      { value: "it", label: "IT" },
-      { value: "finance", label: "Finance" },
-      { value: "hr", label: "Human Resources" },
-    ],
-  },
-  {
-    key: "employment_type",
-    label: "Employment Type",
-    options: [
-      { value: "full-time", label: "Full-time" },
-      { value: "part-time", label: "Part-time" },
-      { value: "contract", label: "Contract" },
-    ],
-  },
-];
+const EMPLOYMENT_TYPE_CATEGORY: FilterCategory = {
+  key: "employment_type",
+  label: "Employment Type",
+  options: [
+    { value: "full-time", label: "Full-time" },
+    { value: "part-time", label: "Part-time" },
+    { value: "contract", label: "Contract" },
+  ],
+};
 
 interface PositionToolbarProps {
-  onFilter: () => void;
+  onFilter: (filters: ActiveFilters) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
+  departments?: { id: string; name: string }[];
+  activeFilters?: ActiveFilters;
+  onSearchQueryChange?: (query: string) => void;
 }
 
 export default function PositionToolbar({
   viewMode,
   onViewModeChange,
+  onFilter,
+  departments = [],
+  activeFilters = {},
+  onSearchQueryChange,
 }: PositionToolbarProps) {
   const { withTenant } = useTenantPath();
-  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+
+  const filterCategories: FilterCategory[] = [
+    ...(departments.length > 0
+      ? [{
+          key: "department",
+          label: "Department",
+          options: departments.map((d) => ({ value: d.id, label: d.name })),
+        }]
+      : []),
+    EMPLOYMENT_TYPE_CATEGORY,
+  ];
 
   const viewModes: { mode: ViewMode; icon: (active: boolean) => ReactElement }[] = [
       { mode: "tree", icon: (active) => <TreeViewIcon active={active} /> },
@@ -85,6 +90,7 @@ export default function PositionToolbar({
             <SearchBar 
               scope="positions" 
               onSearch={handleSearchData}
+              onQueryChange={onSearchQueryChange}
             />
           </div>
         }
@@ -102,9 +108,9 @@ export default function PositionToolbar({
       {/* Right: Filter + View Toggle */}
       <div className="flex items-center gap-2">
         <FilterDropdown
-          categories={FILTER_CATEGORIES}
+          categories={filterCategories}
           activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
+          onFiltersChange={onFilter}
         />
 
         <ViewToggle 

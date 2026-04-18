@@ -1,21 +1,14 @@
-import type { ViewMode } from "../../types";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  FilterLinesIcon,
-  SettingsGearIcon,
 } from "../../../../components/common/Icons";
 
 interface CalendarHeaderProps {
   currentMonth: number;
   currentYear: number;
-  viewMode: ViewMode;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
-  onViewModeChange: (mode: ViewMode) => void;
-  onFilter?: () => void;
-  onSettings?: () => void;
 }
 
 export default function CalendarHeader({
@@ -24,8 +17,6 @@ export default function CalendarHeader({
   onPrevMonth,
   onNextMonth,
   onToday,
-  onFilter,
-  onSettings,
 }: CalendarHeaderProps) {
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -67,24 +58,6 @@ export default function CalendarHeader({
         >
           Today
         </button>
-
-        {/* Filter & Settings */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onFilter}
-            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
-            aria-label="Filter"
-          >
-            <FilterLinesIcon />
-          </button>
-          <button
-            onClick={onSettings}
-            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
-            aria-label="Settings"
-          >
-            <SettingsGearIcon />
-          </button>
-        </div>
       </div>
     </div>
   );

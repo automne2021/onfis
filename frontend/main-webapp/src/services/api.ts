@@ -41,12 +41,7 @@ api.interceptors.response.use(
   },
   async (error: AxiosError) => {
     if (error.response && error.response.status === 401) {
-      console.error("Unauthorized! Redirecting to login...");
-      // localStorage.removeItem('token');
-      // window.location.href = '/login';
-      // await supabase.auth.signOut();
-      // localStorage.removeItem(supabaseKey);
-      // window.location.href = 'onfis/auth/login';
+      console.warn('Unauthorized API response', error.config?.url);
     }
     return Promise.reject(error);
   }

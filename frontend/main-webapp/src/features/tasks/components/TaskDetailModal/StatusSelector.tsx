@@ -6,7 +6,7 @@ import { useToast } from "../../../../contexts/useToast";
 
 interface StatusSelectorProps {
   value: TaskStatus;
-  task: Pick<Task, "assignees" | "reporterId">;
+  task: Pick<Task, "assignees" | "reporterId" | "progress" | "actualEffort">;
   onChange: (status: TaskStatus) => void;
   disabled?: boolean;
 }
@@ -38,7 +38,10 @@ export default function StatusSelector({ value, task, onChange, disabled }: Stat
       return;
     }
 
-    const error = getTransitionError(value, targetStatus, task);
+    // Skip blockedReason check here — the modal will prompt for it
+    const error = targetStatus === "BLOCKED"
+      ? getTransitionError(value, targetStatus, task, undefined, "__skip__")
+      : getTransitionError(value, targetStatus, task);
     if (error) {
       showToast(error, "error");
       setIsOpen(false);

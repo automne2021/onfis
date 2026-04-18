@@ -5,13 +5,17 @@ interface UseRoleReturn {
     role: UserRole;
     isManager: boolean;
     isEmployee: boolean;
+    permissions: string[];
+    isAuthLoading: boolean;
 }
 
 export function useRole(): UseRoleReturn {
-    const { currentUser } = useAuth();
+    const { currentUser, isAuthLoading } = useAuth();
     return {
         role: currentUser.role,
         isManager: currentUser.role === "MANAGER",
         isEmployee: currentUser.role === "EMPLOYEE",
+        permissions: currentUser.permissions,
+        isAuthLoading,
     };
 }

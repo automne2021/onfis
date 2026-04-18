@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Project } from "../../types";
 import type { ProjectCalendarEvent, UpcomingDeadline, StatusCount } from "./types";
 import { getCalendarDays } from "./calendarUtils";
@@ -11,13 +11,30 @@ import StatusOverview from "./StatusOverview";
 interface ProjectCalendarViewProps {
   projects: Project[];
   onProjectClick?: (project: Project) => void;
+  currentDate?: Date;
+  onCurrentDateChange?: (date: Date) => void;
 }
 
-export default function ProjectCalendarView({ projects, onProjectClick }: ProjectCalendarViewProps) {
+export default function ProjectCalendarView({
+  projects,
+  onProjectClick,
+  currentDate,
+  onCurrentDateChange,
+}: ProjectCalendarViewProps) {
   const today = new Date();
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const seedDate = currentDate ?? today;
+  const [currentMonth, setCurrentMonth] = useState(seedDate.getMonth());
+  const [currentYear, setCurrentYear] = useState(seedDate.getFullYear());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(seedDate);
+
+  useEffect(() => {
+    if (!currentDate) {
+      return;
+    }
+    setCurrentMonth(currentDate.getMonth());
+    setCurrentYear(currentDate.getFullYear());
+    setSelectedDate(currentDate);
+  }, [currentDate]);
 
   // Calculate calendar days
   const calendarDays = useMemo(
@@ -33,19 +50,38 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
 
     return projects
       .filter((project) => {
-        const dueDate = new Date(project.dueDate);
-        return dueDate >= now && dueDate <= thirtyDaysFromNow;
+        if (!project.dueDateRaw) return false;
+        const raw = project.dueDateRaw;
+        let dueDate: Date;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+          const [y, m, d] = raw.split("-").map(Number);
+          dueDate = new Date(y, m - 1, d);
+        } else {
+          dueDate = new Date(raw);
+        }
+        return !isNaN(dueDate.getTime()) && dueDate >= now && dueDate <= thirtyDaysFromNow;
       })
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .sort((a, b) => {
+        const parseRaw = (r: string) => (/^\d{4}-\d{2}-\d{2}$/.test(r)
+          ? new Date(+r.slice(0,4), +r.slice(5,7)-1, +r.slice(8,10))
+          : new Date(r));
+        return parseRaw(a.dueDateRaw!).getTime() - parseRaw(b.dueDateRaw!).getTime();
+      })
       .slice(0, 5)
-      .map((project) => ({
-        id: project.id,
-        title: project.title,
-        subtitle: project.description.slice(0, 50) + "...",
-        date: new Date(project.dueDate),
-        status: project.status,
-        priority: project.priority,
-      }));
+      .map((project) => {
+        const raw = project.dueDateRaw!;
+        const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+          ? new Date(+raw.slice(0,4), +raw.slice(5,7)-1, +raw.slice(8,10))
+          : new Date(raw);
+        return {
+          id: project.id,
+          title: project.title,
+          subtitle: project.description.slice(0, 50),
+          date: dueDate,
+          status: project.status,
+          priority: project.priority,
+        };
+      });
   }, [projects]);
 
   // Calculate status counts
@@ -59,28 +95,33 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
     [projects]
   );
 
+  const shiftMonth = (offset: number) => {
+    const baseDate = new Date(currentYear, currentMonth, 1);
+    baseDate.setMonth(baseDate.getMonth() + offset);
+    setCurrentMonth(baseDate.getMonth());
+    setCurrentYear(baseDate.getFullYear());
+    onCurrentDateChange?.(baseDate);
+  };
+
   const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
+    shiftMonth(-1);
   };
 
   const handleNextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    shiftMonth(1);
   };
 
   const handleToday = () => {
-    setCurrentMonth(today.getMonth());
-    setCurrentYear(today.getFullYear());
-    setSelectedDate(today);
+    const nextDate = new Date();
+    setCurrentMonth(nextDate.getMonth());
+    setCurrentYear(nextDate.getFullYear());
+    setSelectedDate(nextDate);
+    onCurrentDateChange?.(nextDate);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    onCurrentDateChange?.(date);
   };
 
   const handleEventClick = (event: ProjectCalendarEvent) => {
@@ -89,45 +130,48 @@ export default function ProjectCalendarView({ projects, onProjectClick }: Projec
     }
   };
 
-  const handleDeadlineClick = (deadline: UpcomingDeadline) => {
-    const project = projects.find((p) => p.id === deadline.id);
+  const handleDeadlineClick = (id: string) => {
+    const project = projects.find((p) => p.id === id);
     if (project && onProjectClick) {
       onProjectClick(project);
     }
   };
 
   return (
-    <div className="flex gap-3 h-full">
-      {/* Main Calendar */}
-      <div className="flex-1 bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden flex flex-col">
-        <CalendarHeader
-          year={currentYear}
-          month={currentMonth}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onToday={handleToday}
-        />
-        <CalendarGrid
-          days={calendarDays}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          onEventClick={handleEventClick}
-        />
-      </div>
+    <div className="flex flex-col h-full w-full max-w-[1440px] mx-auto">
+      <CalendarHeader
+        year={currentYear}
+        month={currentMonth}
+        onPrevMonth={handlePrevMonth}
+        onNextMonth={handleNextMonth}
+        onToday={handleToday}
+      />
 
-      {/* Right Sidebar */}
-      <div className="w-[240px] shrink-0 flex flex-col gap-3">
-        <MiniCalendar
-          year={currentYear}
-          month={currentMonth}
-          days={calendarDays}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-        />
-        <UpcomingDeadlines deadlines={upcomingDeadlines} onDeadlineClick={handleDeadlineClick} />
-        <StatusOverview counts={statusCounts} />
+      <div className="flex-1 flex gap-3 min-h-0 mt-2">
+        {/* Main Calendar */}
+        <div className="flex-1 min-w-0 bg-white rounded-[12px] shadow-sm border border-neutral-100 overflow-hidden flex flex-col">
+          <CalendarGrid
+            days={calendarDays}
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
+            onEventClick={handleEventClick}
+          />
+        </div>
+
+        {/* Right Sidebar */}
+        <aside className="hidden lg:flex w-[240px] xl:w-[260px] shrink-0 flex-col gap-3 overflow-y-auto">
+          <MiniCalendar
+            year={currentYear}
+            month={currentMonth}
+            days={calendarDays}
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+          />
+          <UpcomingDeadlines deadlines={upcomingDeadlines} onDeadlineClick={handleDeadlineClick} />
+          <StatusOverview status={statusCounts} />
+        </aside>
       </div>
     </div>
   );

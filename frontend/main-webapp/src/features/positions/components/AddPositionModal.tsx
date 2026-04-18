@@ -1,31 +1,36 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { CloseIcon, SearchIcon } from "../../../components/common/Icons";
 
 // Types
-interface AddPositionFormData {
+export interface AddPositionFormData {
   jobTitle: string;
-  department: string;
-  reportsTo: string;
+  departmentId: string;
+  parentId: string;
   employmentType: "full-time" | "part-time" | "contract";
   isVacant: boolean;
   assignedUser: string;
+}
+
+export interface DepartmentOption {
+  id: string;
+  name: string;
+}
+
+export interface PositionOption {
+  id: string;
+  title: string;
+  holderName?: string;
 }
 
 interface AddPositionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: AddPositionFormData) => void;
+  departments: DepartmentOption[];
+  positions: PositionOption[];
+  unassignedUsers: { id: string; name: string }[];
 }
-
-// Department options
-const departmentOptions = [
-  { value: "engineering", label: "Engineering" },
-  { value: "marketing", label: "Marketing" },
-  { value: "design", label: "Design" },
-  { value: "hr", label: "Human Resources" },
-  { value: "finance", label: "Finance" },
-];
 
 // Employment type options
 const employmentTypes = [
@@ -38,15 +43,45 @@ export default function AddPositionModal({
   isOpen,
   onClose,
   onSubmit,
+  departments,
+  positions,
+  unassignedUsers,
 }: AddPositionModalProps) {
   const [formData, setFormData] = useState<AddPositionFormData>({
     jobTitle: "",
-    department: "engineering",
-    reportsTo: "",
+    departmentId: "",
+    parentId: "",
     employmentType: "full-time",
-    isVacant: false,
+    isVacant: true,
     assignedUser: "",
   });
+
+  const [reportsToSearch, setReportsToSearch] = useState("");
+  const [showReportsToDropdown, setShowReportsToDropdown] = useState(false);
+  const reportsToContainerRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const updateDropdownRect = useCallback(() => {
+    if (reportsToContainerRef.current) {
+      const rect = reportsToContainerRef.current.getBoundingClientRect();
+      setDropdownRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+  }, []);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        jobTitle: "",
+        departmentId: departments.length > 0 ? departments[0].id : "",
+        parentId: "",
+        employmentType: "full-time",
+        isVacant: true,
+        assignedUser: "",
+      });
+      setReportsToSearch("");
+    }
+  }, [isOpen, departments]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -74,6 +109,24 @@ export default function AddPositionModal({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
+
+  // Filter positions based on search
+  const filteredPositions = useMemo(() => {
+    if (!reportsToSearch.trim()) return positions;
+    const query = reportsToSearch.toLowerCase();
+    return positions.filter(
+      (p) =>
+        p.title.toLowerCase().includes(query) ||
+        (p.holderName && p.holderName.toLowerCase().includes(query))
+    );
+  }, [positions, reportsToSearch]);
+
+  const selectedParentLabel = useMemo(() => {
+    if (!formData.parentId) return "";
+    const pos = positions.find((p) => p.id === formData.parentId);
+    if (!pos) return "";
+    return pos.holderName ? `${pos.title} (${pos.holderName})` : pos.title;
+  }, [formData.parentId, positions]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -136,18 +189,19 @@ export default function AddPositionModal({
               </label>
               <div className="relative">
                 <select
-                  value={formData.department}
+                  value={formData.departmentId}
                   onChange={(e) =>
-                    setFormData({ ...formData, department: e.target.value })
+                    setFormData({ ...formData, departmentId: e.target.value })
                   }
                   className="w-full h-9 px-3 pr-10 bg-neutral-50 border border-neutral-200 rounded-lg
                     text-sm text-neutral-900 appearance-none cursor-pointer
                     focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20
                     transition-colors"
                 >
-                  {departmentOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  <option value="">— Select department —</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
                     </option>
                   ))}
                 </select>
@@ -160,22 +214,84 @@ export default function AddPositionModal({
               <label className="block text-sm font-medium text-neutral-900">
                 Reports To
               </label>
-              <div className="relative">
+              <div className="relative" ref={reportsToContainerRef}>
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
                   <SearchIcon size={20} />
                 </div>
                 <input
                   type="text"
-                  value={formData.reportsTo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reportsTo: e.target.value })
-                  }
-                  placeholder="Search employee..."
+                  value={formData.parentId ? selectedParentLabel : reportsToSearch}
+                  onChange={(e) => {
+                    setReportsToSearch(e.target.value);
+                    setFormData({ ...formData, parentId: "" });
+                    updateDropdownRect();
+                    setShowReportsToDropdown(true);
+                  }}
+                  onFocus={() => { updateDropdownRect(); setShowReportsToDropdown(true); }}
+                  onBlur={() => setTimeout(() => setShowReportsToDropdown(false), 150)}
+                  placeholder="Search position..."
                   className="w-full h-9 pl-10 pr-3 bg-neutral-50 border border-neutral-200 rounded-lg
                     text-sm text-neutral-900 placeholder:text-neutral-400
                     focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20
                     transition-colors"
                 />
+                {formData.parentId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, parentId: "" });
+                      setReportsToSearch("");
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                  >
+                    ×
+                  </button>
+                )}
+                {/* Reports To Dropdown — rendered via portal to escape overflow clipping */}
+                {showReportsToDropdown && !formData.parentId && dropdownRect && createPortal(
+                  <div
+                    className="fixed bg-white border border-neutral-200 rounded-lg shadow-lg max-h-[180px] overflow-y-auto z-[9999]"
+                    style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+                    onMouseDown={(e) => e.preventDefault()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({ ...formData, parentId: "" });
+                        setReportsToSearch("");
+                        setShowReportsToDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-50 transition-colors"
+                    >
+                      — None (root position) —
+                    </button>
+                    {filteredPositions.map((pos) => (
+                      <button
+                        key={pos.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, parentId: pos.id });
+                          setReportsToSearch("");
+                          setShowReportsToDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-neutral-900 hover:bg-primary/5 transition-colors"
+                      >
+                        <span className="font-medium">{pos.title}</span>
+                        {pos.holderName && (
+                          <span className="text-neutral-400 ml-1">
+                            ({pos.holderName})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                    {filteredPositions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-neutral-400">
+                        No positions found
+                      </div>
+                    )}
+                  </div>,
+                  document.body
+                )}
               </div>
             </div>
 
@@ -217,7 +333,7 @@ export default function AddPositionModal({
               <ToggleSwitch
                 checked={formData.isVacant}
                 onChange={(checked) =>
-                  setFormData({ ...formData, isVacant: checked })
+                  setFormData({ ...formData, isVacant: checked, assignedUser: checked ? "" : formData.assignedUser })
                 }
               />
             </div>
@@ -239,10 +355,12 @@ export default function AddPositionModal({
                       focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20
                       transition-colors"
                   >
-                    <option value="">Search users</option>
-                    <option value="user1">John Nguyen</option>
-                    <option value="user2">Sarah Chen</option>
-                    <option value="user3">Tom Brown</option>
+                    <option value="">— Select user —</option>
+                    {unassignedUsers.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
                   </select>
                   <DropdownArrowIcon className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -272,6 +390,14 @@ export default function AddPositionModal({
           </div>
         </form>
       </div>
+
+      {/* Click-away listener for reports-to dropdown */}
+      {showReportsToDropdown && (
+        <div
+          className="fixed inset-0 z-[49]"
+          onClick={() => setShowReportsToDropdown(false)}
+        />
+      )}
     </div>,
     document.body
   );

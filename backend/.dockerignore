@@ -1,0 +1,26 @@
+# Maven build output
+**/target/
+**/*.jar
+**/*.war
+**/*.class
+
+# IDE files
+**/.idea/
+**/*.iml
+**/.settings/
+**/.classpath
+**/.project
+**/.factorypath
+**/.vscode/
+
+# Git
+**/.git/
+**/.gitignore
+
+# OS
+**/.DS_Store
+**/Thumbs.db
+
+# Logs
+**/*.log
+**/logs/

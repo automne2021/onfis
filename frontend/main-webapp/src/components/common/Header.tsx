@@ -2,82 +2,95 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Chat, Notifications } from '@mui/icons-material';
 
-import logo from "../../assets/logo-without-text.svg"
-import userProfileImg from "../../assets/images/user-profile-img.png"
+import logo from '../../assets/logo-without-text.svg';
+import userProfileImg from '../../assets/images/user-profile-img.png';
 import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
+import { signOut } from '../../services/auth';
 
 interface HeaderProps {
-  companyName: string
-  messageContents?: ContentItem[] | null
-  notificationContents?: ContentItem[] | null
+  companyName: string;
+  messageContents?: ContentItem[] | null;
+  notificationContents?: ContentItem[] | null;
 }
 
 export function Header({ companyName, messageContents, notificationContents }: HeaderProps) {
-  
-  const navigate = useNavigate();
+  const { currentUser: authUser } = useAuth();
   const { tenant } = useParams<{ tenant: string }>();
-  
-  const { user: authUser } = useAuth();
+  const navigate = useNavigate();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   const toggleMenu = useCallback((menuId: string) => {
-    setActiveMenu((prev) => prev === menuId ? null : menuId);
+    setActiveMenu((prev) => (prev === menuId ? null : menuId));
   }, []);
 
   const closeMenu = useCallback(() => setActiveMenu(null), []);
 
-  // 🌟 ĐÃ XÓA 'any': Tìm avatar_url trong metadata của Supabase trước, 
-  // nếu không có thì ép kiểu an toàn (Safe Type Assertion) để tìm ở root
-  const avatarImg = 
-    authUser?.user_metadata?.avatar_url || 
-    authUser?.user_metadata?.avatarUrl || 
-    (authUser as { avatarUrl?: string } | null)?.avatarUrl || 
-    userProfileImg;
+  const avatarImg = authUser?.avatar || userProfileImg;
 
-  const authUserId = authUser?.id;
+  const iconButtons = useMemo(
+    () => [
+      {
+        id: 'chat',
+        icon: <Chat />,
+        content: (
+          <ContentList data={messageContents} emptyLabel="No messages available" onItemClick={closeMenu} />
+        ),
+      },
+      {
+        id: 'noti',
+        icon: <Notifications />,
+        content: (
+          <ContentList
+            data={notificationContents}
+            emptyLabel="No notifications available"
+            onItemClick={closeMenu}
+          />
+        ),
+      },
+    ],
+    [messageContents, notificationContents, closeMenu]
+  );
 
-  const iconButtons = useMemo(() => [
-    {
-      id: 'chat',
-      icon: <Chat />,
-      content: <ContentList data={messageContents} emptyLabel='No messages available' onItemClick={closeMenu} />
-    },
-    {
-      id: 'noti',
-      icon: <Notifications />,
-      content: <ContentList data={notificationContents} emptyLabel='No notifications available' onItemClick={closeMenu} />
-    }
-  ], [messageContents, notificationContents, closeMenu]);
-
-  const profileContents: ContentItem[] = useMemo(() => [
-    {
-      content: "User Profile",
-      onClick: () => {
-        closeMenu();
-        if (tenant && authUserId) {
-          navigate(`/${tenant}/profile/${authUserId}`);
-        }
-      }
-    },
-    {
-      content: "Settings",
-      onClick: () => {
-        closeMenu();
-        console.log("Settings");
-      }
-    },
-    {
-      content: "Log out",
-      onClick: () => {
-        closeMenu();
-        console.log("Log out");
-      }
-    },
-  ], [tenant, authUserId, navigate, closeMenu]);
+  const profileContents: ContentItem[] = useMemo(
+    () => [
+      {
+        content: 'User Profile',
+        onClick: () => {
+          closeMenu();
+          if (tenant && authUser?.id) {
+            navigate(`/${tenant}/profile/${authUser.id}`);
+          }
+        },
+      },
+      {
+        content: 'Settings',
+        onClick: () => {
+          closeMenu();
+          console.log('Settings');
+        },
+      },
+      {
+        content: 'Log out',
+        onClick: async () => {
+          try {
+            await signOut();
+          } catch (error) {
+            console.warn('Failed to sign out', error);
+          } finally {
+            closeMenu();
+            if (tenant) {
+              navigate(`/${tenant}/auth/login`);
+            }
+          }
+        },
+      },
+    ],
+    [tenant, authUser?.id, navigate, closeMenu]
+  );
 
   return (
     <header className="flex items-center justify-between w-full px-3 py-1.5 transition-all duration-300 ease-in-out bg-white shadow-md border-b border-neutral-200">
@@ -89,17 +102,13 @@ export function Header({ companyName, messageContents, notificationContents }: H
 
       {/* Right side */}
       <div className="flex items-center gap-2 text-neutral-500">
-
         {/* Icons */}
         {iconButtons.map((item) => (
           <Dropdown
             key={item.id}
             isOpen={activeMenu === item.id}
             trigger={
-              <IconButton
-                icon={item.icon}
-                onClick={() => toggleMenu(item.id)}
-              />
+              <IconButton icon={item.icon} onClick={() => toggleMenu(item.id)} />
             }
             children={item.content}
             onClose={closeMenu}
@@ -122,13 +131,9 @@ export function Header({ companyName, messageContents, notificationContents }: H
             </div>
           }
           children={
-            <ContentList
-              data={profileContents}
-              emptyLabel=''
-              onItemClick={closeMenu}
-            />
+            <ContentList data={profileContents} emptyLabel="" onItemClick={closeMenu} />
           }
-          widthClass='w-32'
+          widthClass="w-32"
           onClose={closeMenu}
         />
       </div>
