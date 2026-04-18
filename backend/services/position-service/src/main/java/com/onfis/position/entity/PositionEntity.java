@@ -7,6 +7,9 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -16,6 +19,8 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "positions", schema = "public")
+@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class PositionEntity {
 
     @Id

@@ -12,10 +12,13 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.hibernate.annotations.Filter;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "project_custom_roles", schema = "public")
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class ProjectCustomRoleEntity {
 
     @Id
