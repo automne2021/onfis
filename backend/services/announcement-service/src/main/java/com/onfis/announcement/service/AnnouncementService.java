@@ -157,20 +157,31 @@ public class AnnouncementService {
     }
 
     public Page<AnnouncementDTO> getCurrentUserDepartmentAnnouncements(String token, String companyIdStr, UUID currentUserId, Pageable pageable) {
-        UUID tenantId = UUID.fromString(companyIdStr);
-        UserResponseDTO myProfile = userClient.getUserProfile(token, companyIdStr, currentUserId);
-        UUID myPositionId = myProfile.getPositionId();
+        try {
+            UUID tenantId = UUID.fromString(companyIdStr);
+            
+            UserResponseDTO myProfile = userClient.getUserProfile(token, companyIdStr, currentUserId);
+            if (myProfile == null || myProfile.getPositionId() == null) {
+                return Page.empty();
+            }
 
-        if (myPositionId == null) return Page.empty();
-
-        PositionResponseDTO positionDetails = positionClient.getPositionById(token, companyIdStr, myPositionId);
-        UUID myDepartmentId = positionDetails.getDepartmentId();
-        
-        Map<UUID, UserResponseDTO> userCache = new HashMap<>();
-        Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
-        
-        return announcementRepository.findByTenantIdAndTargetDepartmentId(tenantId, myDepartmentId, pageable)
-                .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
+            PositionResponseDTO positionDetails = positionClient.getPositionById(token, companyIdStr, myProfile.getPositionId());
+            if (positionDetails == null || positionDetails.getDepartmentId() == null) {
+                return Page.empty(); 
+            }
+            
+            UUID myDepartmentId = positionDetails.getDepartmentId();
+            
+            Map<UUID, UserResponseDTO> userCache = new HashMap<>();
+            Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
+            
+            return announcementRepository.findByTenantIdAndTargetDepartmentId(tenantId, myDepartmentId, pageable)
+                    .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
+                    
+        } catch (Exception e) {
+            log.error("Lỗi khi lấy thông báo phòng ban cho user {}: {}", currentUserId, e.getMessage());
+            return Page.empty(); // Trả về danh sách rỗng thay vì ném lỗi 500 cho Frontend
+        }
     }
 
     public AnnouncementDetailDTO getAnnouncementById(String token, String companyIdStr, UUID id, UUID currentUserId) {
@@ -394,5 +405,18 @@ public class AnnouncementService {
         }
 
         return convertToDTO(token, companyIdStr, announcement, authorId);
+    }
+
+    public Page<AnnouncementDTO> searchAnnouncements(String token, String companyIdStr, String keyword, UUID currentUserId, Pageable pageable) {
+        if (companyIdStr == null || companyIdStr.isBlank() || keyword == null || keyword.trim().isEmpty()) {
+            return Page.empty();
+        }
+        
+        UUID tenantId = UUID.fromString(companyIdStr);
+        Map<UUID, UserResponseDTO> userCache = new HashMap<>();
+        Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
+        
+        return announcementRepository.findByTenantIdAndTitleContainingIgnoreCase(tenantId, keyword.trim(), pageable)
+                .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 }

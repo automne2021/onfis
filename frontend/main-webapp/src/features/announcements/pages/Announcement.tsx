@@ -17,7 +17,6 @@ import { Pagination } from '../components/Pagination';
 import { AnnouncementLoading } from '../components/Loadings/AnnouncementLoading';
 import { AnnouncementFormLoading } from '../components/Loadings/AnnouncementFormLoading';
 
-// 🌟 1. ÁP DỤNG LAZY LOAD CHO FORM (Vì form này chứa bộ Rich Text Editor rất nặng)
 const AnnouncementForm = React.lazy(() => import('../components/AnnouncementForm').then(m => ({ default: m.AnnouncementForm })));
 
 const tabItems = [
@@ -44,6 +43,7 @@ export function Announcement() {
   const currentUserId = user?.id || "";
 
   useEffect(() => {
+    setAnnouncements([]); 
     setCurrentPage(0);
   }, [currentView]);
 
@@ -53,8 +53,12 @@ export function Announcement() {
       let responseData;
 
       if (currentView === 'department' && !currentUserId) {
-         setIsLoading(false);
-         return;
+        if (isMounted) {
+          setAnnouncements([]); 
+          setTotalPages(0);
+          setIsLoading(false);
+        }
+        return;
       }
 
       switch (currentView) {

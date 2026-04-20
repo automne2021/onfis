@@ -61,4 +61,9 @@ export const announcementApi = {
     const response = await api.post(`/announcements/comments/${commentId}/like`);
     return response.data; // Trả về boolean (true/false)
   },
+
+  searchAnnouncements: async (keyword: string, page: number = 0, size: number = 10) => {
+    const response = await api.get(`/announcements/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`);
+    return response.data;
+  },
 }
