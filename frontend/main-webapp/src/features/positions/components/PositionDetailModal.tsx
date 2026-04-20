@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   deletePosition,
   unassignUserFromPosition,
@@ -123,6 +124,8 @@ export default function PositionDetailModal({
   currentUserLevel,
   isManager,
 }: PositionDetailModalProps) {
+  const navigate = useNavigate();
+  const { tenant } = useParams<{ tenant: string }>();
   const [editingTitle, setEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [localTitle, setLocalTitle] = useState(data?.title ?? "");
@@ -135,6 +138,13 @@ export default function PositionDetailModal({
   const canManage =
     isManager &&
     (data?.isVacant || levelToNum(currentUserLevel) >= levelToNum(data?.level));
+
+  const handleViewProfile = () => {
+    if (data?.userId && tenant) {
+      navigate(`/${tenant}/profile/${data.userId}`);
+      onClose();
+    }
+  };
 
   // Focus title input when entering edit
   useEffect(() => {
@@ -383,6 +393,18 @@ export default function PositionDetailModal({
             </div>
           )}
           <div className="flex gap-2 ml-auto">
+            {!data.isVacant && data.userId && (
+              <button
+                onClick={handleViewProfile}
+                className="text-sm px-4 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                View Profile
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-sm px-4 py-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"

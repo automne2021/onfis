@@ -74,7 +74,7 @@ function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false)
     });
 
     return {
-      id: node.positionId ?? node.id,
+      id: node.id ?? node.positionId,
       name: node.name,
       title: node.title,
       avatar: node.avatar ?? undefined,
@@ -86,7 +86,7 @@ function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false)
   }
 
   return {
-    id: node.positionId ?? node.id,
+    id: node.id ?? node.positionId,
     name: node.name,
     title: node.title,
     avatar: node.avatar ?? undefined,
@@ -131,8 +131,9 @@ function mapUnassigned(users: UnassignedUser[]): UnassignedEmployee[] {
 }
 
 function countPositions(tree: Position): { total: number; vacant: number } {
-  let total = 1;
-  let vacant = tree.isVacant ? 1 : 0;
+  const isDeptHeader = tree.isDeptHeader;
+  let total = (!isDeptHeader && !tree.isVacant) ? 1 : 0;
+  let vacant = (!isDeptHeader && tree.isVacant) ? 1 : 0;
   for (const child of tree.children || []) {
     const childCount = countPositions(child);
     total += childCount.total;
@@ -406,6 +407,12 @@ export default function PositionTreePage() {
 
   // Drag and drop: move a position under a new parent
   const handlePositionMove = useCallback(async (draggedId: string, targetId: string) => {
+    // Resolve userId → positionId (since mapped node IDs are userIds)
+    const draggedRawNode = rawTreeData ? findPositionInTree(rawTreeData, draggedId) : null;
+    const resolvedDraggedId = draggedRawNode?.positionId ?? draggedId;
+    const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetId) : null;
+    const resolvedTargetId = targetRawNode?.positionId ?? targetId;
+
     setConfirmDialog({
       isOpen: true,
       title: "Move Position",
@@ -415,7 +422,7 @@ export default function PositionTreePage() {
       onConfirm: async () => {
         closeConfirm();
         try {
-          await movePosition(draggedId, targetId);
+          await movePosition(resolvedDraggedId, resolvedTargetId);
           showToast("Position moved successfully", "success");
           await fetchTreeData();
         } catch (err) {
@@ -425,16 +432,19 @@ export default function PositionTreePage() {
         }
       },
     });
-  }, [fetchTreeData, showToast, closeConfirm]);
+  }, [rawTreeData, fetchTreeData, showToast, closeConfirm]);
 
   // Assign an unassigned employee to a position
   const handleEmployeeAssign = useCallback(
     async (employeeId: string, targetPositionId: string, mode: "replace" | "subordinate") => {
       const employeeName = unassignedEmployees.find((e) => e.id === employeeId)?.name || "this employee";
 
+      // Resolve userId → positionId (since mapped node IDs are userIds)
+      const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetPositionId) : null;
+      const resolvedPositionId = targetRawNode?.positionId ?? targetPositionId;
+
       if (mode === "replace") {
         // Check if the target position is already occupied
-        const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetPositionId) : null;
         const isOccupied = targetRawNode && !targetRawNode.isVacant && targetRawNode.id;
         const currentOccupantName = isOccupied ? (targetRawNode?.name ?? "current occupant") : null;
 
@@ -444,7 +454,7 @@ export default function PositionTreePage() {
             isOpen: true,
             employeeId,
             employeeName,
-            targetPositionId,
+            targetPositionId: resolvedPositionId,
             currentUserName: currentOccupantName!,
           });
         } else {
@@ -458,7 +468,7 @@ export default function PositionTreePage() {
             onConfirm: async () => {
               closeConfirm();
               try {
-                await assignUserToPosition(targetPositionId, employeeId);
+                await assignUserToPosition(resolvedPositionId, employeeId);
                 showToast(`${employeeName} assigned successfully`, "success");
                 await fetchTreeData();
               } catch (err) {
@@ -480,16 +490,11 @@ export default function PositionTreePage() {
           onConfirm: async () => {
             closeConfirm();
             try {
-              // Find the target position's department for the new position
-              const targetPos = rawTreeData
-                ? findPositionInTree(rawTreeData, targetPositionId)
-                : null;
-
               // Create a new subordinate position
               const newPosition = await createPosition({
                 title: "New Position",
-                parentId: targetPositionId,
-                departmentId: targetPos?.departmentId ?? undefined,
+                parentId: resolvedPositionId,
+                departmentId: targetRawNode?.departmentId ?? undefined,
               });
 
               // Assign the employee to the new position
@@ -532,7 +537,12 @@ export default function PositionTreePage() {
 
   // Get position options for the modal
   const positionOptions: PositionOption[] = rawTreeData
-    ? flattenTreeToOptions(rawTreeData).filter((p) => p.id !== "empty" && p.id !== "virtual-root")
+    ? (() => {
+        const seen = new Set<string>();
+        return flattenTreeToOptions(rawTreeData)
+          .filter((p) => p.id !== "empty" && p.id !== "virtual-root")
+          .filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+      })()
     : [];
 
   const departmentOptions: DepartmentOption[] = departmentList.map((d) => ({
@@ -684,7 +694,7 @@ export default function PositionTreePage() {
             {/* Stats Box */}
             <div className="bg-white border border-primary rounded-[8px] px-3 py-1.5 flex items-center gap-4">
               <span className="text-xs font-semibold text-neutral-500">
-                Total Position:{" "}
+                Employees:{" "}
                 <span className="text-primary font-bold">{totalPositions}</span>
               </span>
               <span className="text-xs font-semibold text-neutral-500">
@@ -722,7 +732,7 @@ export default function PositionTreePage() {
           <div className="bg-neutral-50 border border-neutral-200 flex items-center justify-between p-2">
             <div className="flex items-center gap-4">
               <span className="text-sm font-bold text-neutral-500">
-                Total Position:{" "}
+                Employees:{" "}
                 <span className="text-primary">{totalPositions}</span>
               </span>
               <span className="text-sm font-bold text-neutral-500">
