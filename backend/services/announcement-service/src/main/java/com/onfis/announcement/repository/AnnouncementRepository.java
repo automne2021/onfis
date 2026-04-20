@@ -18,4 +18,6 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, UUID
   Page<Announcement> findByTenantIdAndTargetDepartmentIdIsNull(UUID tenantId, Pageable pageable);
 
   Page<Announcement> findByTenantIdAndTargetDepartmentId(UUID tenantId, UUID targetDepartmentId, Pageable pageable);
+
+  Page<Announcement> findByTenantIdAndTitleContainingIgnoreCase(UUID tenantId, String title, Pageable pageable);
 }

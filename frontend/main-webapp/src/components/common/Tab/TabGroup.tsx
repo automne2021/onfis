@@ -24,8 +24,6 @@ export function TabGroup({ tabItems, defaultTab } : TabGroupProps) {
 
   // Functions
   const handleTabChange = (tabId: string) => {
-    // Update URL: ?view=department
-    // Đổi tab nhưng không làm mất kết quả tìm kiếm
     setSearchParams(prev => {
       prev.set('view', tabId); 
       return prev;

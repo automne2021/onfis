@@ -116,4 +116,10 @@ public class PositionController {
         positionService.unassignUserFromPosition(id, userId);
         return ResponseEntity.noContent().build();
     }
+
+    // ── Get single position ───────────────────────────────────────────
+    @GetMapping("/{id}")
+    public ResponseEntity<PositionResponse> getPositionById(@PathVariable UUID id) {
+        return ResponseEntity.ok(positionService.getPositionById(id));
+    }
 }

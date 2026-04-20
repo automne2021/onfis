@@ -524,4 +524,12 @@ public class PositionService {
         String full = (first + " " + last).trim();
         return full.isEmpty() ? (user.getEmail() != null ? user.getEmail() : "Unknown") : full;
     }
+
+    // ── Get single position ───────────────────────────────────────────
+    public PositionResponse getPositionById(UUID id) {
+        PositionEntity position = positionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Position not found with ID: " + id));
+        
+        return toPositionResponse(position); 
+    }
 }
