@@ -5,7 +5,7 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   title?: string;
   iconLeft?: ReactNode;
   iconRight?: ReactNode;
-  style: 'primary' | 'sub' | 'custom'; 
+  style: 'primary' | 'sub' | 'custom' | 'danger'; 
   textStyle?: string;
   bgColor?: string;
   bgHoverColor?: string;
@@ -52,7 +52,8 @@ export function Button({
         ${size === 'default' ? 'px-2.5 py-1.5' : ''}
         ${size === 'square' ? 'p-2' : ''}
         ${style === 'primary' ? 'border-primary bg-secondary text-primary hover:bg-secondary-hover' : ''} 
-        ${style === 'sub' ? 'border-neutral-200 bg-neutral-50 text-neutral-500 hover:bg-neutral-200' : ''}
+        ${style === 'sub' ? 'border-neutral-400 bg-neutral-50 text-neutral-500 hover:bg-neutral-200' : ''}
+        ${style === 'danger' ? 'border-red-500 bg-red-100 text-red-500 hover:bg-red-200' : ''}
         ${style === 'custom' ? `${borderColor || ''} ${bgColor || ''} ${textColor || ''} ${bgHoverColor ? `hover:${bgHoverColor}` : ''}` : ''}
         ${(disabled || loading) ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}
         ${width || ''}

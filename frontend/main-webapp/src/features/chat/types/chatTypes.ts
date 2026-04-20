@@ -1,6 +1,6 @@
 // Các loại tin nhắn hỗ trợ trong hệ thống
-export type MessageType = 'text' | 'file' | 'meeting';
-export type ChannelType = 'group' | 'direct' | 'self';
+export type MessageType = 'text' | 'file' | 'meeting' | 'system';
+export type ChannelType = 'public_group' | 'private_group' | 'direct' | 'self';
 
 export interface ChatUser {
   id: string; // Đổi thành string vì ID Supabase là UUID
@@ -31,10 +31,13 @@ export interface FileAttachment {
 
 // Cấu trúc cho thẻ Meeting (Cuộc họp)
 export interface MeetingData {
-  hostName: string;
-  status: 'ongoing' | 'ended';
-  participantsCount: number;
-  url: string;
+  id: string;
+  hostId: string;
+  type: 'VIDEO' | 'AUDIO';
+  status: 'ONGOING' | 'ENDED';
+  startTime: string;
+  endTime?: string | null;
+  meetingLink: string; // Tên phòng LiveKit
 }
 
 export interface ChatMessage {
@@ -56,6 +59,7 @@ export interface BackendMessageDTO {
   userId: string;
   senderName: string | null;   
   senderAvatar: string | null; 
+  senderStatus?: "online" | "busy" | "offline";
   content: string;
   type: string;
   isEdited: boolean;
@@ -63,4 +67,11 @@ export interface BackendMessageDTO {
   parentId: string | null;
   createdAt: string;
   updatedAt: string | null;
+  meeting?: MeetingData | null;
+}
+
+export interface ActionModalState {
+  type: 'rename' | 'delete' | null;
+  channelId: string;
+  channelName: string;
 }

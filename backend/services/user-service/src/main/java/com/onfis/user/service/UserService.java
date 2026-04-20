@@ -10,8 +10,13 @@ import com.onfis.user.repository.UserProfileEntityRepository;
 import com.onfis.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -21,6 +26,32 @@ public class UserService {
   private final UserRepository userRepository;
   private final UserProfileEntityRepository profileRepository;
   private final PositionServiceClient positionServiceClient;
+  private final StringRedisTemplate redisTemplate;
+
+  private String getUserStatus(UUID userId) {
+      
+      try {
+          // Bước 1: Check Redis xem có kết nối WebSocket không
+          // Pattern key phải giống hệt với lúc chat-service lưu vào (ví dụ: "user:status:1234-5678...")
+          String redisKey = "user:status:" + userId.toString();
+          Boolean isOnline = redisTemplate.hasKey(redisKey);
+          
+          if (Boolean.FALSE.equals(isOnline)) {
+              return "offline"; // Không có trong Redis -> Chắc chắn đang tắt web
+          }
+
+          // Bước 2: Truy vấn bảng Meeting xem có đang kẹt lịch họp không
+          // (Mở comment 2 dòng dưới khi bạn đã có MeetingRepository)
+          // boolean isInMeeting = meetingRepository.isUserInMeetingNow(userId);
+          // if (isInMeeting) return "busy"; // Có kết nối, nhưng đang họp -> Hiện màu đỏ
+
+      } catch (Exception e) {
+          log.warn("Lỗi khi kiểm tra trạng thái cho user {}: {}", userId, e.getMessage());
+      }
+
+      // Vượt qua 2 vòng trên -> Đang rảnh và có mở web -> Hiện màu xanh
+      return "online"; 
+  }
 
   public UserResponseDTO getBasicUserProfile(UUID userId) {
     User user = userRepository.findById(userId)
@@ -38,7 +69,8 @@ public class UserService {
       user.getAvatarUrl(),
       user.getEmail(),
       user.getRole(),
-      user.getPositionId()
+      user.getPositionId(),
+      getUserStatus(user.getId())
     );
   }
 
@@ -105,5 +137,47 @@ public class UserService {
       profile != null ? profile.getCompensationInfo() : null
     );
   }
+
+  public List<UserResponseDTO> getUsersByTenant(String tenantIdStr) {
+    if (tenantIdStr == null || tenantIdStr.isEmpty()) {
+        throw new IllegalArgumentException("Tenant ID không được để trống");
+    }
+    
+    UUID tenantId = UUID.fromString(tenantIdStr);
+    List<User> users = userRepository.findByTenantId(tenantId);
+    
+    return users.stream().map(user -> new UserResponseDTO(
+            user.getId(),
+            user.getTenantId(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getAvatarUrl(),
+            user.getEmail(),
+            user.getRole(),
+            user.getPositionId(),
+            getUserStatus(user.getId())
+    )).collect(Collectors.toList());
+  }
+
+  public List<UserResponseDTO> searchUsers(String tenantIdStr, String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        UUID tenantId = UUID.fromString(tenantIdStr);
+        List<User> users = userRepository.searchUsersByKeyword(tenantId, keyword.trim());
+        
+        return users.stream().map(user -> new UserResponseDTO(
+                user.getId(),
+                user.getTenantId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getAvatarUrl(),
+                user.getEmail(),
+                user.getRole(),
+                user.getPositionId(),
+                getUserStatus(user.getId())
+        )).collect(Collectors.toList());
+    }
   
 }

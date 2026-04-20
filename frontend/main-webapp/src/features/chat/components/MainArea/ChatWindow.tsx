@@ -1,9 +1,33 @@
+import { useState, useEffect } from "react";
 import { ChatHeader } from "./ChatHeader";
-// import { MOCK_CHANNELS, MOCK_USERS, MOCK_MESSAGES } from "../../../../data/mockChatData"; // Đường dẫn tuỳ project của bạn
 import { ChatInput } from "./ChatInput/ChatInput";
 import { MessageArea } from "./MessageList/MessageArea";
 import type { ChatChannel } from "../../types/chatTypes";
 import { useChat } from "../../hooks/useChat";
+import { useAuth } from "../../../../hooks/useAuth";
+import { userApi } from "../../services/userApi";
+
+interface DBUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl: string | null;
+  email: string;
+}
+
+interface AuthUser {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    first_name?: string;
+    firstName?: string;
+    last_name?: string;
+    lastName?: string;
+    full_name?: string;
+    name?: string;
+    avatar_url?: string;
+  };
+}
 
 interface ChatWindowProps {
   activeChannelId: string;
@@ -11,34 +35,124 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ activeChannelId, currentChannel }: ChatWindowProps) {
+  const { user, isLoading: isAuthLoading } = useAuth();
   
-  // Gọi hook quản lý logic tin nhắn
-  const { messages, isConnected, sendMessage } = useChat(activeChannelId);
-  console.log("isConnected: ", isConnected);
+  const [dbUser, setDbUser] = useState<DBUser | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+
+  useEffect(() => {
+    if (isAuthLoading) return; 
+
+    if (!user?.id) {
+      const timer = setTimeout(() => setIsProfileLoading(false), 0);
+      return () => clearTimeout(timer);
+    }
+
+    userApi.getProfile(user.id)
+      .then((data: DBUser) => setDbUser(data))
+      .catch(err => console.error("Error fetching profile", err))
+      .finally(() => setIsProfileLoading(false));
+  }, [user?.id, isAuthLoading]);
+
+  if (isProfileLoading || isAuthLoading) {
+    return <ChatWindowSkeleton />;
+  }
+
+  return (
+    <ChatWindowContent
+      activeChannelId={activeChannelId}
+      currentChannel={currentChannel}
+      user={user as AuthUser} 
+      dbUser={dbUser}
+    />
+  );
+}
+
+interface ChatWindowContentProps extends ChatWindowProps {
+  user: AuthUser | null;
+  dbUser: DBUser | null;
+}
+
+function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser }: ChatWindowContentProps) {
+  
+  const firstName = dbUser?.firstName || "";
+  const lastName = dbUser?.lastName || "";
+  let fullName = `${firstName} ${lastName}`.trim();
+
+  if (!fullName) {
+    fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User";
+  }
+
+  const currentUserAvatarUrl = dbUser?.avatarUrl || user?.user_metadata?.avatar_url || ""; 
+
+  const currentUserInfo = user ? {
+    id: user.id,
+    name: fullName,
+    avatarUrl: currentUserAvatarUrl
+  } : undefined;
+  
+  const { messages, isConnected, sendMessage } = useChat(activeChannelId, currentUserInfo);
+  
+  const cleanHeaderName = (currentChannel?.name || "Unknown User").replace(/\(You\)/g, '').trim();
+  const headerAvatarUrl = currentChannel?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanHeaderName)}&background=random`;
 
   return (
     <div className="flex flex-col h-full w-full bg-white relative">
       {currentChannel ? (
         <ChatHeader
-          name={currentChannel.name}
+          name={cleanHeaderName}
           type={currentChannel.type}
           memberCount={currentChannel.membersCount}
           isPinned={currentChannel.isPinned}
-          avatarUrl={currentChannel.avatarUrl} 
+          avatarUrl={headerAvatarUrl}
           status={currentChannel.status} 
+          conversationId={currentChannel.id}
         />
       ) : (
-         <div className="h-[48px]">Start a chat now!</div>
+         <div className="h-[48px] px-4 flex items-center border-b border-neutral-200">Start a chat now!</div>
       )}
 
-      {/* Truyền messages thật vào */}
       <MessageArea channel={currentChannel} messages={messages} />
 
       <ChatInput 
-        label={currentChannel?.name || "conversation"} 
+        label={cleanHeaderName} 
         onSendMessage={sendMessage}
         disabled={!isConnected}
       />
     </div>
-  )
+  );
+}
+
+function ChatWindowSkeleton() {
+  return (
+    <div className="flex flex-col h-full w-full bg-white relative animate-pulse">
+      {/* Header Skeleton */}
+      <div className="w-full h-[60px] flex items-center px-4 border-b border-neutral-200 gap-3 flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-neutral-200" />
+        <div className="flex flex-col gap-2">
+          <div className="w-32 h-4 bg-neutral-200 rounded" />
+          <div className="w-20 h-3 bg-neutral-200 rounded" />
+        </div>
+      </div>
+
+      <div className="flex-1 p-4 flex flex-col gap-6 justify-end pb-8">
+        <div className="flex items-end gap-3 w-full">
+          <div className="w-10 h-10 rounded-full bg-neutral-200 flex-shrink-0" />
+          <div className="w-1/3 h-12 bg-neutral-200 rounded-2xl rounded-bl-none" />
+        </div>
+        <div className="flex items-end gap-3 w-full flex-row-reverse">
+          <div className="w-10 h-10 rounded-full bg-neutral-200 flex-shrink-0" />
+          <div className="w-1/4 h-12 bg-neutral-200 rounded-2xl rounded-br-none" />
+        </div>
+         <div className="flex items-end gap-3 w-full flex-row-reverse">
+          <div className="w-10 h-10 rounded-full bg-neutral-200 flex-shrink-0" />
+          <div className="w-2/5 h-16 bg-neutral-200 rounded-2xl rounded-br-none" />
+        </div>
+      </div>
+
+      <div className="p-4 border-t border-neutral-200 flex-shrink-0">
+         <div className="w-full h-12 bg-neutral-100 rounded-xl" />
+      </div>
+    </div>
+  );
 }
