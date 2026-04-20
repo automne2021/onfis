@@ -109,13 +109,26 @@ public class AnnouncementController {
   }
 
   @GetMapping("/my-departments")
-    public ResponseEntity<List<DepartmentDTO>> getMyDepartments(
-            @RequestHeader("Authorization") String token,
-            @RequestHeader("X-Company-ID") String companyId,
-            @RequestHeader("X-User-ID") UUID userId) {
-        
-        return ResponseEntity.ok(announcementService.getMyPostingDepartments(token, companyId, userId));
-    }
+public ResponseEntity<List<DepartmentDTO>> getMyDepartments(
+        @RequestHeader("Authorization") String token,
+        @RequestHeader("X-Company-ID") String companyId,
+        @RequestHeader("X-User-ID") UUID userId) {
+    
+    return ResponseEntity.ok(announcementService.getMyPostingDepartments(token, companyId, userId));
+}
+
+  @GetMapping("/search")
+  public ResponseEntity<Page<AnnouncementDTO>> searchAnnouncements(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader(value = "X-Company-ID", required = false) String companyId,
+          @RequestHeader(value = "X-User-ID", required = false) UUID userId,
+          @RequestParam("keyword") String keyword,
+          @RequestParam(defaultValue = "0") int page,
+          @RequestParam(defaultValue = "10") int size) {
+      
+      Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+      return ResponseEntity.ok(announcementService.searchAnnouncements(token, companyId, keyword, userId, pageable));
+  }
 
   /* ================== POST ================== */
 

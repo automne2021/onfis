@@ -12,6 +12,8 @@ export function Navbar() {
   // States management
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearching, setIsSearching] = useState(false);
 
   // Data
   const filterContents: ContentItem[] = [
@@ -61,19 +63,21 @@ export function Navbar() {
 
       {/* Search bar */}
       <Dropdown
-        isOpen={activeMenu === 'search'}
+        isOpen={activeMenu === 'search' && searchQuery.trim().length > 0}
         trigger={
           <div onClick={() => setActiveMenu('search')}>
             <SearchBar 
               scope="announcement" 
               onSearch={handleSearchData}
+              onQueryChange={setSearchQuery} 
+              onIsSearchingChange={setIsSearching}
             />
           </div>
         }
         children={
           <ContentList 
             data={searchContentItem}
-            emptyLabel="No result available"
+            emptyLabel={isSearching ? "Searching..." : "No result available"}
             onItemClick={closeMenu}
           />
         }
