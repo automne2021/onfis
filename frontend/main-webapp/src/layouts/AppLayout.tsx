@@ -5,7 +5,9 @@ import { Header } from "../components/common/Header";
 import { SidebarProvider } from "../contexts/SidebarContext";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ToastProvider } from "../contexts/ToastContext";
+import { ToastContainer } from 'react-toastify';
 import { supabase } from "../services/supabaseClient";
+import 'react-toastify/dist/ReactToastify.css';
 
 const mockCompanyName = "Your company";
 
@@ -75,6 +77,9 @@ export default function AppLayout() {
               </main>
             </div>
           </div>
+          <ToastContainer 
+            className="body-3-regular text-neutral-800 font-sans"
+          />
         </SidebarProvider>
       </ToastProvider>
     </AuthProvider>

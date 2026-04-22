@@ -89,7 +89,7 @@ export function SearchBar({ scope, onSearch, onQueryChange, onIsSearchingChange,
 
     handleDynamicSearch();
 
-  }, [debouncedSearchTerm, scope, onSearch]);
+  }, [debouncedSearchTerm, scope, onSearch, onIsSearchingChange]);
 
   return (
     <div className={`flex gap-2 items-center px-4 py-2 border bg-white border-neutral-200 outline-none rounded-full transition-colors duration-200 focus-within:border-primary focus-within:bg-white ${width}`}>

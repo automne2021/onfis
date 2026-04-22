@@ -33,11 +33,8 @@ public class AnnouncementService {
     
     private final UserClient userClient;
     private final PositionClient positionClient;
-    
-    // 🌟 SỬA LỖI 2: Inject ObjectMapper có sẵn của Spring Boot để dùng chung
     private final ObjectMapper objectMapper;
-
-    // (Đã xóa hàm getTenantId() và TenantContext vì không cần thiết nữa)
+    private final SupabaseStorageService supabaseStorageService;
 
     private AnnouncementDTO convertToDTO(String token, String companyIdStr, Announcement ann, UUID currentUserId) {
         return convertToDTOWithCache(token, companyIdStr, ann, currentUserId, new HashMap<>(), new HashMap<>());
@@ -390,14 +387,15 @@ public class AnnouncementService {
 
         if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
             for (MultipartFile file : request.getAttachments()) {
-                String mockFileUrl = "https://onfis-storage.local/files/" + file.getOriginalFilename();
+                String actualFileUrl = supabaseStorageService.uploadFile(file);
+
                 Attachment attachment = Attachment.builder()
                         .tenantId(tenantId)
                         .announcementId(announcement.getId())
                         .name(file.getOriginalFilename())
                         .fileType(file.getContentType())
                         .size((int) file.getSize())
-                        .fileUrl(mockFileUrl)
+                        .fileUrl(actualFileUrl) 
                         .uploadedBy(authorId)
                         .build();
                 attachmentRepository.save(attachment);

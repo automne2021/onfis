@@ -193,12 +193,10 @@ export function Announcement() {
           <div className='absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn' onClick={handleToggleAddForm} />
           
           <div className='relative z-10 animate-slideUp w-full max-w-3xl'>
-            {/* 🌟 2. BỌC FORM TRONG SUSPENSE (Kèm giao diện Fallback mượt mà) */}
             <Suspense fallback={<AnnouncementFormLoading />}>
               <AnnouncementForm 
                 onClose={handleToggleAddForm} 
                 onSuccess={() => {
-                  handleToggleAddForm();
                   setCurrentPage(0); 
                   fetchMyAnnouncements();
                 }} 

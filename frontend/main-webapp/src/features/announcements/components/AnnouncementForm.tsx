@@ -7,6 +7,8 @@ import { AttachmentSection } from '../../../components/common/Attachment/Attachm
 import { announcementApi } from '../services/announcementApi';
 import type { DepartmentType } from '../types/AnnouncementTypes';
 
+import { toast } from 'react-toastify'; 
+
 interface AnnouncementFormProps {
   onClose: () => void;
   onSuccess: () => void;
@@ -25,6 +27,8 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
+  
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -40,7 +44,6 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     fetchDepartments();
   }, []);
 
-  // Functions
   const handleSelectOption = (id: string) => {
     setSelectedOption(id);
   }
@@ -48,9 +51,12 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
   const handleContentChange = useCallback((html: string) => {
     setErrors(prev => (prev.content ? { ...prev, content: undefined } : prev));
     setMessageContent(html);
-  }, []);
+    if (formError) setFormError(null); 
+  }, [formError]);
 
   const submitAnnouncement = async (status: 'draft' | 'published') => {
+    // Xóa lỗi cũ trước khi submit
+    setFormError(null); 
     
     const cleanContent = messageContent ? messageContent.replace(/<\/?p[^>]*>/g, "") : '';
 
@@ -79,7 +85,6 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     formData.append('scope', selectedOption);
     formData.append('status', status);
     
-    // 🌟 3. NẾU CHỌN "DEPARTMENT", TỰ ĐỘNG GỬI ID PHÒNG BAN CỦA USER XUỐNG BACKEND
     if (selectedOption === 'department' && myDepartment) {
       formData.append('departments', JSON.stringify([myDepartment.id]));
     } else {
@@ -94,7 +99,10 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     try {
       await announcementApi.createAnnouncement(formData);
 
-      alert(status === 'published' ? "Announcement published!" : "Draft saved successfully!");
+      toast.success(status === 'published' ? "Announcement published successfully!" : "Draft saved successfully!", {
+        position: "top-right",
+        autoClose: 1500,
+      });
       
       if (onSuccess) {
         onSuccess();
@@ -102,7 +110,7 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
       onClose();
     } catch (error) {
       console.error("Failed to process announcement", error);
-      alert("Đã có lỗi xảy ra khi lưu thông báo!");
+      setFormError("An error occurred while saving the announcement. Please check your connection or try again later.");
     } finally {
       setIsSubmitting(false);
     }
@@ -155,11 +163,19 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
       {/* Body */}
       <div className='py-3 flex flex-col gap-3 min-h-[280px] max-h-[400px] overflow-y-auto custom-scrollbar'>
 
+        {/* MỚI: Hiển thị lỗi API chung ở ngay đầu Form */}
+        {formError && (
+          <div className="mx-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-200">
+            {formError}
+          </div>
+        )}
+
         {/* Audience Scope */}
         <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
             Audience Scope
           </p>
+          {/* ... (Giữ nguyên code OptionCard) ... */}
           <div className='flex flex-wrap items-center justify-between gap-4'>
             {optionItems.map((item) => (
               <OptionCard
@@ -193,8 +209,12 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
             type="text"
             placeholder='Enter announcement title...'
             minLength={1}
-            maxLength={32}
-            onChange={(e) => setTitle(e.target.value)}
+            maxLength={256}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (errors.title) setErrors(prev => ({ ...prev, title: undefined }));
+              if (formError) setFormError(null);
+            }}
             value={title}
             className={`w-full body-3-regular text-neutral-900 border px-4 py-3 rounded-lg transition-all outline-none 
             ${errors.title ? 'border-red-500' : (title.length > 0 ? 'border-neutral-200 bg-white' : 'border-neutral-200 bg-neutral-50')}
