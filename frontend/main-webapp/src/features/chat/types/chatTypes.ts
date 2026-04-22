@@ -13,12 +13,12 @@ export interface ChatChannel {
   id: string;
   name: string;
   type: ChannelType;
-  // Thêm 2 trường này để hiển thị avatar/trạng thái cho Direct Message
   avatarUrl?: string; 
   status?: "online" | "busy" | "offline"; 
   membersCount?: number;
   isPinned?: boolean;
   unreadCount?: number;
+  targetUserId?: string;
 }
 
 // Cấu trúc cho file đính kèm

@@ -68,7 +68,10 @@ export function ChatItem({ name, isActive, onClick, icon, avatarUrl, status, onR
             {icon}
           </div>
         )}
-        <span className={`truncate select-none ${isActive ? 'font-medium' : ''}`}>{name}</span>
+        
+        <div className="flex items-center gap-1.5 truncate">
+          <span className={`truncate select-none ${isActive ? 'font-medium' : ''}`}>{name}</span>
+        </div>
       </div>
 
       {(onRename || onDelete) && (

@@ -49,6 +49,11 @@ export const chatApi = {
     return response.data;
   },
 
+  togglePinConversation: async (conversationId: string) => {
+    const response = await api.put(`/chat/conversations/${conversationId}/pin`);
+    return response.data;
+  },
+
   /* ****************************** */
   /* *********** MEETING ********** */
   /* ****************************** */
@@ -72,5 +77,6 @@ export const chatApi = {
     const response = await api.get(`/chat/meetings/${meetingId}`);
     return response.data;
   },
+
 
 };

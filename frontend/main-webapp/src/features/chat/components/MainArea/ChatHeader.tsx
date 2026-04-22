@@ -16,6 +16,7 @@ interface ChatHeaderProps {
   avatarUrl?: string;
   status?: "online" | "busy" | "offline";
   conversationId: string;
+  onTogglePin?: () => void; // 1. THÊM PROP: Nhận hàm xử lý từ Component cha
 }
 
 export function ChatHeader({
@@ -25,7 +26,8 @@ export function ChatHeader({
   isPinned = false,
   avatarUrl,
   status = 'offline',
-  conversationId
+  conversationId,
+  onTogglePin // Destructure prop
 }: ChatHeaderProps) {
 
   const { startLiveKit } = useCall();
@@ -35,19 +37,9 @@ export function ChatHeader({
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMembersOpen, setIsMembersOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [localMemberCount, setLocalMemberCount] = useState(memberCount);
-
-  const [localIsPinned, setLocalIsPinned] = useState(isPinned);
 
   const isGroupChat = type === 'public_group' || type === 'private_group';
   const isPrivateGroup = type === 'private_group';
-
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      setLocalMemberCount(memberCount);
-      setLocalIsPinned(isPinned);
-    });
-  }, [memberCount, isPinned, name]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -59,23 +51,10 @@ export function ChatHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      setLocalIsPinned(isPinned);
-    });
-  }, [isPinned, name])
-
-  const handleTogglePin = () => {
-    setLocalIsPinned(prev => !prev);
-  };
-
   const startCall = async (callType: 'VIDEO' | 'AUDIO') => {
     try {
-      // 1. Backend tạo phòng
       const response = await chatApi.createMeeting(conversationId, callType);
-      // 2. Tự động Join lấy Token luôn
       const joinData = await chatApi.joinMeeting(response.meeting.id);
-      // 3. Mở Full màn hình Video
       startLiveKit(joinData.token, joinData.roomName, response.meeting.id, true, callType === 'VIDEO', avatarUrl, name);
     } catch (error) {
       console.error("Lỗi khi khởi tạo cuộc gọi:", error);
@@ -104,35 +83,43 @@ export function ChatHeader({
           </h2>
 
           <div className="flex items-center gap-2 mt-0.5 body-4-regular text-neutral-500">
-            {isGroupChat ? (
+            {/* Nếu là Group Chat, hiển thị số thành viên */}
+            {isGroupChat && (
               <>
                 <div className="flex items-center gap-1.5 transition-all text-[13px]">
                   <Users size={14} />
-                  <span>{localMemberCount} Members</span>
+                  <span>{memberCount} Members</span>
                 </div>
                 <span className="w-1 h-1 rounded-full bg-neutral-400" />
-                <button
-                  type='button'
-                  onClick={handleTogglePin}
-                  className={`flex items-center gap-1 transition-colors cursor-pointer text-[13px]
-                      ${localIsPinned ? 'text-primary' : 'hover:text-primary'}
-                    `}
-                >
-                  <Pin size={14} className={localIsPinned ? 'fill-current' : ''} />
-                  {localIsPinned ? 'Pinned' : 'Pin Channel'}
-                </button>
               </>
-            ) : (
-              <span className="text-[13px] capitalize">{status}</span>
             )}
+
+            {!isGroupChat && (
+             <>
+               <span className="text-[13px] capitalize">{status}</span>
+               <span className="w-1 h-1 rounded-full bg-neutral-400" />
+             </>
+           )}
+
+            <button
+              type='button'
+              onClick={onTogglePin} // 3. Gọi hàm từ Props khi nhấn
+              className={`flex items-center gap-1 transition-colors cursor-pointer text-[13px]
+                  ${isPinned ? 'text-primary' : 'hover:text-primary'}
+                `}
+            >
+              <Pin size={14} className={isPinned ? 'fill-current' : ''} />
+              {isPinned ? 'Pinned' : (isGroupChat ? 'Pin Channel' : 'Pin Chat')}
+            </button>
+
           </div>
         </div>
       </div>
 
       {/* --- RIGHT SIDE --- */}
+      {/* ... (Phần UI bên phải giữ nguyên không đổi) ... */}
       <div className="flex items-center gap-2">
 
-        {/* Khung Search */}
         <div className="relative hidden md:block">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
@@ -142,7 +129,6 @@ export function ChatHeader({
           />
         </div>
 
-        {/* Nút Call */}
         <Button
           iconLeft={<Phone size={16} />}
           onClick={() => startCall('AUDIO')} 
@@ -153,7 +139,6 @@ export function ChatHeader({
           customStyle='p-2'
         />
 
-        {/* Nút Gọi Video */}
         <Button
           iconLeft={<Video size={16} />}
           onClick={() => startCall('VIDEO')} 

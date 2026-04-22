@@ -84,6 +84,7 @@ export function ChatPage() {
               <ChatWindow 
                 activeChannelId={activeChannelId} 
                 currentChannel={currentChannel} 
+                onRefreshChannels={fetchChannels}
               />
             )}
           </div>

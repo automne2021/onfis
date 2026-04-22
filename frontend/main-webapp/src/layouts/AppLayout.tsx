@@ -8,6 +8,7 @@ import { ToastProvider } from "../contexts/ToastContext";
 import { ToastContainer } from 'react-toastify';
 import { supabase } from "../services/supabaseClient";
 import 'react-toastify/dist/ReactToastify.css';
+import { PresenceProvider } from "../features/chat/context/PresenceContext";
 
 const mockCompanyName = "Your company";
 
@@ -59,28 +60,30 @@ export default function AppLayout() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <SidebarProvider>
-          <div className="flex flex-col h-screen overflow-hidden bg-neutral-50">
-            {/* Header - Full Width */}
-            <Header companyName={mockCompanyName} />
+        <PresenceProvider>
+          <SidebarProvider>
+            <div className="flex flex-col h-screen overflow-hidden bg-neutral-50">
+              {/* Header - Full Width */}
+              <Header companyName={mockCompanyName} />
 
-            {/* Main Area: Sidebar + Content */}
-            <div className="flex flex-1 p-3 gap-3 min-h-0">
-              {/* Sidebar */}
-              <Sidebar />
+              {/* Main Area: Sidebar + Content */}
+              <div className="flex flex-1 p-3 gap-3 min-h-0">
+                {/* Sidebar */}
+                <Sidebar />
 
-              {/* Main Content Area */}
-              <main ref={mainRef} className="flex-1 overflow-auto">
-                <div key={location.pathname} className="animate-page-enter">
-                  <Outlet />
-                </div>
-              </main>
+                {/* Main Content Area */}
+                <main ref={mainRef} className="flex-1 overflow-auto">
+                  <div key={location.pathname} className="animate-page-enter">
+                    <Outlet />
+                  </div>
+                </main>
+              </div>
             </div>
-          </div>
-          <ToastContainer 
-            className="body-3-regular text-neutral-800 font-sans"
-          />
-        </SidebarProvider>
+            <ToastContainer 
+              className="body-3-regular text-neutral-800 font-sans"
+            />
+          </SidebarProvider>
+        </PresenceProvider>
       </ToastProvider>
     </AuthProvider>
   );

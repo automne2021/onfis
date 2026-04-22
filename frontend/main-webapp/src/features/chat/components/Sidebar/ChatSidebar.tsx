@@ -11,6 +11,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { userApi } from '../../services/userApi';
 import { chatApi } from '../../services/chatApi';
 import { ActionModal } from '../Modal/ActionModal';
+import { usePresence } from '../../context/PresenceContext';
 
 interface ChatSidebarProps {
   channels: ChatChannel[];
@@ -52,15 +53,13 @@ export function ChatSidebar({
   channels, activeChannelId, onChannelSelect, icons, onCreateGroupClick, isLoading, onRefreshChannels 
 }: ChatSidebarProps) {
 
-  const projectGroups = channels.filter(channel => 
-    channel.type === 'public_group' || channel.type === 'private_group'
-  );
+  const pinnedChannels = channels.filter(c => c.isPinned);
+  const unpinned = channels.filter(c => !c.isPinned);
+  const projectGroups = unpinned.filter(c => c.type === 'public_group' || c.type === 'private_group');
+  const directMessages = unpinned.filter(c => c.type === 'direct').slice(0, 10);
+  const selfChats = unpinned.filter(channel => channel.type === 'self');
 
-  const directMessages = channels
-    .filter(channel => channel.type === 'direct')
-    .slice(0, 10);
-
-  const selfChats = channels.filter(channel => channel.type === 'self');
+  const { statuses } = usePresence();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -294,7 +293,46 @@ export function ChatSidebar({
             <SidebarSkeleton />
           ) : (
             <>
-              <ChatGroup title="Groups">
+              {pinnedChannels.length > 0 && (
+                <ChatGroup title="Pinned Channels"> 
+                  {pinnedChannels.map(channel => {
+                    const isDirectOrSelf = channel.type === 'direct' || channel.type === 'self';
+                    const isPrivate = channel.type === 'private_group';
+                    
+                    // Xử lý tên và avatar giống hệt Direct Messages
+                    const cleanName = (channel.name || "").replace(/\(You\)/g, '').trim() || (channel.type === 'self' ? "You" : "User");
+                    const defaultAvatar = channel.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=random`;
+                    
+                    // Lấy realtime status
+                    const liveStatus = channel.targetUserId && statuses[channel.targetUserId]
+                                      ? statuses[channel.targetUserId]
+                                      : channel.status || (channel.type === 'self' ? "online" : "offline");
+
+                    return (
+                    <ChatItem 
+                      key={channel.id} 
+                      name={isDirectOrSelf ? cleanName : channel.name}
+                      isActive={activeChannelId === channel.id}
+                      onClick={() => onChannelSelect(channel.id)}
+                      
+                      // Nếu là Group thì hiện Icon, nếu là Direct/Self thì hiện Avatar
+                      icon={!isDirectOrSelf ? (isPrivate ? <Lock size={16} /> : <Hash size={16} />) : undefined}
+                      avatarUrl={isDirectOrSelf ? defaultAvatar : undefined}
+                      status={isDirectOrSelf ? liveStatus : undefined}
+                      
+                      onRename={() => {
+                        setNewChannelName(channel.name);
+                        setActionModal({ type: 'rename', channelId: channel.id, channelName: channel.name });
+                      }}
+                      onDelete={() => {
+                        setActionModal({ type: 'delete', channelId: channel.id, channelName: channel.name });
+                      }}
+                    />
+                  )})}
+                </ChatGroup>
+              )}
+
+              <ChatGroup title="channels">
                 {projectGroups.map((channel) => {
                   const isPrivate = channel.type === 'private_group';
                   return (
@@ -321,13 +359,15 @@ export function ChatSidebar({
                   {directMessages.map((channel) => {
                     const cleanName = (channel.name || "User").replace(/\(You\)/g, '').trim();
                     const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=random`;
-                    
+                    const liveStatus = channel.targetUserId && statuses[channel.targetUserId]
+                                      ? statuses[channel.targetUserId]
+                                      : channel.status || "offline";
                     return (
                       <ChatItem
                         key={channel.id}
                         name={channel.name} 
                         avatarUrl={channel.avatarUrl || defaultAvatar} 
-                        status={channel.status || "online"} // Ép trạng thái online
+                        status={liveStatus}
                         isActive={activeChannelId === channel.id}
                         onClick={() => onChannelSelect(channel.id)}
                       />
@@ -340,13 +380,15 @@ export function ChatSidebar({
                 {selfChats.map((channel) => {
                   const cleanName = (channel.name || "You").replace(/\(You\)/g, '').trim();
                   const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=random`;
-
+                  const liveStatus = channel.targetUserId && statuses[channel.targetUserId]
+                                    ? statuses[channel.targetUserId]
+                                    : channel.status || "online";
                   return (
                     <ChatItem
                       key={channel.id}
                       name={channel.name} 
                       avatarUrl={channel.avatarUrl || defaultAvatar} 
-                      status="online" 
+                      status={liveStatus}
                       isActive={activeChannelId === channel.id}
                       onClick={() => onChannelSelect(channel.id)}
                     />

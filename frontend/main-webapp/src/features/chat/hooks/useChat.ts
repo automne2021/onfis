@@ -3,8 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { chatApi } from '../services/chatApi';
 import { type BackendMessageDTO, type ChatMessage, type MessageType } from '../types/chatTypes';
 import { useCall } from '../context/CallContext';
-
-// Bổ sung interface để nhận thông tin user hiện tại
+import { usePresence } from '../context/PresenceContext';
 interface CurrentUserInfo {
   id: string;
   name: string;
@@ -16,6 +15,7 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const stompClient = useRef<Client | null>(null);
+  const { statuses } = usePresence();
 
   const lastDateRef = useRef<string>("");
   const currentUserRef = useRef(currentUser);
@@ -38,13 +38,15 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
     const rawName = msg.senderName || "Unknown User";
     const cleanName = rawName.replace(/\(You\)/g, '').trim(); 
     
+    const currentLiveStatus = statuses[msg.userId];
+    
     return {
       id: msg.userId,
       name: cleanName,
       avatarUrl: msg.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=random`,
-      status: msg.senderStatus || "offline" 
+      status: currentLiveStatus || msg.senderStatus || "offline" 
     };
-  }, []);
+  }, [statuses]);
 
   // Fetch lịch sử tin nhắn ban đầu
   useEffect(() => {

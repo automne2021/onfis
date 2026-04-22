@@ -17,13 +17,6 @@ export function MessageArea({ channel, messages }: MessageAreaProps) {
   const { startLiveKit } = useCall()
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // const [callToken, setCallToken] = useState<string | null>(null);
-  // const [roomName, setRoomName] = useState<string>("");
-
-  // const handleOpenCall = (token: string, room: string) => {
-  //   setCallToken(token);
-  //   setRoomName(room);
-  // };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,27 +47,12 @@ export function MessageArea({ channel, messages }: MessageAreaProps) {
           return (
             <div key={msg.id} className="flex flex-col w-full">
               {msg.dateSeparator && <DateSeparator date={msg.dateSeparator} />}
-              {/* {msg.type === 'meeting' ? (
-                <MeetingCard 
-                    msg={msg} 
-                    onJoin={(token, room) => startLiveKit(token, room)} 
-                />
-              ) : (
-                <MessageBubble msg={msg} isOwn={isOwn} />
-              )} */}
               <MessageBubble msg={msg} isOwn={isOwn} onJoinCall={startLiveKit} />
             </div>
           );
         })}
         <div ref={messagesEndRef} />
       </div>
-      {/* {callToken && (
-        <CallRoomModal 
-          token={callToken} 
-          roomName={roomName}
-          onDisconnect={() => setCallToken(null)} 
-        />
-      )} */}
     </div>
   );
 }

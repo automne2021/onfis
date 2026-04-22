@@ -6,6 +6,8 @@ import type { ChatChannel } from "../../types/chatTypes";
 import { useChat } from "../../hooks/useChat";
 import { useAuth } from "../../../../hooks/useAuth";
 import { userApi } from "../../services/userApi";
+import { usePresence } from "../../context/PresenceContext";
+import { chatApi } from "../../services/chatApi";
 
 interface DBUser {
   id: string;
@@ -29,12 +31,14 @@ interface AuthUser {
   };
 }
 
+// 1. SỬA: Thêm onRefreshChannels vào Props để component cha truyền vào
 interface ChatWindowProps {
   activeChannelId: string;
   currentChannel: ChatChannel | null;
+  onRefreshChannels?: (silent?: boolean) => void; 
 }
 
-export function ChatWindow({ activeChannelId, currentChannel }: ChatWindowProps) {
+export function ChatWindow({ activeChannelId, currentChannel, onRefreshChannels }: ChatWindowProps) {
   const { user, isLoading: isAuthLoading } = useAuth();
   
   const [dbUser, setDbUser] = useState<DBUser | null>(null);
@@ -54,6 +58,17 @@ export function ChatWindow({ activeChannelId, currentChannel }: ChatWindowProps)
       .finally(() => setIsProfileLoading(false));
   }, [user?.id, isAuthLoading]);
 
+  // Hàm xử lý Pin nằm ở Component cha
+  const handleTogglePin = async () => {
+    if (!activeChannelId) return;
+    try {
+      await chatApi.togglePinConversation(activeChannelId);
+      if (onRefreshChannels) onRefreshChannels(true); 
+    } catch (error) {
+      console.error("Lỗi khi ghim:", error);
+    }
+  };
+
   if (isProfileLoading || isAuthLoading) {
     return <ChatWindowSkeleton />;
   }
@@ -64,16 +79,22 @@ export function ChatWindow({ activeChannelId, currentChannel }: ChatWindowProps)
       currentChannel={currentChannel}
       user={user as AuthUser} 
       dbUser={dbUser}
+      onTogglePin={handleTogglePin} // 2. SỬA: Truyền hàm này xuống component con
     />
   );
 }
 
-interface ChatWindowContentProps extends ChatWindowProps {
+// 3. SỬA: Thêm onTogglePin vào Interface của Component con
+interface ChatWindowContentProps {
+  activeChannelId: string;
+  currentChannel: ChatChannel | null;
   user: AuthUser | null;
   dbUser: DBUser | null;
+  onTogglePin: () => Promise<void>; 
 }
 
-function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser }: ChatWindowContentProps) {
+function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser, onTogglePin }: ChatWindowContentProps) {
+  const { statuses } = usePresence();
   
   const firstName = dbUser?.firstName || "";
   const lastName = dbUser?.lastName || "";
@@ -90,6 +111,11 @@ function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser }: Ch
     name: fullName,
     avatarUrl: currentUserAvatarUrl
   } : undefined;
+
+  // Lấy status realtime
+  const headerStatus = currentChannel?.targetUserId && statuses[currentChannel.targetUserId] 
+      ? statuses[currentChannel.targetUserId] 
+      : currentChannel?.status;
   
   const { messages, isConnected, sendMessage } = useChat(activeChannelId, currentUserInfo);
   
@@ -103,9 +129,10 @@ function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser }: Ch
           name={cleanHeaderName}
           type={currentChannel.type}
           memberCount={currentChannel.membersCount}
-          isPinned={currentChannel.isPinned}
+          isPinned={currentChannel.isPinned} 
+          onTogglePin={onTogglePin} 
           avatarUrl={headerAvatarUrl}
-          status={currentChannel.status} 
+          status={headerStatus} 
           conversationId={currentChannel.id}
         />
       ) : (
