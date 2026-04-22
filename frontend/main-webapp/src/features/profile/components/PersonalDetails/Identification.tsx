@@ -13,7 +13,7 @@ export function Identification({ icon, userInfo, role }: OverviewProps & { role?
 
   const identificationInfo = [
     ...(canViewNationalId
-      ? [{ label: "National ID (SSN)", icon: <IdCard fontSize="small" />, content: userInfo.nationalId }]
+      ? [{ label: "National ID (SSN)", icon: <IdCard fontSize="small" />, content: userInfo.nationId }]
       : []
     ),
     { label: "Nationality", icon: <Flag fontSize="small" />, content: userInfo.nationality },

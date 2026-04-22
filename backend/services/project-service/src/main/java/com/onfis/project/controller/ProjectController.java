@@ -57,7 +57,8 @@ public class ProjectController {
         response.put("service", "project-service");
         response.put("status", "UP");
         response.put("port", "8082");
-        if (companyId != null) response.put("companyId", companyId);
+        if (companyId != null)
+            response.put("companyId", companyId);
         return ResponseEntity.ok(response);
     }
 
@@ -73,8 +74,7 @@ public class ProjectController {
     @GetMapping("/users/search")
     public ResponseEntity<List<UserSearchResponse>> searchUsers(
             @RequestHeader(USER_HEADER) String userId,
-            @RequestParam(required = false, defaultValue = "") String q
-    ) {
+            @RequestParam(required = false, defaultValue = "") String q) {
         return ResponseEntity.ok(projectModuleService.searchUsers(userId, q));
     }
 
@@ -82,16 +82,14 @@ public class ProjectController {
 
     @GetMapping("/settings/tags")
     public ResponseEntity<List<CompanyTagResponse>> listCompanyTags(
-            @RequestHeader(USER_HEADER) String userId
-    ) {
+            @RequestHeader(USER_HEADER) String userId) {
         return ResponseEntity.ok(projectModuleService.listCompanyTags(userId));
     }
 
     @PostMapping("/settings/tags")
     public ResponseEntity<CompanyTagResponse> createCompanyTag(
             @RequestHeader(USER_HEADER) String userId,
-            @Valid @RequestBody CompanyTagUpsertRequest request
-    ) {
+            @Valid @RequestBody CompanyTagUpsertRequest request) {
         return ResponseEntity.ok(projectModuleService.createCompanyTag(userId, request));
     }
 
@@ -99,16 +97,14 @@ public class ProjectController {
     public ResponseEntity<CompanyTagResponse> updateCompanyTag(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID tagId,
-            @Valid @RequestBody CompanyTagUpsertRequest request
-    ) {
+            @Valid @RequestBody CompanyTagUpsertRequest request) {
         return ResponseEntity.ok(projectModuleService.updateCompanyTag(userId, tagId, request));
     }
 
     @DeleteMapping("/settings/tags/{tagId}")
     public ResponseEntity<Void> deleteCompanyTag(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable UUID tagId
-    ) {
+            @PathVariable UUID tagId) {
         projectModuleService.deleteCompanyTag(userId, tagId);
         return ResponseEntity.noContent().build();
     }
@@ -123,16 +119,14 @@ public class ProjectController {
     @PostMapping
     public ResponseEntity<ProjectResponse> createProject(
             @RequestHeader(USER_HEADER) String userId,
-            @Valid @RequestBody ProjectUpsertRequest request
-    ) {
+            @Valid @RequestBody ProjectUpsertRequest request) {
         return ResponseEntity.ok(projectModuleService.createProject(userId, request));
     }
 
     @GetMapping("/{projectId}")
     public ResponseEntity<ProjectResponse> getProject(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.getProject(userId, resolvedProjectId));
     }
@@ -140,8 +134,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/detail")
     public ResponseEntity<ProjectDetailResponse> getProjectDetail(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.getProjectDetail(userId, resolvedProjectId));
     }
@@ -150,8 +143,7 @@ public class ProjectController {
     public ResponseEntity<ProjectResponse> updateProject(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @Valid @RequestBody ProjectUpsertRequest request
-    ) {
+            @Valid @RequestBody ProjectUpsertRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.updateProject(userId, resolvedProjectId, request));
     }
@@ -159,8 +151,7 @@ public class ProjectController {
     @DeleteMapping("/{projectId}")
     public ResponseEntity<Void> deleteProject(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.deleteProject(userId, resolvedProjectId);
         return ResponseEntity.noContent().build();
@@ -169,8 +160,7 @@ public class ProjectController {
     @PostMapping("/{projectId}/favorite")
     public ResponseEntity<Map<String, Object>> toggleFavorite(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         boolean isNowStarred = projectModuleService.toggleFavorite(userId, resolvedProjectId);
         Map<String, Object> resp = new HashMap<>();
@@ -183,8 +173,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/members")
     public ResponseEntity<List<ProjectMemberResponse>> listMembers(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.listMembers(userId, resolvedProjectId));
     }
@@ -193,8 +182,7 @@ public class ProjectController {
     public ResponseEntity<ProjectMemberResponse> addMember(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @Valid @RequestBody ProjectMemberRequest request
-    ) {
+            @Valid @RequestBody ProjectMemberRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.addMember(userId, resolvedProjectId, request));
     }
@@ -204,8 +192,7 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
             @PathVariable UUID memberId,
-            @Valid @RequestBody ProjectMemberRequest request
-    ) {
+            @Valid @RequestBody ProjectMemberRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.updateMemberRole(userId, resolvedProjectId, memberId, request));
     }
@@ -214,8 +201,7 @@ public class ProjectController {
     public ResponseEntity<Void> removeMember(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @PathVariable UUID memberId
-    ) {
+            @PathVariable UUID memberId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.removeMember(userId, resolvedProjectId, memberId);
         return ResponseEntity.noContent().build();
@@ -226,8 +212,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/roles")
     public ResponseEntity<List<ProjectCustomRoleResponse>> listProjectCustomRoles(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.listProjectCustomRoles(userId, resolvedProjectId));
     }
@@ -236,8 +221,7 @@ public class ProjectController {
     public ResponseEntity<ProjectCustomRoleResponse> createProjectCustomRole(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @Valid @RequestBody ProjectCustomRoleRequest request
-    ) {
+            @Valid @RequestBody ProjectCustomRoleRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.createProjectCustomRole(userId, resolvedProjectId, request));
     }
@@ -247,18 +231,17 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
             @PathVariable UUID roleId,
-            @Valid @RequestBody ProjectCustomRoleRequest request
-    ) {
+            @Valid @RequestBody ProjectCustomRoleRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
-        return ResponseEntity.ok(projectModuleService.updateProjectCustomRole(userId, resolvedProjectId, roleId, request));
+        return ResponseEntity
+                .ok(projectModuleService.updateProjectCustomRole(userId, resolvedProjectId, roleId, request));
     }
 
     @DeleteMapping("/{projectId}/roles/{roleId}")
     public ResponseEntity<Void> deleteProjectCustomRole(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @PathVariable UUID roleId
-    ) {
+            @PathVariable UUID roleId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.deleteProjectCustomRole(userId, resolvedProjectId, roleId);
         return ResponseEntity.noContent().build();
@@ -269,8 +252,7 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
             @PathVariable UUID memberId,
-            @PathVariable UUID roleId
-    ) {
+            @PathVariable UUID roleId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.assignMemberCustomRole(userId, resolvedProjectId, memberId, roleId);
         return ResponseEntity.noContent().build();
@@ -281,8 +263,7 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
             @PathVariable UUID memberId,
-            @PathVariable UUID roleId
-    ) {
+            @PathVariable UUID roleId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.removeMemberCustomRole(userId, resolvedProjectId, memberId, roleId);
         return ResponseEntity.noContent().build();
@@ -293,8 +274,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/stages")
     public ResponseEntity<List<WorkflowStageResponse>> listStages(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.listStages(userId, resolvedProjectId));
     }
@@ -303,8 +283,7 @@ public class ProjectController {
     public ResponseEntity<WorkflowStageResponse> createStage(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @Valid @RequestBody WorkflowStageUpsertRequest request
-    ) {
+            @Valid @RequestBody WorkflowStageUpsertRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.createStage(userId, resolvedProjectId, request));
     }
@@ -314,8 +293,7 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
             @PathVariable UUID stageId,
-            @Valid @RequestBody WorkflowStageUpsertRequest request
-    ) {
+            @Valid @RequestBody WorkflowStageUpsertRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.updateStage(userId, resolvedProjectId, stageId, request));
     }
@@ -324,8 +302,7 @@ public class ProjectController {
     public ResponseEntity<Void> deleteStage(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @PathVariable UUID stageId
-    ) {
+            @PathVariable UUID stageId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.deleteStage(userId, resolvedProjectId, stageId);
         return ResponseEntity.noContent().build();
@@ -335,8 +312,7 @@ public class ProjectController {
     public ResponseEntity<List<WorkflowStageResponse>> reorderStages(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @Valid @RequestBody WorkflowStageReorderRequest request
-    ) {
+            @Valid @RequestBody WorkflowStageReorderRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.reorderStages(userId, resolvedProjectId, request));
     }
@@ -346,8 +322,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/milestones")
     public ResponseEntity<List<MilestoneResponse>> listMilestones(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.listMilestones(userId, resolvedProjectId));
     }
@@ -356,8 +331,7 @@ public class ProjectController {
     public ResponseEntity<MilestoneResponse> createMilestone(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @RequestBody MilestoneUpsertRequest request
-    ) {
+            @RequestBody MilestoneUpsertRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.createMilestone(userId, resolvedProjectId, request));
     }
@@ -367,8 +341,7 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
             @PathVariable UUID milestoneId,
-            @RequestBody MilestoneUpsertRequest request
-    ) {
+            @RequestBody MilestoneUpsertRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.updateMilestone(userId, resolvedProjectId, milestoneId, request));
     }
@@ -377,8 +350,7 @@ public class ProjectController {
     public ResponseEntity<Void> deleteMilestone(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @PathVariable UUID milestoneId
-    ) {
+            @PathVariable UUID milestoneId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         projectModuleService.deleteMilestone(userId, resolvedProjectId, milestoneId);
         return ResponseEntity.noContent().build();
@@ -389,8 +361,7 @@ public class ProjectController {
     @GetMapping("/{projectId}/tasks")
     public ResponseEntity<List<TaskResponse>> listTasks(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable String projectId
-    ) {
+            @PathVariable String projectId) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.listTasks(userId, resolvedProjectId));
     }
@@ -406,8 +377,7 @@ public class ProjectController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "updatedAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
-    ) {
+            @RequestParam(defaultValue = "desc") String sortDir) {
         return ResponseEntity.ok(projectModuleService.listMyTasks(
                 userId,
                 tab,
@@ -418,16 +388,14 @@ public class ProjectController {
                 page,
                 size,
                 sortBy,
-                sortDir
-        ));
+                sortDir));
     }
 
     @PostMapping("/{projectId}/tasks")
     public ResponseEntity<TaskResponse> createTask(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable String projectId,
-            @Valid @RequestBody TaskUpsertRequest request
-    ) {
+            @Valid @RequestBody TaskUpsertRequest request) {
         UUID resolvedProjectId = projectModuleService.resolveProjectId(projectId);
         return ResponseEntity.ok(projectModuleService.createTask(userId, resolvedProjectId, request));
     }
@@ -435,16 +403,14 @@ public class ProjectController {
     @GetMapping("/tasks/{taskId}")
     public ResponseEntity<TaskResponse> getTask(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable UUID taskId
-    ) {
+            @PathVariable UUID taskId) {
         return ResponseEntity.ok(projectModuleService.getTask(userId, taskId));
     }
 
     @GetMapping("/tasks/{taskId}/detail")
     public ResponseEntity<TaskDetailResponse> getTaskDetail(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable UUID taskId
-    ) {
+            @PathVariable UUID taskId) {
         return ResponseEntity.ok(projectModuleService.getTaskDetail(userId, taskId));
     }
 
@@ -452,16 +418,14 @@ public class ProjectController {
     public ResponseEntity<TaskResponse> updateTask(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @Valid @RequestBody TaskUpsertRequest request
-    ) {
+            @Valid @RequestBody TaskUpsertRequest request) {
         return ResponseEntity.ok(projectModuleService.updateTask(userId, taskId, request));
     }
 
     @DeleteMapping("/tasks/{taskId}")
     public ResponseEntity<Void> deleteTask(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable UUID taskId
-    ) {
+            @PathVariable UUID taskId) {
         projectModuleService.deleteTask(userId, taskId);
         return ResponseEntity.noContent().build();
     }
@@ -470,8 +434,7 @@ public class ProjectController {
     public ResponseEntity<TaskResponse> updateTaskStage(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @Valid @RequestBody TaskStageUpdateRequest request
-    ) {
+            @Valid @RequestBody TaskStageUpdateRequest request) {
         return ResponseEntity.ok(projectModuleService.updateTaskStage(userId, taskId, request));
     }
 
@@ -479,8 +442,7 @@ public class ProjectController {
     public ResponseEntity<TaskResponse> addDependency(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @Valid @RequestBody TaskDependencyRequest request
-    ) {
+            @Valid @RequestBody TaskDependencyRequest request) {
         return ResponseEntity.ok(projectModuleService.addDependency(userId, taskId, request));
     }
 
@@ -488,8 +450,7 @@ public class ProjectController {
     public ResponseEntity<TaskResponse> removeDependency(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @PathVariable UUID blockedByTaskId
-    ) {
+            @PathVariable UUID blockedByTaskId) {
         return ResponseEntity.ok(projectModuleService.removeDependency(userId, taskId, blockedByTaskId));
     }
 
@@ -497,16 +458,14 @@ public class ProjectController {
     public ResponseEntity<TaskResponse> reviewTask(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @Valid @RequestBody ReviewCreateRequest request
-    ) {
+            @Valid @RequestBody ReviewCreateRequest request) {
         return ResponseEntity.ok(projectModuleService.reviewTask(userId, taskId, request));
     }
 
     @GetMapping("/tasks/{taskId}/comments")
     public ResponseEntity<List<TaskCommentResponse>> listComments(
             @RequestHeader(USER_HEADER) String userId,
-            @PathVariable UUID taskId
-    ) {
+            @PathVariable UUID taskId) {
         return ResponseEntity.ok(projectModuleService.listComments(userId, taskId));
     }
 
@@ -514,8 +473,7 @@ public class ProjectController {
     public ResponseEntity<TaskCommentResponse> addComment(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @Valid @RequestBody TaskCommentRequest request
-    ) {
+            @Valid @RequestBody TaskCommentRequest request) {
         return ResponseEntity.ok(projectModuleService.addComment(userId, taskId, request));
     }
 
@@ -525,8 +483,7 @@ public class ProjectController {
     public ResponseEntity<TaskSubtaskResponse> createSubtask(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @RequestBody TaskSubtaskRequest request
-    ) {
+            @RequestBody TaskSubtaskRequest request) {
         return ResponseEntity.ok(projectModuleService.createSubtask(userId, taskId, request));
     }
 
@@ -535,8 +492,7 @@ public class ProjectController {
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
             @PathVariable UUID subtaskId,
-            @RequestBody TaskSubtaskRequest request
-    ) {
+            @RequestBody TaskSubtaskRequest request) {
         return ResponseEntity.ok(projectModuleService.updateSubtask(userId, taskId, subtaskId, request));
     }
 
@@ -544,8 +500,7 @@ public class ProjectController {
     public ResponseEntity<Void> deleteSubtask(
             @RequestHeader(USER_HEADER) String userId,
             @PathVariable UUID taskId,
-            @PathVariable UUID subtaskId
-    ) {
+            @PathVariable UUID subtaskId) {
         projectModuleService.deleteSubtask(userId, taskId, subtaskId);
         return ResponseEntity.noContent().build();
     }
@@ -561,8 +516,8 @@ public class ProjectController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "updatedAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
-    ) {
-        return ResponseEntity.ok(projectModuleService.reviewQueue(userId, projectId, status, changesRequested, page, size, sortBy, sortDir));
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return ResponseEntity.ok(projectModuleService.reviewQueue(userId, projectId, status, changesRequested, page,
+                size, sortBy, sortDir));
     }
 }

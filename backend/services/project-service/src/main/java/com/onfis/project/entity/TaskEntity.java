@@ -21,10 +21,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import org.hibernate.annotations.Filter;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "tasks", schema = "public")
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class TaskEntity {
 
     @Id

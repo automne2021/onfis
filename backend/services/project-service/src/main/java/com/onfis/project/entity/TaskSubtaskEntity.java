@@ -8,6 +8,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "task_subtasks", schema = "public")
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class TaskSubtaskEntity {
 
     @Id
@@ -45,8 +47,10 @@ public class TaskSubtaskEntity {
     @PrePersist
     public void prePersist() {
         Instant now = Instant.now();
-        if (createdAt == null) createdAt = now;
-        if (updatedAt == null) updatedAt = now;
+        if (createdAt == null)
+            createdAt = now;
+        if (updatedAt == null)
+            updatedAt = now;
     }
 
     @PreUpdate

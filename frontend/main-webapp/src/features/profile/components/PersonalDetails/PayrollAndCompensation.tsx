@@ -4,10 +4,10 @@ import { TitleHeader } from "../TitleHeader";
 export function PayrollAndCompensation({ icon, userInfo }: OverviewProps) {
 
   const payrollInfo = [
-    { label: 'Base salary', content: userInfo.compensation?.baseSalary, subcontent: 'per annum' },
-    { label: 'Pay frequency', content: userInfo.compensation?.payFrequency },
-    { label: 'Bonus target', content: userInfo.compensation?.bonusTarget },
-    { label: 'Next review', content: userInfo.compensation?.nextReview },
+    { label: 'Base salary', content: userInfo.compensationInfo?.baseSalary, subcontent: 'per annum' },
+    { label: 'Pay frequency', content: userInfo.compensationInfo?.payFrequency },
+    { label: 'Bonus target', content: userInfo.compensationInfo?.bonusTarget },
+    { label: 'Next review', content: userInfo.compensationInfo?.nextReview },
   ]
 
   return (

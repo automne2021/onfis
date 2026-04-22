@@ -5,9 +5,11 @@ import { AttachedFilesPreview } from './AttachedFilesPreview';
 
 interface ChatInputProps {
   label?: string;
+  onSendMessage?: (content: string, type: 'TEXT' | 'FILE', attachmentId?: string) => void;
+  disabled?: boolean;
 }
 
-export function ChatInput({ label }: ChatInputProps) {
+export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
 
   // useState
   const [message, setMessage] = useState('');
@@ -56,14 +58,15 @@ export function ChatInput({ label }: ChatInputProps) {
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
     if (!message.trim() && attachedFiles.length === 0) return;
 
-    if (attachedFiles.length > 0)
-      console.log("Attached files: ", attachedFiles.map(file => file.name))
-    console.log("Đã gửi tin nhắn:", message);
+    if (attachedFiles.length > 0) {
+      console.log("Attached files: ", attachedFiles.map(file => file.name));
+    } else {
+      // Gửi text bình thường
+      onSendMessage?.(message, 'TEXT'); 
+    }
 
-    // Clear
     setMessage('');
     setAttachedFiles([]);
     setShowEmojiPicker(false)
@@ -120,6 +123,7 @@ export function ChatInput({ label }: ChatInputProps) {
           onChange={(e) => setMessage(e.target.value)}
           placeholder={`Type a message to ${label ? `# ${label}` : '...'}`}
           className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-2 py-2 body-3-regular"
+          disabled={disabled}
         />
 
         <button

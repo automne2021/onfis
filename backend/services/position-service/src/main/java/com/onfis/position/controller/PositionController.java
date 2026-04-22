@@ -10,37 +10,21 @@ import com.onfis.position.dto.PositionTreeResponse;
 import com.onfis.position.dto.PositionUpsertRequest;
 import com.onfis.position.dto.UnassignedUserResponse;
 import com.onfis.position.service.PositionService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/positions")
+@RequiredArgsConstructor
 public class PositionController {
 
     private final PositionService positionService;
 
-    public PositionController(PositionService positionService) {
-        this.positionService = positionService;
-    }
-
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, String>> health(
-            @RequestHeader(value = "X-Company-ID", required = false) String companyId) {
-        Map<String, String> response = new HashMap<>();
-        response.put("service", "position-service");
-        response.put("status", "UP");
-        response.put("port", "8083");
-        if (companyId != null)
-            response.put("companyId", companyId);
-        return ResponseEntity.ok(response);
-    }
-
-    // ── Current user ──────────────────────────────────────────────────────────
+    // ── Current user ──────────────────────────────────────────────────
 
     @GetMapping("/me")
     public ResponseEntity<PositionMeResponse> me(
@@ -48,35 +32,35 @@ public class PositionController {
         return ResponseEntity.ok(positionService.getCurrentUser(userId));
     }
 
-    // ── Tree view ─────────────────────────────────────────────────────────────
+    // ── Tree view ─────────────────────────────────────────────────────
 
     @GetMapping("/tree")
     public ResponseEntity<PositionTreeResponse> getPositionTree() {
         return ResponseEntity.ok(positionService.getPositionTree());
     }
 
-    // ── List view (departments with employees) ────────────────────────────────
+    // ── List view (departments with employees) ────────────────────────
 
     @GetMapping("/departments")
     public ResponseEntity<List<DepartmentWithEmployeesResponse>> getDepartmentsWithEmployees() {
         return ResponseEntity.ok(positionService.getDepartmentsWithEmployees());
     }
 
-    // ── Department dropdown list ──────────────────────────────────────────────
+    // ── Department dropdown list ──────────────────────────────────────
 
     @GetMapping("/department-list")
     public ResponseEntity<List<DepartmentResponse>> getDepartmentList() {
         return ResponseEntity.ok(positionService.getDepartmentList());
     }
 
-    // ── Unassigned users ──────────────────────────────────────────────────────
+    // ── Unassigned users ──────────────────────────────────────────────
 
     @GetMapping("/unassigned-users")
     public ResponseEntity<List<UnassignedUserResponse>> getUnassignedUsers() {
         return ResponseEntity.ok(positionService.getUnassignedUsers());
     }
 
-    // ── CRUD ──────────────────────────────────────────────────────────────────
+    // ── CRUD ──────────────────────────────────────────────────────────
 
     @PostMapping
     public ResponseEntity<PositionResponse> createPosition(@RequestBody PositionUpsertRequest request) {
@@ -96,7 +80,7 @@ public class PositionController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Move (drag-and-drop) ──────────────────────────────────────────────────
+    // ── Move (drag-and-drop) ──────────────────────────────────────────
 
     @PatchMapping("/{id}/move")
     public ResponseEntity<PositionResponse> movePosition(
@@ -105,7 +89,7 @@ public class PositionController {
         return ResponseEntity.ok(positionService.movePosition(id, request));
     }
 
-    // ── Assign user ───────────────────────────────────────────────────────────
+    // ── Assign user ───────────────────────────────────────────────────
 
     @PostMapping("/{id}/assign")
     public ResponseEntity<Void> assignUserToPosition(
@@ -115,7 +99,7 @@ public class PositionController {
         return ResponseEntity.ok().build();
     }
 
-    // ── Remove user from unassigned list ──────────────────────────────────────
+    // ── Remove user from unassigned list ──────────────────────────────
 
     @DeleteMapping("/unassigned-users/{userId}")
     public ResponseEntity<Void> removeUnassignedUser(@PathVariable UUID userId) {
@@ -123,7 +107,7 @@ public class PositionController {
         return ResponseEntity.noContent().build();
     }
 
-    // ── Unassign user ─────────────────────────────────────────────────────────
+    // ── Unassign user ─────────────────────────────────────────────────
 
     @DeleteMapping("/{id}/users/{userId}")
     public ResponseEntity<Void> unassignUserFromPosition(
@@ -131,5 +115,11 @@ public class PositionController {
             @PathVariable UUID userId) {
         positionService.unassignUserFromPosition(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Get single position ───────────────────────────────────────────
+    @GetMapping("/{id}")
+    public ResponseEntity<PositionResponse> getPositionById(@PathVariable UUID id) {
+        return ResponseEntity.ok(positionService.getPositionById(id));
     }
 }

@@ -4,9 +4,9 @@ import userProfileImg from "../../../../assets/images/user-profile-img.png";
 
 export interface CommentInputProps {
   currentUserAvatar?: string;
-  replyingToName?: string | null; // Tên của người đang được reply (nếu có)
-  onCancelReply?: () => void;     // Hàm hủy bỏ trạng thái reply
-  onSubmit: (content: string) => void; // Hàm gửi dữ liệu
+  replyingToName?: string | null; 
+  onCancelReply?: () => void;     
+  onSubmit: (content: string) => void; 
 }
 
 export function CommentInput({ 
@@ -17,9 +17,8 @@ export function CommentInput({
 }: CommentInputProps) {
   
   const [content, setContent] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null); // Dùng để auto-focus
+  const inputRef = useRef<HTMLInputElement>(null); 
 
-  // Tự động nháy con trỏ chuột vào ô input khi bấm Reply ai đó
   useEffect(() => {
     if (replyingToName && inputRef.current) {
       inputRef.current.focus();
@@ -27,14 +26,12 @@ export function CommentInput({
   }, [replyingToName]);
 
   const handleSubmit = () => {
-    // Chống gửi nội dung trống
     if (!content.trim()) return; 
     
     onSubmit(content);
-    setContent(""); // Xóa trắng ô input sau khi gửi thành công
+    setContent(""); 
   };
 
-  // Bấm Enter để gửi
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

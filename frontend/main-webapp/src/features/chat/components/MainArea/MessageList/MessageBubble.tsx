@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../../types/chatTypes'; // Chỉnh lại đường dẫn cho đúng với project của bạn
+import type { ChatMessage } from '../../../types/chatTypes';
 import { StatusBubble } from '../../../../../components/common/StatusBubble';
 import { FileAttachment } from './FileAttachments';
 import { MeetingCard } from './MeetingCard';
@@ -6,15 +6,23 @@ import { MeetingCard } from './MeetingCard';
 interface MessageBubbleProps {
   msg: ChatMessage;
   isOwn: boolean;
+  onJoinCall: (token: string, room: string, meetingId: string, isHost: boolean, isVideo: boolean, avatarUrl?: string, name?: string) => void;
 }
 
-export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
+export function MessageBubble({ msg, isOwn, onJoinCall }: MessageBubbleProps) {
 
-  if (msg.type === 'meeting' && msg.meeting) {
+  // Tin nhắn hệ thống (Nằm giữa màn hình)
+  if (msg.type === 'system') {
     return (
-      <MeetingCard msg={msg} />
+      <div className="w-full flex justify-center my-4">
+        <span className="body-4-regular text-neutral-500 px-4 py-1.5 rounded-full">
+          {msg.content}
+        </span>
+      </div>
     );
   }
+
+  // ĐÃ XÓA ĐOẠN RETURN SỚM CỦA MEETING Ở ĐÂY
 
   return (
     <div className={`flex gap-2.5 w-full ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -27,10 +35,9 @@ export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
           className="w-full h-full object-cover rounded-full"
         />
         <StatusBubble status={msg.sender.status} />
-
       </div>
 
-      {/* Nội dung tin nhắn */}
+      {/* Nội dung tin nhắn (Bong bóng) */}
       <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-[70%]`}>
 
         {/* Tên & Thời gian */}
@@ -43,8 +50,8 @@ export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
           </span>
         </div>
 
-        {/* Văn bản (Có bong bóng nếu là mình, không bong bóng nếu là người khác) */}
-        {msg.content && (
+        {/* 1. NẾU LÀ TIN NHẮN CHỮ (Văn bản thường) */}
+        {msg.type !== 'meeting' && msg.content && (
           <div className={`
             body-3-regular text-neutral-900 px-3 py-2 shadow-md 
             ${isOwn ? 'bg-secondary rounded-s-lg rounded-br-lg' : 'bg-white rounded-e-lg rounded-bl-lg'}
@@ -53,7 +60,16 @@ export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
           </div>
         )}
 
-        {/* Thẻ File Đính kèm (Nếu có) */}
+        {/* 2. NẾU LÀ CUỘC GỌI (Meeting) -> Render Card ngay trong khung này */}
+        {msg.type === 'meeting' && (
+          <div className={`rounded-2xl shadow-sm border border-neutral-100 overflow-hidden ${isOwn ? 'bg-secondary/5' : 'bg-white'}`}>
+             <MeetingCard msg={msg} onJoin={(token, room) => onJoinCall(
+                 token, room, msg.meeting!.id, isOwn, msg.meeting!.type === 'VIDEO', msg.sender.avatarUrl, msg.sender.name
+               )} />
+          </div>
+        )}
+
+        {/* 3. NẾU LÀ FILE ĐÍNH KÈM */}
         {msg.type === 'file' && msg.file && (
           <FileAttachment msg={msg} />
         )}

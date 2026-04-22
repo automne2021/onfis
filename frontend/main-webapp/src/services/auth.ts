@@ -18,6 +18,7 @@ export async function signOut() {
 export async function getAccessToken(): Promise<string | null> {
   const { data, error } = await supabase.auth.getSession();
   if (error) {
+    console.error("Lỗi khi lấy token từ Supabase:", error);
     return null;
   }
   return data.session?.access_token ?? null;

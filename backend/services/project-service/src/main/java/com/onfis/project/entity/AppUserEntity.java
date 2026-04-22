@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
 
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "users", schema = "public")
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class AppUserEntity {
 
     @Id

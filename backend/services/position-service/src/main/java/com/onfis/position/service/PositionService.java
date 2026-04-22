@@ -82,11 +82,11 @@ public class PositionService {
             deptNameById.put(dept.getId(), dept.getName());
         }
 
-        // Build user lookup by positionId
-        Map<UUID, AppUserEntity> userByPosition = new HashMap<>();
+        // Build user lookup by positionId — all users per position
+        Map<UUID, List<AppUserEntity>> usersByPosition = new HashMap<>();
         for (AppUserEntity user : allUsers) {
             if (user.getPositionId() != null) {
-                userByPosition.put(user.getPositionId(), user);
+                usersByPosition.computeIfAbsent(user.getPositionId(), k -> new ArrayList<>()).add(user);
             }
         }
 
@@ -110,10 +110,10 @@ public class PositionService {
         // Pick the root with the highest-level user (or first if tied/vacant)
         PositionEntity mainRoot = roots.stream()
                 .max((a, b) -> {
-                    AppUserEntity ua = userByPosition.get(a.getId());
-                    AppUserEntity ub = userByPosition.get(b.getId());
-                    int la = levelToInt(ua != null ? ua.getLevel() : null);
-                    int lb = levelToInt(ub != null ? ub.getLevel() : null);
+                    List<AppUserEntity> ua = usersByPosition.getOrDefault(a.getId(), List.of());
+                    List<AppUserEntity> ub = usersByPosition.getOrDefault(b.getId(), List.of());
+                    int la = levelToInt(ua.isEmpty() ? null : ua.get(0).getLevel());
+                    int lb = levelToInt(ub.isEmpty() ? null : ub.get(0).getLevel());
                     return Integer.compare(la, lb);
                 })
                 .orElse(roots.get(0));
@@ -127,9 +127,36 @@ public class PositionService {
 
         // Skip vacant root: if the top position has no assigned user, promote
         // the highest-level child as the new root
-        mainRoot = skipVacantRoot(mainRoot, childrenMap, userByPosition);
+        mainRoot = skipVacantRoot(mainRoot, childrenMap, usersByPosition);
 
-        return buildTreeNode(mainRoot, childrenMap, userByPosition, deptNameById);
+        // Build per-person nodes for the root position
+        List<PositionTreeResponse> rootPersonNodes = buildPersonNodes(mainRoot, childrenMap, usersByPosition,
+                deptNameById);
+
+        if (rootPersonNodes.isEmpty()) {
+            return new PositionTreeResponse(
+                    null, "empty", "No Positions", "Organization", null, true, null, null, null, null, 0, List.of(),
+                    null, null);
+        }
+        if (rootPersonNodes.size() == 1) {
+            return rootPersonNodes.get(0);
+        }
+
+        // Multiple persons at root: first is the tree root, the rest become its
+        // first-level children
+        PositionTreeResponse firstRoot = rootPersonNodes.get(0);
+        List<PositionTreeResponse> siblings = new ArrayList<>(rootPersonNodes.subList(1, rootPersonNodes.size()));
+        List<PositionTreeResponse> mergedChildren = new ArrayList<>(siblings);
+        if (firstRoot.children() != null)
+            mergedChildren.addAll(firstRoot.children());
+
+        return new PositionTreeResponse(
+                firstRoot.id(), firstRoot.positionId(), firstRoot.name(), firstRoot.title(),
+                firstRoot.avatar(), firstRoot.isVacant(), firstRoot.status(), firstRoot.level(),
+                firstRoot.role(), firstRoot.email(),
+                mergedChildren.isEmpty() ? null : mergedChildren.size(),
+                mergedChildren.isEmpty() ? null : mergedChildren,
+                firstRoot.departmentId(), firstRoot.departmentName());
     }
 
     private static int levelToInt(String level) {
@@ -143,14 +170,14 @@ public class PositionService {
     }
 
     /**
-     * If the given root position is vacant (no assigned user), promote the
-     * highest-level child as the new root. Other children remain attached to
-     * the promoted node. Only skips one vacant level.
+     * If the given root position is vacant (no assigned users), promote the
+     * highest-level child as the new root.
      */
     private PositionEntity skipVacantRoot(PositionEntity root,
             Map<UUID, List<PositionEntity>> childrenMap,
-            Map<UUID, AppUserEntity> userByPosition) {
-        if (userByPosition.containsKey(root.getId())) {
+            Map<UUID, List<AppUserEntity>> usersByPosition) {
+        List<AppUserEntity> rootUsers = usersByPosition.getOrDefault(root.getId(), List.of());
+        if (!rootUsers.isEmpty()) {
             return root; // root is occupied
         }
         List<PositionEntity> children = childrenMap.getOrDefault(root.getId(), List.of());
@@ -159,11 +186,13 @@ public class PositionService {
         }
         // Find the highest-level child
         PositionEntity newRoot = children.stream()
-                .max((a, b) -> Integer.compare(
-                        levelToInt(userByPosition.get(a.getId()) != null ? userByPosition.get(a.getId()).getLevel()
-                                : null),
-                        levelToInt(userByPosition.get(b.getId()) != null ? userByPosition.get(b.getId()).getLevel()
-                                : null)))
+                .max((a, b) -> {
+                    List<AppUserEntity> ua = usersByPosition.getOrDefault(a.getId(), List.of());
+                    List<AppUserEntity> ub = usersByPosition.getOrDefault(b.getId(), List.of());
+                    return Integer.compare(
+                            levelToInt(ua.isEmpty() ? null : ua.get(0).getLevel()),
+                            levelToInt(ub.isEmpty() ? null : ub.get(0).getLevel()));
+                })
                 .orElse(children.get(0));
 
         // Attach the other children to the new root
@@ -176,44 +205,60 @@ public class PositionService {
         return newRoot;
     }
 
-    private PositionTreeResponse buildTreeNode(PositionEntity position,
+    /**
+     * Build one tree node per user in this position. The first user gets all
+     * child nodes; subsequent users are leaf nodes (same level, no children).
+     * If the position is vacant, a single vacant placeholder node is returned.
+     */
+    private List<PositionTreeResponse> buildPersonNodes(PositionEntity position,
             Map<UUID, List<PositionEntity>> childrenMap,
-            Map<UUID, AppUserEntity> userByPosition,
+            Map<UUID, List<AppUserEntity>> usersByPosition,
             Map<UUID, String> deptNameById) {
-        AppUserEntity assignedUser = userByPosition.get(position.getId());
-        boolean isVacant = (assignedUser == null);
 
-        String userId = isVacant ? null : assignedUser.getId().toString();
-        String name = isVacant ? "Vacant" : fullName(assignedUser);
-        String avatar = isVacant ? null : assignedUser.getAvatarUrl();
-        String status = isVacant ? null : "on_track";
-        String level = isVacant ? null : assignedUser.getLevel();
-        String role = isVacant ? null : assignedUser.getRole();
-        String email = isVacant ? null : assignedUser.getEmail();
+        List<AppUserEntity> users = usersByPosition.getOrDefault(position.getId(), List.of());
         String deptId = position.getDepartmentId() != null ? position.getDepartmentId().toString() : null;
         String deptName = position.getDepartmentId() != null ? deptNameById.get(position.getDepartmentId()) : null;
 
-        List<PositionEntity> children = childrenMap.getOrDefault(position.getId(), List.of());
-        List<PositionTreeResponse> childResponses = new ArrayList<>();
-        for (PositionEntity child : children) {
-            childResponses.add(buildTreeNode(child, childrenMap, userByPosition, deptNameById));
+        // Build all child person-nodes from child positions
+        List<PositionEntity> childPositions = childrenMap.getOrDefault(position.getId(), List.of());
+        List<PositionTreeResponse> allChildNodes = new ArrayList<>();
+        for (PositionEntity childPos : childPositions) {
+            allChildNodes.addAll(buildPersonNodes(childPos, childrenMap, usersByPosition, deptNameById));
         }
 
-        return new PositionTreeResponse(
-                userId,
-                position.getId().toString(),
-                name,
-                position.getTitle(),
-                avatar,
-                isVacant,
-                status,
-                level,
-                role,
-                email,
-                childResponses.isEmpty() ? null : childResponses.size(),
-                childResponses.isEmpty() ? null : childResponses,
-                deptId,
-                deptName);
+        // Vacant position: one placeholder node with all children
+        if (users.isEmpty()) {
+            return List.of(new PositionTreeResponse(
+                    null, position.getId().toString(), "Vacant", position.getTitle(),
+                    null, true, null, null, null, null,
+                    allChildNodes.isEmpty() ? null : allChildNodes.size(),
+                    allChildNodes.isEmpty() ? null : allChildNodes,
+                    deptId, deptName));
+        }
+
+        // One node per user; first user gets all children, others are leaf nodes
+        List<PositionTreeResponse> result = new ArrayList<>();
+        for (int i = 0; i < users.size(); i++) {
+            AppUserEntity user = users.get(i);
+            List<PositionTreeResponse> nodeChildren = (i == 0) ? allChildNodes : new ArrayList<>();
+            Integer subordinateCount = (i == 0 && !allChildNodes.isEmpty()) ? allChildNodes.size() : null;
+            result.add(new PositionTreeResponse(
+                    user.getId().toString(),
+                    position.getId().toString(),
+                    fullName(user),
+                    position.getTitle(),
+                    user.getAvatarUrl(),
+                    false,
+                    "on_track",
+                    user.getLevel(),
+                    user.getRole(),
+                    user.getEmail(),
+                    subordinateCount,
+                    nodeChildren.isEmpty() ? null : nodeChildren,
+                    deptId,
+                    deptName));
+        }
+        return result;
     }
 
     // ── List view (by department) ─────────────────────────────────────────────
@@ -224,11 +269,11 @@ public class PositionService {
         List<PositionEntity> allPositions = positionRepository.findByTenantId(tenantId);
         List<AppUserEntity> allUsers = appUserRepository.findByTenantId(tenantId);
 
-        // Build user lookup by positionId
-        Map<UUID, AppUserEntity> userByPosition = new HashMap<>();
+        // Build user lookup by positionId — supports multiple users per position
+        Map<UUID, List<AppUserEntity>> usersByPosition = new HashMap<>();
         for (AppUserEntity user : allUsers) {
             if (user.getPositionId() != null) {
-                userByPosition.put(user.getPositionId(), user);
+                usersByPosition.computeIfAbsent(user.getPositionId(), k -> new ArrayList<>()).add(user);
             }
         }
 
@@ -246,16 +291,17 @@ public class PositionService {
 
             List<EmployeeResponse> employees = new ArrayList<>();
             for (PositionEntity pos : deptPositions) {
-                AppUserEntity user = userByPosition.get(pos.getId());
-                boolean isVacant = (user == null);
+                List<AppUserEntity> posUsers = usersByPosition.getOrDefault(pos.getId(), List.of());
+                boolean isVacant = posUsers.isEmpty();
 
-                // Find manager: parent position's user
+                // Find manager: first user at the parent position
                 EmployeeResponse.ManagerInfo managerInfo = null;
                 if (pos.getParentId() != null) {
                     PositionEntity parentPos = positionById.get(pos.getParentId());
                     if (parentPos != null) {
-                        AppUserEntity managerUser = userByPosition.get(parentPos.getId());
-                        if (managerUser != null) {
+                        List<AppUserEntity> parentUsers = usersByPosition.getOrDefault(parentPos.getId(), List.of());
+                        if (!parentUsers.isEmpty()) {
+                            AppUserEntity managerUser = parentUsers.get(0);
                             managerInfo = new EmployeeResponse.ManagerInfo(
                                     managerUser.getId().toString(),
                                     fullName(managerUser),
@@ -264,18 +310,35 @@ public class PositionService {
                     }
                 }
 
-                employees.add(new EmployeeResponse(
-                        isVacant ? pos.getId().toString() : user.getId().toString(),
-                        pos.getId().toString(),
-                        isVacant ? "Unassigned" : fullName(user),
-                        isVacant ? null : user.getAvatarUrl(),
-                        null, // workPhone — not in users table
-                        isVacant ? null : user.getEmail(),
-                        pos.getTitle(),
-                        isVacant ? null : user.getLevel(),
-                        isVacant ? null : user.getRole(),
-                        managerInfo,
-                        isVacant));
+                if (isVacant) {
+                    employees.add(new EmployeeResponse(
+                            pos.getId().toString(),
+                            pos.getId().toString(),
+                            "Unassigned",
+                            null,
+                            null,
+                            null,
+                            pos.getTitle(),
+                            null,
+                            null,
+                            managerInfo,
+                            true));
+                } else {
+                    for (AppUserEntity user : posUsers) {
+                        employees.add(new EmployeeResponse(
+                                user.getId().toString(),
+                                pos.getId().toString(),
+                                fullName(user),
+                                user.getAvatarUrl(),
+                                null, // workPhone — not in users table
+                                user.getEmail(),
+                                pos.getTitle(),
+                                user.getLevel(),
+                                user.getRole(),
+                                managerInfo,
+                                false));
+                    }
+                }
             }
 
             result.add(new DepartmentWithEmployeesResponse(
@@ -284,6 +347,7 @@ public class PositionService {
                     employees));
         }
         return result;
+
     }
 
     // ── Department list (for dropdowns) ───────────────────────────────────────
@@ -523,5 +587,13 @@ public class PositionService {
         String last = user.getLastName() != null ? user.getLastName() : "";
         String full = (first + " " + last).trim();
         return full.isEmpty() ? (user.getEmail() != null ? user.getEmail() : "Unknown") : full;
+    }
+
+    // ── Get single position ───────────────────────────────────────────
+    public PositionResponse getPositionById(UUID id) {
+        PositionEntity position = positionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Position not found with ID: " + id));
+        
+        return toPositionResponse(position); 
     }
 }

@@ -2,9 +2,7 @@ package com.onfis.shared.security;
 
 import org.springframework.stereotype.Component;
 
-/**
- * Thread-safe context holder for multi-tenancy
- */
+/** Thread-safe context holder for multi-tenancy */
 @Component
 public class TenantContext {
 

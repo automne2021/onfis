@@ -1,16 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import {
-  PositionToolbar,
-  PositionTreeView,
-  PositionListView,
-  AddPositionModal,
-  PositionDetailModal,
-  type Position,
-  type Department,
-  type Employee,
-  type UnassignedEmployee,
-  type PositionDetailData,
-} from "../components";
+import { PositionToolbar, PositionTreeView, PositionListView, AddPositionModal, PositionDetailModal, type Position, type Department, type Employee, type UnassignedEmployee, type PositionDetailData } from "../components";
 import type { AddPositionFormData, DepartmentOption, PositionOption } from "../components/AddPositionModal";
 import type { ActiveFilters } from "../../../components/common/FilterDropdown";
 import { Add } from '@mui/icons-material';
@@ -33,8 +22,6 @@ import {
   type UnassignedUser,
   type DepartmentItem,
 } from "../services/positionApi";
-
-// ── Mapper helpers ────────────────────────────────────────────────────────────
 
 function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false): Position {
   const mappedChildren = node.children?.map((c) => mapTreeNode(c, false));
@@ -87,7 +74,7 @@ function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false)
     });
 
     return {
-      id: node.positionId ?? node.id,
+      id: node.id ?? node.positionId,
       name: node.name,
       title: node.title,
       avatar: node.avatar ?? undefined,
@@ -99,7 +86,7 @@ function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false)
   }
 
   return {
-    id: node.positionId ?? node.id,
+    id: node.id ?? node.positionId,
     name: node.name,
     title: node.title,
     avatar: node.avatar ?? undefined,
@@ -143,11 +130,10 @@ function mapUnassigned(users: UnassignedUser[]): UnassignedEmployee[] {
   }));
 }
 
-// ── Helper: count all positions recursively ───────────────────────────────────
-
 function countPositions(tree: Position): { total: number; vacant: number } {
-  let total = 1;
-  let vacant = tree.isVacant ? 1 : 0;
+  const isDeptHeader = tree.isDeptHeader;
+  let total = (!isDeptHeader && !tree.isVacant) ? 1 : 0;
+  let vacant = (!isDeptHeader && tree.isVacant) ? 1 : 0;
   for (const child of tree.children || []) {
     const childCount = countPositions(child);
     total += childCount.total;
@@ -155,8 +141,6 @@ function countPositions(tree: Position): { total: number; vacant: number } {
   }
   return { total, vacant };
 }
-
-// ── Helper: flatten tree to position options ──────────────────────────────────
 
 function flattenTreeToOptions(node: PositionTreeNode): PositionOption[] {
   const result: PositionOption[] = [{
@@ -169,8 +153,6 @@ function flattenTreeToOptions(node: PositionTreeNode): PositionOption[] {
   }
   return result;
 }
-
-// ── Tree filter helpers ───────────────────────────────────────────────────────
 
 function filterPositionTree(node: Position, query: string, deptIds: string[]): Position {
   const q = query.trim().toLowerCase();
@@ -223,9 +205,7 @@ function filterPositionTree(node: Position, query: string, deptIds: string[]): P
   return { ...node, children: filteredChildren };
 }
 
-
-// ── Fallback mock data (shown only while loading or on error) ─────────────────
-
+// Fallback mock data (shown only while loading or on error)
 const fallbackTree: Position = {
   id: "loading",
   name: "Loading...",
@@ -249,13 +229,13 @@ export default function PositionTreePage() {
   const { isManager } = useRole();
   const { showToast } = useToast();
 
-  // ── Position detail modal state ─────────────────────────────────────────────
+  // ΓöÇΓöÇ Position detail modal state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const [detailModal, setDetailModal] = useState<{
     isOpen: boolean;
     data: PositionDetailData | null;
   }>({ isOpen: false, data: null });
 
-  // ── Confirm dialog state ────────────────────────────────────────────────────
+  // ΓöÇΓöÇ Confirm dialog state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -276,7 +256,7 @@ export default function PositionTreePage() {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  // ── Displaced user dialog state (assign to occupied position) ───────────────
+  // Displaced user dialog state (assign to occupied position)
   const [displacedDialog, setDisplacedDialog] = useState<{
     isOpen: boolean;
     employeeId: string;
@@ -285,7 +265,7 @@ export default function PositionTreePage() {
     currentUserName: string;
   }>({ isOpen: false, employeeId: "", employeeName: "", targetPositionId: "", currentUserName: "" });
 
-  // ── Fetch data ──────────────────────────────────────────────────────────────
+  // Fetch data
 
   const fetchTreeData = useCallback(async () => {
     try {
@@ -327,7 +307,7 @@ export default function PositionTreePage() {
     fetchDepartmentList();
     getCurrentUserPositionInfo()
       .then((info) => setCurrentUserLevel(info.level))
-      .catch(() => {/* ignore – level-based control degrades gracefully */});
+      .catch(() => {/* ignore ΓÇô level-based control degrades gracefully */});
   }, [fetchTreeData, fetchListData, fetchDepartmentList]);
 
   const handleRefreshAll = useCallback(async () => {
@@ -348,7 +328,7 @@ export default function PositionTreePage() {
     }
   }, [displacedDialog, fetchTreeData, showToast]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // Handlers
 
   const handleFilter = useCallback((filters: ActiveFilters) => {
     setToolbarFilters(filters);
@@ -383,7 +363,7 @@ export default function PositionTreePage() {
   };
 
   const handlePositionClick = (position: Position) => {
-    // Dept header nodes are not real positions — skip modal
+    // Dept header nodes are not real positions ΓÇö skip modal
     if (position.isDeptHeader) return;
 
     // Find the corresponding raw tree node to get level, userId etc.
@@ -427,6 +407,12 @@ export default function PositionTreePage() {
 
   // Drag and drop: move a position under a new parent
   const handlePositionMove = useCallback(async (draggedId: string, targetId: string) => {
+    // Resolve userId → positionId (since mapped node IDs are userIds)
+    const draggedRawNode = rawTreeData ? findPositionInTree(rawTreeData, draggedId) : null;
+    const resolvedDraggedId = draggedRawNode?.positionId ?? draggedId;
+    const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetId) : null;
+    const resolvedTargetId = targetRawNode?.positionId ?? targetId;
+
     setConfirmDialog({
       isOpen: true,
       title: "Move Position",
@@ -436,7 +422,7 @@ export default function PositionTreePage() {
       onConfirm: async () => {
         closeConfirm();
         try {
-          await movePosition(draggedId, targetId);
+          await movePosition(resolvedDraggedId, resolvedTargetId);
           showToast("Position moved successfully", "success");
           await fetchTreeData();
         } catch (err) {
@@ -446,16 +432,19 @@ export default function PositionTreePage() {
         }
       },
     });
-  }, [fetchTreeData, showToast, closeConfirm]);
+  }, [rawTreeData, fetchTreeData, showToast, closeConfirm]);
 
   // Assign an unassigned employee to a position
   const handleEmployeeAssign = useCallback(
     async (employeeId: string, targetPositionId: string, mode: "replace" | "subordinate") => {
       const employeeName = unassignedEmployees.find((e) => e.id === employeeId)?.name || "this employee";
 
+      // Resolve userId → positionId (since mapped node IDs are userIds)
+      const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetPositionId) : null;
+      const resolvedPositionId = targetRawNode?.positionId ?? targetPositionId;
+
       if (mode === "replace") {
         // Check if the target position is already occupied
-        const targetRawNode = rawTreeData ? findPositionInTree(rawTreeData, targetPositionId) : null;
         const isOccupied = targetRawNode && !targetRawNode.isVacant && targetRawNode.id;
         const currentOccupantName = isOccupied ? (targetRawNode?.name ?? "current occupant") : null;
 
@@ -465,7 +454,7 @@ export default function PositionTreePage() {
             isOpen: true,
             employeeId,
             employeeName,
-            targetPositionId,
+            targetPositionId: resolvedPositionId,
             currentUserName: currentOccupantName!,
           });
         } else {
@@ -479,7 +468,7 @@ export default function PositionTreePage() {
             onConfirm: async () => {
               closeConfirm();
               try {
-                await assignUserToPosition(targetPositionId, employeeId);
+                await assignUserToPosition(resolvedPositionId, employeeId);
                 showToast(`${employeeName} assigned successfully`, "success");
                 await fetchTreeData();
               } catch (err) {
@@ -501,16 +490,11 @@ export default function PositionTreePage() {
           onConfirm: async () => {
             closeConfirm();
             try {
-              // Find the target position's department for the new position
-              const targetPos = rawTreeData
-                ? findPositionInTree(rawTreeData, targetPositionId)
-                : null;
-
               // Create a new subordinate position
               const newPosition = await createPosition({
                 title: "New Position",
-                parentId: targetPositionId,
-                departmentId: targetPos?.departmentId ?? undefined,
+                parentId: resolvedPositionId,
+                departmentId: targetRawNode?.departmentId ?? undefined,
               });
 
               // Assign the employee to the new position
@@ -551,11 +535,14 @@ export default function PositionTreePage() {
     });
   }, [unassignedEmployees, fetchTreeData, showToast, closeConfirm]);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
-
   // Get position options for the modal
   const positionOptions: PositionOption[] = rawTreeData
-    ? flattenTreeToOptions(rawTreeData).filter((p) => p.id !== "empty" && p.id !== "virtual-root")
+    ? (() => {
+        const seen = new Set<string>();
+        return flattenTreeToOptions(rawTreeData)
+          .filter((p) => p.id !== "empty" && p.id !== "virtual-root")
+          .filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+      })()
     : [];
 
   const departmentOptions: DepartmentOption[] = departmentList.map((d) => ({
@@ -633,7 +620,7 @@ export default function PositionTreePage() {
 
         {/* Tree node skeletons */}
         <div className="flex flex-col gap-2">
-          {/* Level 0 — root node */}
+          {/* Level 0 ΓÇö root node */}
           <div className="flex items-center gap-3 p-3 bg-white border border-neutral-200 rounded-xl w-56">
             <div className="w-8 h-8 rounded-full bg-neutral-200 flex-shrink-0" />
             <div className="flex flex-col gap-1.5 flex-1">
@@ -707,7 +694,7 @@ export default function PositionTreePage() {
             {/* Stats Box */}
             <div className="bg-white border border-primary rounded-[8px] px-3 py-1.5 flex items-center gap-4">
               <span className="text-xs font-semibold text-neutral-500">
-                Total Position:{" "}
+                Employees:{" "}
                 <span className="text-primary font-bold">{totalPositions}</span>
               </span>
               <span className="text-xs font-semibold text-neutral-500">
@@ -745,7 +732,7 @@ export default function PositionTreePage() {
           <div className="bg-neutral-50 border border-neutral-200 flex items-center justify-between p-2">
             <div className="flex items-center gap-4">
               <span className="text-sm font-bold text-neutral-500">
-                Total Position:{" "}
+                Employees:{" "}
                 <span className="text-primary">{totalPositions}</span>
               </span>
               <span className="text-sm font-bold text-neutral-500">
@@ -845,8 +832,6 @@ export default function PositionTreePage() {
     </div>
   );
 }
-
-// ── Tree search helper ─────────────────────────────────────────────────────────
 
 interface TreeNodeWithDept {
   id?: string;
