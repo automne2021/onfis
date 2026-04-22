@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
 
 /** Health check and basic user operations */
 @RestController
@@ -47,4 +48,18 @@ public class UserController {
   ) {
     return ResponseEntity.ok(userService.getFullUserProfile(token, id, tenantId));
   }
+
+  @GetMapping
+  public ResponseEntity<List<UserResponseDTO>> getAllUsersInCompany(
+          @RequestHeader("X-Company-ID") String tenantId) {
+      return ResponseEntity.ok(userService.getUsersByTenant(tenantId));
+  }
+
+  @GetMapping("/search")
+    public ResponseEntity<List<UserResponseDTO>> searchUsers(
+            @RequestParam("q") String keyword,
+            @RequestHeader("X-Company-ID") String tenantId) {
+            
+        return ResponseEntity.ok(userService.searchUsers(tenantId, keyword));
+    }
 }

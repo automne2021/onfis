@@ -10,5 +10,6 @@ public record UserResponseDTO(
   String avatarUrl,
   String email,
   String role,
-  UUID positionId
+  UUID positionId,
+  String status
 ) {}
