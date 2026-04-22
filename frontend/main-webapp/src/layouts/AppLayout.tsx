@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import Sidebar from "../components/navigation/Sidebar";
 import { Header } from "../components/common/Header";
 import { SidebarProvider } from "../contexts/SidebarContext";
-import { AuthProvider } from "../contexts/AuthContext";
+import { AuthProvider } from "../hooks/useAuth";
 import { ToastProvider } from "../contexts/ToastContext";
 import { ToastContainer } from 'react-toastify';
 import { supabase } from "../services/supabaseClient";

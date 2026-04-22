@@ -23,7 +23,7 @@ export function OptionCard({ title, description, icon, isActive, onClick, permis
         ${isActive 
           ? "bg-white border-primary hover:scale-105 cursor-pointer "
           : permission
-          ? "bg-white border-neutral-200 hover:border-neutral-600 hover:scale-105 cursor-pointer "
+          ? "bg-white border-neutral-200 hover:border-neutral-500 hover:scale-105 cursor-pointer "
           : "bg-neutral-50 border-neutral-200"
         }
       `}

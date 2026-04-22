@@ -8,6 +8,9 @@ import { announcementApi } from '../services/announcementApi';
 import type { DepartmentType } from '../types/AnnouncementTypes';
 
 import { toast } from 'react-toastify'; 
+import { useAuth } from '../../../hooks/useAuth';
+import { userApi } from '../../profile/services/userApi';
+import type { FullUserProfile } from '../../../types/userType';
 
 interface AnnouncementFormProps {
   onClose: () => void;
@@ -16,7 +19,10 @@ interface AnnouncementFormProps {
 
 export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) {
 
+  const { user } = useAuth();
+  
   // State Managements
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [selectedOption, setSelectedOption] = useState('department');
   const [myDepartment, setMyDepartment] = useState<DepartmentType | null>(null);
@@ -29,6 +35,21 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
   
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      userApi.getFullUserProfile(user.id)
+        .then((res: FullUserProfile) => {
+          const userRole = res.role?.toUpperCase() || "";
+          if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN') {
+            setIsAdmin(true);
+          }
+        })
+        .catch((err: unknown) => { // Thay any bằng unknown
+        console.error("Failed to fetch user role:", err);
+      });
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -55,7 +76,6 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
   }, [formError]);
 
   const submitAnnouncement = async (status: 'draft' | 'published') => {
-    // Xóa lỗi cũ trước khi submit
     setFormError(null); 
     
     const cleanContent = messageContent ? messageContent.replace(/<\/?p[^>]*>/g, "") : '';
@@ -128,9 +148,9 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     {
       id: 'company',
       title: 'Whole Company',
-      description: 'Require Admin Approval',
+      description: isAdmin ? 'Visible to the entire company' : 'Require Admin Approval',
       icon: <Business />,
-      permission: false
+      permission: isAdmin 
     },
   ];
 
@@ -163,7 +183,6 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
       {/* Body */}
       <div className='py-3 flex flex-col gap-3 min-h-[280px] max-h-[400px] overflow-y-auto custom-scrollbar'>
 
-        {/* MỚI: Hiển thị lỗi API chung ở ngay đầu Form */}
         {formError && (
           <div className="mx-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-200">
             {formError}
@@ -175,7 +194,6 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
           <p className="body-3-medium text-neutral-900">
             Audience Scope
           </p>
-          {/* ... (Giữ nguyên code OptionCard) ... */}
           <div className='flex flex-wrap items-center justify-between gap-4'>
             {optionItems.map((item) => (
               <OptionCard

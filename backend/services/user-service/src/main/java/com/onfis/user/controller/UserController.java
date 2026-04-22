@@ -56,10 +56,17 @@ public class UserController {
   }
 
   @GetMapping("/search")
-    public ResponseEntity<List<UserResponseDTO>> searchUsers(
-            @RequestParam("q") String keyword,
-            @RequestHeader("X-Company-ID") String tenantId) {
-            
-        return ResponseEntity.ok(userService.searchUsers(tenantId, keyword));
-    }
+  public ResponseEntity<List<UserResponseDTO>> searchUsers(
+          @RequestParam("q") String keyword,
+          @RequestHeader("X-Company-ID") String tenantId) {
+          
+      return ResponseEntity.ok(userService.searchUsers(tenantId, keyword));
+  }
+
+  @GetMapping("/me") // Hoặc khớp với /projects/me tùy cấu hình của bạn
+  public ResponseEntity<UserResponseDTO> getCurrentUser(
+      @RequestHeader("X-User-ID") UUID userId // Lấy ID trực tiếp từ header mà Frontend gửi lên
+  ) {
+      return ResponseEntity.ok(userService.getBasicUserProfile(userId));
+  }
 }

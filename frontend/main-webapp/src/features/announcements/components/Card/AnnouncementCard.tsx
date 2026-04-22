@@ -81,8 +81,6 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
     avatarUrl: userProfileImg
   };
 
-  console.log("author profile: ", authorProfile)
-
   const handleLike = async () => {
     try {
       const isNowLiked = await announcementApi.toggleAnnouncementLike(id);

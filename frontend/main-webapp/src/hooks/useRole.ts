@@ -1,21 +1,28 @@
-import { useAuth } from "../contexts/AuthContext";
-import type { UserRole } from "../contexts/AuthContext";
+import { useAuth } from "./useAuth";
+import type { UserRole } from "./useAuth";
 
 interface UseRoleReturn {
-    role: UserRole;
+    role: UserRole | null;
     isManager: boolean;
+    isAdmin: boolean;
     isEmployee: boolean;
     permissions: string[];
     isAuthLoading: boolean;
 }
 
 export function useRole(): UseRoleReturn {
-    const { currentUser, isAuthLoading } = useAuth();
+    const { dbUser, isLoading } = useAuth();
+
+    const role = dbUser?.role || null;
+
+    console.log(role)
+
     return {
-        role: currentUser.role,
-        isManager: currentUser.role === "MANAGER",
-        isEmployee: currentUser.role === "EMPLOYEE",
-        permissions: currentUser.permissions,
-        isAuthLoading,
+        role,
+        isManager: role === "MANAGER",
+        isAdmin: role === "ADMIN" || role === "SUPER_ADMIN",
+        isEmployee: role === "EMPLOYEE",
+        permissions: dbUser?.permissions || [],
+        isAuthLoading: isLoading,
     };
 }
