@@ -6,51 +6,59 @@ import Dropdown from "../../../components/common/Dropdown/Dropdown";
 import { Button } from "../../../components/common/Buttons/Button";
 import { ContentList, type ContentItem } from "../../../components/common/Dropdown/ContentList";
 import { SearchBar, type SearchResult } from "../../../components/common/SearchBar";
+import type { AnnouncementFilterOption } from "../types/AnnouncementTypes";
+import { Check } from "lucide-react";
 
-export function Navbar() {
+interface NavbarProps {
+  currentFilter?: AnnouncementFilterOption;
+  onFilterChange?: (filter: AnnouncementFilterOption) => void;
+}
 
-  // States management
+export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps) {
+
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Data
-  const filterContents: ContentItem[] = [
-    {
-      content: "ABC",
-      onClick: () => console.log("Filter Item 1")
-    },
-    {
-      content: "Filter 2",
-      onClick: () => console.log("Filter Item 2")
-    },
-    {
-      content: "Filter 3",
-      onClick: () => console.log("Filter Item 3")
-    },
-  ]
-
+  
   // Functions
   const toggleMenu = (menuId: string) => {
     setActiveMenu(activeMenu === menuId ? null : menuId)
   }
-
+  
   const closeMenu = () => setActiveMenu(null)
-
-  const handleSearchResultClick = (item: SearchResult) => {
-    console.log("Navigate to: ", item.url)
-    // Can use router.push(item.url)
+  
+  const handleSearchResultClick = () => {
     closeMenu()
     setSearchResults([])
   }
-
+  
   const searchContentItem: ContentItem[] = searchResults.slice(0,5).map(item => ({
     content: item.title,
-    onClick: () => handleSearchResultClick(item)
+    onClick: () => handleSearchResultClick()
   }))
 
   const handleSearchData = useCallback((results: SearchResult[]) => {
     setSearchResults(results);
   }, []);
+
+  const handleSelectFilter = (opt: AnnouncementFilterOption) => {
+    if (onFilterChange) onFilterChange(opt);
+    closeMenu();
+  };
+
+  const renderFilterText = (label: string, opt: AnnouncementFilterOption) => (
+    <div className="flex items-center justify-between w-full">
+      <span className={currentFilter === opt ? "font-medium text-primary" : ""}>{label}</span>
+      {currentFilter === opt && <Check fontSize="small" className="text-primary" />}
+    </div>
+  );
+
+  const filterContents: ContentItem[] = [
+    { content: renderFilterText("Newest First", 'newest'), onClick: () => handleSelectFilter('newest') },
+    { content: renderFilterText("Oldest First", 'oldest'), onClick: () => handleSelectFilter('oldest') },
+  ];
 
   return(
     <nav className="navbar-style">
@@ -61,19 +69,21 @@ export function Navbar() {
 
       {/* Search bar */}
       <Dropdown
-        isOpen={activeMenu === 'search'}
+        isOpen={activeMenu === 'search' && searchQuery.trim().length > 0}
         trigger={
           <div onClick={() => setActiveMenu('search')}>
             <SearchBar 
               scope="announcement" 
               onSearch={handleSearchData}
+              onQueryChange={setSearchQuery} 
+              onIsSearchingChange={setIsSearching}
             />
           </div>
         }
         children={
           <ContentList 
             data={searchContentItem}
-            emptyLabel="No result available"
+            emptyLabel={isSearching ? "Searching..." : "No result available"}
             onItemClick={closeMenu}
           />
         }

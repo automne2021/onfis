@@ -1,20 +1,20 @@
 package com.onfis.gateway.security;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders;
@@ -33,24 +33,27 @@ public class GatewaySecurityConfig {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .cors(Customizer.withDefaults())
                 .authorizeExchange(exchanges -> exchanges
-                .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers("/actuator/**", "/public/**").permitAll()
+                        .pathMatchers("/{tenant}/api/announcements/**").permitAll()
+                        .pathMatchers("/{tenant}/api/positions/**").permitAll()
+                        .pathMatchers("/{tenant}/ws/**").permitAll()
                         .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}))
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
+                }))
                 .build();
     }
 
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:5173"
-        ));
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -58,7 +61,7 @@ public class GatewaySecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
-        }
+    }
 
     @Bean
     public ReactiveJwtDecoder jwtDecoder(SupabaseJwtProperties properties) {
@@ -90,7 +93,8 @@ public class GatewaySecurityConfig {
         }
 
         if (hs256Decoder == null && rs256Decoder == null) {
-            throw new IllegalStateException("Supabase JWT config missing: set supabase.jwt.secret or supabase.jwt.jwk-set-uri");
+            throw new IllegalStateException(
+                    "Supabase JWT config missing: set supabase.jwt.secret or supabase.jwt.jwk-set-uri");
         }
 
         ReactiveJwtDecoder finalHs256Decoder = hs256Decoder;
@@ -120,7 +124,8 @@ public class GatewaySecurityConfig {
             if (dot <= 0) {
                 return null;
             }
-            String headerJson = new String(Base64.getUrlDecoder().decode(token.substring(0, dot)), StandardCharsets.UTF_8);
+            String headerJson = new String(Base64.getUrlDecoder().decode(token.substring(0, dot)),
+                    StandardCharsets.UTF_8);
             int index = headerJson.indexOf("\"alg\"");
             if (index < 0) {
                 return null;

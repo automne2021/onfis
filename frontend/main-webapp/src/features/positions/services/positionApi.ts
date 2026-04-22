@@ -1,7 +1,5 @@
 import api from '../../../services/api';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 export interface PositionTreeNode {
   id: string;       // user ID (null/undefined if vacant)
   positionId: string;
@@ -85,8 +83,6 @@ export interface CurrentUserPositionInfo {
   positionId: string | null;
   positionTitle: string | null;
 }
-
-// ── API Functions ─────────────────────────────────────────────────────────────
 
 export async function getPositionTree(): Promise<PositionTreeNode> {
   const res = await api.get('/positions/tree');

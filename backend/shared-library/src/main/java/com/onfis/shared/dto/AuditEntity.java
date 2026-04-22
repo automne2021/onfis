@@ -3,6 +3,7 @@ package com.onfis.shared.dto;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.Filter;
@@ -14,11 +15,7 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
-
-/**
- * Auditable entity with creation and modification tracking
- */
+/** Auditable entity with creation and modification tracking */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @MappedSuperclass

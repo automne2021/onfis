@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EntityScan(basePackages = {"com.onfis.project.entity", "com.onfis.shared.dto"})
 @EnableJpaAuditing
 public class ProjectServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(ProjectServiceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(ProjectServiceApplication.class, args);
+  }
 }

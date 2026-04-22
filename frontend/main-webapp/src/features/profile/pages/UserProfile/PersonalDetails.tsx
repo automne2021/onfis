@@ -8,7 +8,7 @@ import {
   PaymentOutlined
 } from '@mui/icons-material';
 import { ContactInformation } from '../../components/PersonalDetails/ContactInfo';
-import type { UserProfile } from '../../../../types/userType';
+import type { FullUserProfile } from '../../../../types/userType';
 import { Identification } from '../../components/PersonalDetails/Identification';
 import { Education } from '../../components/PersonalDetails/Education';
 import { BankingAndTax } from '../../components/PersonalDetails/BankingAndTax';
@@ -16,7 +16,7 @@ import { FamilyAndEmergency } from '../../components/PersonalDetails/FamilyAndEm
 import { PayrollAndCompensation } from '../../components/PersonalDetails/PayrollAndCompensation';
 import { EmploymentContract } from '../../components/PersonalDetails/EmploymentContract';
 
-export function PersonalDetails({ userInfo, role } : { userInfo: UserProfile, role?: string }) {
+export function PersonalDetails({ userInfo, role } : { userInfo: FullUserProfile, role?: string }) {
   
   const allowedRole = ['hr', 'admin']
   

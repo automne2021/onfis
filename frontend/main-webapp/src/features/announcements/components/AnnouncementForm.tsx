@@ -1,75 +1,85 @@
-import { Close, Groups, Business, KeyboardArrowDown, KeyboardArrowUp, PushPinOutlined, PushPin } from '@mui/icons-material';
+import { Close, Groups, Business, PushPinOutlined, PushPin } from '@mui/icons-material';
 import { Button } from '../../../components/common/Buttons/Button';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { OptionCard } from './Card/OptionCard';
-import Dropdown from '../../../components/common/Dropdown/Dropdown';
-import { ContentList, type ContentItem } from '../../../components/common/Dropdown/ContentList';
-import { OptionTag } from './Tags/OptionTag';
 import { RichTextEditor } from '../../../components/common/RichTextEditor/RichTextEditor';
 import { AttachmentSection } from '../../../components/common/Attachment/AttachmentSection';
+import { announcementApi } from '../services/announcementApi';
+import type { DepartmentType } from '../types/AnnouncementTypes';
 
-// MOCK DATA
-const DEPARTMENT_NAMES = [
-  'Development',
-  'Human Resources',
-  'Marketing',
-  'ABC',
-  'DEF',
-  'XYZ',
-  'GHI'
-];
+import { toast } from 'react-toastify'; 
+import { useAuth } from '../../../hooks/useAuth';
+import { userApi } from '../../profile/services/userApi';
+import type { FullUserProfile } from '../../../types/userType';
 
 interface AnnouncementFormProps {
-  onClose: () => void
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
-export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
+export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) {
 
+  const { user } = useAuth();
+  
   // State Managements
-  const [isPinned, setIsPinned] = useState(false)
-  const [selectedOption, setSelectedOption] = useState('department')
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
-  const [title, setTitle] = useState<string>('')
-  const [messageContent, setMessageContent] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [selectedOption, setSelectedOption] = useState('department');
+  const [myDepartment, setMyDepartment] = useState<DepartmentType | null>(null);
+
+  const [title, setTitle] = useState<string>('');
+  const [messageContent, setMessageContent] = useState<string | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [errors, setErrors] = useState<{ title?: string; content?: string }>({})
+  const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
+  
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Functions
-  const handleSelectOption = (id: string) => {
-    setSelectedOption(id)
-    console.log("Select: ", id)
-    if (id !== "department") setActiveMenu(null)
-  }
+  useEffect(() => {
+    if (user?.id) {
+      userApi.getFullUserProfile(user.id)
+        .then((res: FullUserProfile) => {
+          const userRole = res.role?.toUpperCase() || "";
+          if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN') {
+            setIsAdmin(true);
+          }
+        })
+        .catch((err: unknown) => { // Thay any bằng unknown
+        console.error("Failed to fetch user role:", err);
+      });
+    }
+  }, [user?.id]);
 
-  const toggleMenu = (menuId: string) => {
-    setActiveMenu(prev => prev === menuId ? null : menuId)
-  }
-
-  const handleSelectedDepartment = (deptName: string) => {
-    setSelectedDepartments(prev => {
-      if (prev.includes(deptName)) {
-        return prev
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const data = await announcementApi.getMyDepartments();
+        if (data && data.length > 0) {
+          setMyDepartment(data[0]); 
+        }
+      } catch (error) {
+        console.error("No department available", error);
       }
-      return [...prev, deptName];
-    });
-  };
+    };
+    fetchDepartments();
+  }, []);
 
-  const handleDeleteSelectedDepartment = (deptName: string) => {
-    setSelectedDepartments(prev => {
-      return prev.filter(name => name !== deptName)
-    })
+  const handleSelectOption = (id: string) => {
+    setSelectedOption(id);
   }
 
   const handleContentChange = useCallback((html: string) => {
     setErrors(prev => (prev.content ? { ...prev, content: undefined } : prev));
     setMessageContent(html);
-  }, []);
+    if (formError) setFormError(null); 
+  }, [formError]);
 
   const submitAnnouncement = async (status: 'draft' | 'published') => {
-    // Check basic validation before publishing
+    setFormError(null); 
+    
+    const cleanContent = messageContent ? messageContent.replace(/<\/?p[^>]*>/g, "") : '';
+
     if (status === 'published') {
       const newErrors: { title?: string; content?: string } = {};
 
@@ -77,7 +87,7 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
         newErrors.title = "Subject is required when publishing.";
       }
 
-      if (!messageContent || messageContent.replace(/<[^>]*>/g, '').trim().length === 0) {
+      if (!cleanContent || cleanContent.trim().length === 0) {
         newErrors.content = "Message content is required when publishing.";
       }
 
@@ -89,54 +99,60 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
 
     setIsSubmitting(true);
 
-    const formData = new FormData()
-    formData.append('title', title)
-    formData.append('content', messageContent || '')
-    formData.append('scope', selectedOption)
-    formData.append('status', status)
-    formData.append('departments', JSON.stringify(selectedDepartments))
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('content', cleanContent.trim());
+    formData.append('scope', selectedOption);
+    formData.append('status', status);
+    
+    if (selectedOption === 'department' && myDepartment) {
+      formData.append('departments', JSON.stringify([myDepartment.id]));
+    } else {
+      formData.append('departments', JSON.stringify([]));
+    }
 
     attachmentFile.forEach((file) => {
-      formData.append('attachments', file)
-    })
-    formData.append('isPinned', isPinned.toString())
+      formData.append('attachments', file);
+    });
+    formData.append('isPinned', isPinned.toString());
 
     try {
-      console.log(`Action: ${status}`, Object.fromEntries(formData));
+      await announcementApi.createAnnouncement(formData);
 
-      // Gọi API thực tế ở đây
-      // const response = await api.post('/announcements', formData);
-
-      alert(status === 'published' ? "Announcement published!" : "Draft saved successfully!");
+      toast.success(status === 'published' ? "Announcement published successfully!" : "Draft saved successfully!", {
+        position: "top-right",
+        autoClose: 1500,
+      });
+      
+      if (onSuccess) {
+        onSuccess();
+      }
       onClose();
     } catch (error) {
       console.error("Failed to process announcement", error);
+      setFormError("An error occurred while saving the announcement. Please check your connection or try again later.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Derived data
-  const departmentListItems: ContentItem[] = DEPARTMENT_NAMES.map((name) => ({ content: name, onClick: () => handleSelectedDepartment(name) }))
-
   // Data
   const optionItems = [
     {
       id: 'department',
-      title: 'My Departments',
-      description: 'Visible to Departments',
+      title: 'My Department',
+      description: 'Visible to your department',
       icon: <Groups />,
       permission: true,
-      content: <ContentList data={departmentListItems} emptyLabel='No department available' onItemClick={() => toggleMenu} />
     },
     {
       id: 'company',
       title: 'Whole Company',
-      description: 'Require Admin Approval',
+      description: isAdmin ? 'Visible to the entire company' : 'Require Admin Approval',
       icon: <Business />,
-      permission: false
+      permission: isAdmin 
     },
-  ]
+  ];
 
   return (
     <form className="bg-white rounded-xl w-[420px] md:w-[590px] lg:w-[732px] shadow-xl border border-neutral-200">
@@ -167,6 +183,12 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
       {/* Body */}
       <div className='py-3 flex flex-col gap-3 min-h-[280px] max-h-[400px] overflow-y-auto custom-scrollbar'>
 
+        {formError && (
+          <div className="mx-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-200">
+            {formError}
+          </div>
+        )}
+
         {/* Audience Scope */}
         <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
@@ -185,31 +207,13 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
               />
             ))}
           </div>
-          {selectedOption === "department" && (
-            <>
-              <div className='relative w-fit'>
-                <p className='body-4-regular text-neutral-500 mb-2'>Choose departments</p>
-                <Dropdown
-                  key={"department"}
-                  isOpen={activeMenu === "department"}
-                  trigger={
-                    <Button
-                      title='Your Departments'
-                      iconRight={activeMenu === "department" ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                      onClick={() => toggleMenu("department")}
-                      style='sub'
-                    />
-                  }
-                  children={optionItems.find(i => i.id === "department")?.content}
-                  onClose={() => setActiveMenu(null)}
-                />
-              </div>
-              <div className='flex flex-wrap items-center gap-2 w-fit max-w-full max-h-[88px] overflow-y-auto'>
-                {selectedDepartments.map((item) => (
-                  <OptionTag label={item} onDelete={() => handleDeleteSelectedDepartment(item)} />
-                ))}
-              </div>
-            </>
+          
+          {selectedOption === "department" && myDepartment && (
+            <div className="mt-1 pl-1">
+              <p className="body-4-regular text-neutral-500">
+                Targeting: <span className="body-4-regular text-primary bg-secondary px-2 py-0.5 rounded-md border border-primary">{myDepartment.name}</span>
+              </p>
+            </div>
           )}
         </div>
 
@@ -218,14 +222,17 @@ export function AnnouncementForm({ onClose }: AnnouncementFormProps) {
           <p className="body-3-medium text-neutral-900">
             Subject <span className='text-red-500'>*</span>
           </p>
-          {/* Input */}
           <input
             name='subject'
             type="text"
             placeholder='Enter announcement title...'
             minLength={1}
-            maxLength={32}
-            onChange={(e) => setTitle(e.target.value)}
+            maxLength={256}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (errors.title) setErrors(prev => ({ ...prev, title: undefined }));
+              if (formError) setFormError(null);
+            }}
             value={title}
             className={`w-full body-3-regular text-neutral-900 border px-4 py-3 rounded-lg transition-all outline-none 
             ${errors.title ? 'border-red-500' : (title.length > 0 ? 'border-neutral-200 bg-white' : 'border-neutral-200 bg-neutral-50')}

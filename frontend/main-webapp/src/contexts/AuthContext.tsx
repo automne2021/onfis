@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getCurrentProjectUser } from "../services/projectService";
 
-export type UserRole = "MANAGER" | "EMPLOYEE";
+export type UserRole = "MANAGER" | "EMPLOYEE" | "ADMIN" | "SUPER ADMIN";
 
 export interface AuthUser {
     id: string;

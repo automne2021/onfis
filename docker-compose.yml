@@ -84,10 +84,14 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
+    depends_on:
+      - redis
 
   # Announcement Service
   announcement-service:
@@ -122,6 +126,15 @@ services:
       - admin-service
       - chat-service
       - announcement-service
+      - redis
+  redis:
+    image: redis:7-alpine
+    container_name: onfis-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - onfis-network
+    command: redis-server --appendonly yes
 
 networks:
   onfis-network:

@@ -1,7 +1,6 @@
 import { useParams, useSearchParams } from "react-router-dom"
-import { MOCK_USERS } from "../../../data/mockUserData"
 import { useEffect, useState } from "react"
-import type { UserProfile } from "../../../types/userType"
+import type { FullUserProfile } from "../../../types/userType"
 import { Loading } from "../components/Loading"
 import userProfileImg from "../../../assets/images/user-profile-img.png"
 
@@ -10,6 +9,7 @@ import { TabGroup } from "../../../components/common/Tab/TabGroup"
 import { Overview } from "./UserProfile/Overview"
 import { PersonalDetails } from "./UserProfile/PersonalDetails"
 import { Documents } from "./UserProfile/Documents"
+import { userApi } from "../services/userApi"
 
 const tabItems = [
   { id: 'overview', label: "Overview", isDisplay: true },
@@ -25,24 +25,28 @@ export function UserProfile() {
   const currentView = searchParams.get('view') || 'overview'
 
   const [isLoading, setIsLoading] = useState(true)
-  const [info, setInfo] = useState<UserProfile | null>(null)
+  const [info, setInfo] = useState<FullUserProfile | null>(null)
 
   useEffect(() => {
     const fetchDetail = async () => {
-      setIsLoading(true)
+      if (!id) return; // Nếu không có id trên URL thì bỏ qua
 
-      setTimeout(() => {
-        if (id) {
-          const user = MOCK_USERS.find(
-            (item) => item.id === Number(id)
-          )
-          setInfo(user || null)
-        }
-        setIsLoading(false)
-      }, 500)
-    }
-    fetchDetail()
-  }, [id])
+      setIsLoading(true);
+      try {
+        const userProfile = await userApi.getFullUserProfile(id);
+        setInfo(userProfile);
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin user:", error);
+        setInfo(null); // Nếu lỗi (VD: 404, 500) thì set null để hiện "User not found!"
+      } finally {
+        setIsLoading(false); // Luôn tắt loading dù thành công hay thất bại
+      }
+    };
+
+    fetchDetail();
+  }, [id]);
+
+  console.log("Info: ", info)
 
 
   if (isLoading) return <Loading />
@@ -68,25 +72,25 @@ export function UserProfile() {
           </div>
           {/* Basic info */}
           <div className="flex flex-col gap-1">
-            <p className="text-base font-bold text-neutral-900 leading-snug">{info.name}</p>
+            <p className="text-base font-bold text-neutral-900 leading-snug">{info.firstName} {info.lastName}</p>
             <div className="flex items-center gap-3 text-neutral-500 body-3-regular">
               <div className="flex items-center gap-1.5">
                 <BadgeOutlined sx={{ fontSize: 18 }} />
-                {info.position}
+                {info.positionName}
               </div>
 
               <span className="text-neutral-300">•</span>
 
               <div className="flex items-center gap-1.5">
                 <BusinessOutlined sx={{ fontSize: 18 }} />
-                {info.department}
+                {info.departmentName}
               </div>
 
               <span className="text-neutral-300">•</span>
 
               <div className="flex items-center gap-1.5">
                 <PlaceOutlined sx={{ fontSize: 18 }} />
-                {info.location}
+                {info.workLocation}
               </div>
             </div>
           </div>
