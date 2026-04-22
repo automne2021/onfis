@@ -7,8 +7,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootEnvDir = resolve(__dirname, '..', '..')
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   envDir: rootEnvDir,
+  base: mode === 'production' ? '/_app/' : '/',
   plugins: [react()],
   
   resolve: {
@@ -34,5 +35,5 @@ export default defineConfig({
   },
   define: {
     global: 'window',
-  },
-})
+  }
+}))

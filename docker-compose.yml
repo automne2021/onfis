@@ -5,12 +5,11 @@ services:
       context: ./backend
       dockerfile: api-gateway/Dockerfile
     container_name: onfis-api-gateway
-    ports:
-      - "8080:8080"
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
       USER_SERVICE_URL: http://user-service:8081
       PROJECT_SERVICE_URL: http://project-service:8082
       POSITION_SERVICE_URL: http://position-service:8083
@@ -26,12 +25,11 @@ services:
       context: ./backend
       dockerfile: services/user-service/Dockerfile
     container_name: onfis-user-service
-    ports:
-      - "8081:8081"
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
 
@@ -41,12 +39,11 @@ services:
       context: ./backend
       dockerfile: services/project-service/Dockerfile
     container_name: onfis-project-service
-    ports:
-      - "8082:8082"
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
 
@@ -56,12 +53,11 @@ services:
       context: ./backend
       dockerfile: services/position-service/Dockerfile
     container_name: onfis-position-service
-    ports:
-      - "8083:8083"
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
 
@@ -71,12 +67,11 @@ services:
       context: ./backend
       dockerfile: services/admin-service/Dockerfile
     container_name: onfis-admin-service
-    ports:
-      - "8084:8084"
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
 
@@ -86,14 +81,13 @@ services:
       context: ./backend
       dockerfile: services/chat-service/Dockerfile
     container_name: onfis-chat-service
-    ports:
-      - "8085:8085"
     env_file:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
+      - JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
     depends_on:
@@ -105,27 +99,34 @@ services:
       context: ./backend
       dockerfile: services/announcement-service/Dockerfile
     container_name: onfis-announcement-service
-    ports:
-      - "8086:8086"
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
     networks:
       - onfis-network
 
-  # Nginx Reverse Proxy
+  # Nginx Reverse Proxy + Frontend Static Files
   nginx:
     build:
-      context: ./infrastructure/nginx
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: infrastructure/nginx/Dockerfile
     container_name: onfis-nginx
     ports:
       - "80:80"
+      - "443:443"
     networks:
       - onfis-network
     depends_on:
       - api-gateway
+      - user-service
+      - project-service
+      - position-service
+      - admin-service
+      - chat-service
+      - announcement-service
+      - redis
   redis:
     image: redis:7-alpine
     container_name: onfis-redis
