@@ -8,7 +8,6 @@ import {
 import { Link, useParams } from "react-router-dom"; 
 import { useRef, useLayoutEffect, useState } from "react"; 
 
-import userProfileImg from "../../../assets/images/user-profile-img.png";
 import type { FullUserProfile } from '../../../types/userType';
 
 interface ProfileCardProps {
@@ -17,10 +16,10 @@ interface ProfileCardProps {
 }
 
 export function ProfileCard({ user, onClose }: ProfileCardProps) {
-  const avatarImg = user.avatarUrl || userProfileImg;
   const { tenant } = useParams<{ tenant: string }>();
   const profilePath = tenant ? `/${tenant}/profile/${user.id}` : `/profile/${user.id}`;
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
+  const avatarImg = user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`;
   
   const cardRef = useRef<HTMLDivElement>(null);
   const [positionClass, setPositionClass] = useState("top-12");

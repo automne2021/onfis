@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Navbar } from "../components/Navbar";
@@ -9,7 +9,7 @@ import { AnnouncementCard } from '../components/Card/AnnouncementCard';
 import { useSearchParams } from 'react-router-dom';
 import { useRole } from '../../../hooks/useRole';
 import { announcementApi } from '../services/announcementApi';
-import { type AnnouncementData } from '../types/AnnouncementTypes';
+import { type AnnouncementData, type AnnouncementFilterOption } from '../types/AnnouncementTypes';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatAnnouncementData } from '../utils/announcementFormatter';
 
@@ -35,6 +35,8 @@ export function Announcement() {
   
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
+
+  const [currentFilter, setCurrentFilter] = useState<AnnouncementFilterOption>('newest');
 
   const { isManager } = useRole();
   const { user } = useAuth();
@@ -104,6 +106,18 @@ export function Announcement() {
   const handleToggleAddForm = () => setOpenAddForm((prev) => !prev);
   const handleToggleProfile = (id: string | number) => setOpenProfileId((prevId) => (prevId === id ? null : id));
 
+  const displayedAnnouncements = useMemo(() => {
+    const result = [...announcements];
+
+    if (currentFilter === 'oldest') {
+      result.sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
+    } else {
+      result.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+    }
+
+    return result;
+  }, [announcements, currentFilter]);
+
   const handleLike = (id: string | number, newStatus: boolean) => {
     setAnnouncements(prev => prev.map(item => {
       if (item.id === id) {
@@ -121,7 +135,10 @@ export function Announcement() {
   return (
     <>
       <section className="onfis-section flex flex-col min-h-screen">
-        <Navbar />
+        <Navbar 
+          currentFilter={currentFilter}
+          onFilterChange={(newFilter) => setCurrentFilter(newFilter)}
+        />
         <div className="w-full md:px-6 lg:px-8 flex-1 flex flex-col">
           <p className="header-h6 text-neutral-900 mt-5 mb-2 leading-none">
             Announcements & News
@@ -147,9 +164,9 @@ export function Announcement() {
               <>
                 <AnnouncementLoading />
               </>
-            ) : announcements.length > 0 ? (
+            ) : displayedAnnouncements.length > 0 ? (
               <>
-                {announcements.map((item) => (
+                {displayedAnnouncements.map((item) => (
                   <AnnouncementCard
                     key={item.id}
                     id={item.id}

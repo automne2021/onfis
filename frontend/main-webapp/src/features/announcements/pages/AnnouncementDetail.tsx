@@ -15,11 +15,12 @@ import { AnnouncementDetailLoading } from "../components/Loadings/AnnouncementDe
 import { findUserById } from "../../../data/mockUserData"
 import { ProfileCard } from "../../../components/common/Card/ProfileCard"
 import type { AnnouncementData, CommentData } from "../types/AnnouncementTypes"
-import type { UserProfile } from "../../../types/userType"
-import { StatusBubble } from "../../../components/common/StatusBubble"
+import type { FullUserProfile } from "../../../types/userType"
+// import { StatusBubble } from "../../../components/common/StatusBubble"
 
 import { announcementApi } from "../services/announcementApi"
 import { formatAnnouncementData } from "../utils/announcementFormatter"
+// import { usePresence } from "../../chat/context/PresenceContext"
 
 const flattenAllReplies = (replies: CommentData[], parentName?: string): CommentData[] => {
   let flat: CommentData[] = [];
@@ -37,6 +38,7 @@ const flattenAllReplies = (replies: CommentData[], parentName?: string): Comment
 
 export function AnnouncementDetail() {
   const { id } = useParams<{ id: string }>()
+  // const { statuses } = usePresence()
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -101,6 +103,40 @@ export function AnnouncementDetail() {
     setReplyingTo({ id: commentId, name: authorName });
   };
 
+  const handleDownloadAll = async () => {
+    if (!detail?.attachments || detail.attachments.length === 0) return;
+
+    for (let i = 0; i < detail.attachments.length; i++) {
+      const file = detail.attachments[i];
+      try {
+        // Dùng fetch để ép tải file về máy dưới dạng Blob (tránh việc trình duyệt tự mở PDF/Ảnh)
+        const response = await fetch(file.url);
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = file.fileName || `attachment-${i}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        window.URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        console.warn(`Lỗi fetch (có thể do CORS), dùng fallback tải link cho file: ${file.fileName}`, error);
+        const link = document.createElement('a');
+        link.href = file.url;
+        link.download = file.fileName || `attachment-${i}`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
   if (isLoading) {
     return <AnnouncementDetailLoading />
   }
@@ -109,12 +145,14 @@ export function AnnouncementDetail() {
     return <div className="p-4 text-center text-neutral-500">No announcement available!</div>;
   }
 
-  const avatarImg = detail.avatarUrl ? detail.avatarUrl : userProfileImg;
+  // const authorLiveStatus = statuses[detail.authId] || "offline";
+
+  const avatarImg = detail.avatarUrl ? detail.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(detail.authName)}&background=random`;
   const safeUtcDate = detail.date ? (detail.date.endsWith('Z') ? detail.date : `${detail.date}Z`) : "";
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
   
   const authorProfile = findUserById(detail.authId)
-  const profileCardData: UserProfile = authorProfile || {
+  const profileCardData: FullUserProfile = authorProfile || {
     id: "unknown",
     name: "N/A",
     position: "N/A",
@@ -147,7 +185,7 @@ export function AnnouncementDetail() {
                   className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
                 >
                   <img src={avatarImg} alt="User Avatar" className="w-full h-full object-cover" />
-                  <StatusBubble />
+                  {/* <StatusBubble status={authorLiveStatus as "online" | "offline" | "busy"} /> */}
                 </div>
 
                 {isProfileOpen && (
@@ -187,7 +225,10 @@ export function AnnouncementDetail() {
                 <span className="body-2-regular text-neutral-500">({detail.attachments ? detail.attachments.length : 0})</span>
               </p>
               {detail.attachments && detail.attachments.length > 0 && (
-                <button type="button" className="text-primary hover:underline flex items-center gap-1 transition body-4-regular">
+                <button 
+                  type="button"
+                  onClick={handleDownloadAll} 
+                  className="text-primary hover:underline flex items-center gap-1 transition body-4-regular">
                   <FileDownloadOutlined sx={{ fontSize: 16 }} /> Download All
                 </button>
               )}

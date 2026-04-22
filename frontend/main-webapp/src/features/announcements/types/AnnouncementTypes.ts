@@ -82,3 +82,5 @@ export interface PaginatedResponse<T> {
   numberOfElements: number;
   empty: boolean;
 }
+
+export type AnnouncementFilterOption = 'newest' | 'oldest' | 'global' | 'department' | 'pinned' | 'all';

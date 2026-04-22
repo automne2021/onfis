@@ -48,7 +48,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
   const [authorProfile, setAuthorProfile] = useState<FullUserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
-  const avatarImg = avatarUrl ? avatarUrl : userProfileImg
+  const avatarImg = avatarUrl ? avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(authName)}&background=random`
   const slug = generateSlug(title)
   const safeUtcDate = date ? (date.endsWith('Z') ? date : `${date}Z`) : "";
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
