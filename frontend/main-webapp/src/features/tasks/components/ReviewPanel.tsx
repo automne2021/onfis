@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRole } from "../../../hooks/useRole";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../hooks/useAuth";
 import type { ReviewComment, ReviewAction } from "../types";
 
 interface ReviewPanelProps {
@@ -82,7 +82,7 @@ function ReviewTimeline({ reviews }: { reviews: ReviewComment[] }) {
 
 export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestChanges }: ReviewPanelProps) {
   const { isManager } = useRole();
-  const { currentUser } = useAuth();
+  const { dbUser: currentUser } = useAuth();
   const [comment, setComment] = useState("");
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
 
@@ -223,7 +223,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
       )}
 
       {/* Unused currentUser check to satisfy lint */}
-      {false && currentUser.id}
+      {false && currentUser?.id}
     </div>
   );
 }

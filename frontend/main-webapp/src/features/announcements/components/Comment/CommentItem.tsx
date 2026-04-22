@@ -5,7 +5,7 @@ import userProfileImg from "../../../../assets/images/user-profile-img.png";
 import { CommentInput } from "./CommentInput"; 
 import { findUserById } from "../../../../data/mockUserData";
 import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
-import type { UserProfile } from "../../../../types/userType";
+import type { FullUserProfile } from "../../../../types/userType";
 import { announcementApi } from "../../services/announcementApi";
 
 export interface CommentItemProps {
@@ -82,13 +82,18 @@ export function CommentItem({
   const avatarImg = avatarUrl ? avatarUrl : userProfileImg;
 
   const commentAuthorProfile = findUserById(userId);
-  const profileCardData: UserProfile = commentAuthorProfile || {
+  const profileCardData: FullUserProfile = commentAuthorProfile ? {
+    id: commentAuthorProfile.id,
+    email: commentAuthorProfile.email,
+    avatarUrl: commentAuthorProfile.avatarUrl,
+    firstName: commentAuthorProfile.name?.split(' ')[0] || '',
+    lastName: commentAuthorProfile.name?.split(' ').slice(1).join(' ') || '',
+    positionName: commentAuthorProfile.position,
+    departmentName: commentAuthorProfile.department,
+  } : {
     id: "unknown",
-    name: "N/A",
-    position: "N/A",
-    department: "Company",
     email: "unknown@company.com",
-    avatarUrl: userProfileImg
+    avatarUrl: userProfileImg,
   };
 
   return(

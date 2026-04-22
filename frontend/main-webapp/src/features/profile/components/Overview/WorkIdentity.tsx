@@ -27,13 +27,18 @@ export function WorkIdentity({ icon, userInfo }: OverviewProps) {
     { label: 'Location', content: userInfo?.workLocation || 'N/A' },
   ]
 
-  const profileCardData: FullUserProfile = managerProfile || {
+  const profileCardData: FullUserProfile = managerProfile ? {
+    id: managerProfile.id,
+    email: managerProfile.email,
+    avatarUrl: managerProfile.avatarUrl || managerAvatar,
+    firstName: managerProfile.name?.split(' ')[0] || '',
+    lastName: managerProfile.name?.split(' ').slice(1).join(' ') || '',
+    positionName: managerProfile.position,
+    departmentName: managerProfile.department,
+  } : {
     id: "unknown",
-    name: managerName,
-    position: "Manager",
-    department: "Company",
     email: "unknown@company.com",
-    avatarUrl: managerAvatar
+    avatarUrl: managerAvatar,
   };
 
   const togglePersonalInformationCard = () => {

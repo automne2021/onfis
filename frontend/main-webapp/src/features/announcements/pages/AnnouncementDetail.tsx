@@ -151,14 +151,19 @@ export function AnnouncementDetail() {
   const safeUtcDate = detail.date ? (detail.date.endsWith('Z') ? detail.date : `${detail.date}Z`) : "";
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
   
-  const authorProfile = findUserById(detail.authId)
-  const profileCardData: FullUserProfile = authorProfile || {
+  const authorProfile = findUserById(detail.authId);
+  const profileCardData: FullUserProfile = authorProfile ? {
+    id: authorProfile.id,
+    email: authorProfile.email,
+    avatarUrl: authorProfile.avatarUrl,
+    firstName: authorProfile.name?.split(' ')[0] || '',
+    lastName: authorProfile.name?.split(' ').slice(1).join(' ') || '',
+    positionName: authorProfile.position,
+    departmentName: authorProfile.department,
+  } : {
     id: "unknown",
-    name: "N/A",
-    position: "N/A",
-    department: "Company",
     email: "unknown@company.com",
-    avatarUrl: userProfileImg
+    avatarUrl: userProfileImg,
   };
 
   const displayDeptName = detail.targetDepartmentName || "My department";
