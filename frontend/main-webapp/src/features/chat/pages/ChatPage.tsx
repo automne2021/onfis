@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react" 
 import { Menu } from '@mui/icons-material';
 import { ChatSidebar } from "../components/Sidebar/ChatSidebar";
 import { SquarePen, Hash } from 'lucide-react';
@@ -8,24 +8,63 @@ import { useConversations } from "../hooks/useConversations";
 import { chatApi } from "../services/chatApi";
 import { CreateGroupModal } from "../components/Modal/CreateGroupModal";
 import { CallProvider } from "../context/CallContext";
+import { useSearchParams } from "react-router-dom"; 
 
 export function ChatPage() {
 
   const { channels, fetchChannels, isLoading } = useConversations();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const channelFromUrl = searchParams.get('channel');
 
-  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const activeChannelId = selectedChannelId || (channels.length > 0 ? channels[0].id : null);
+  // KIỂM TRA TÍNH HỢP LỆ CỦA URL
+  // Kiểm tra xem ID trên URL có thực sự nằm trong danh sách phòng của user không
+  const isChannelValid = channels.some(c => c.id === channelFromUrl);
+
+  // XÁC ĐỊNH PHÒNG ĐANG MỞ AN TOÀN
+  let activeChannelId: string | null = null;
+  // Nếu URL có ID hợp lệ (hoặc đang loading chưa biết hợp lệ hay không), thì tin tưởng URL
+  if (channelFromUrl && (isChannelValid || isLoading)) {
+    activeChannelId = channelFromUrl;
+  } else if (channels.length > 0) {
+    // Nếu URL sai hoặc trống, fallback về phòng đầu tiên
+    activeChannelId = channels[0].id;
+  }
+
   const currentChannel = channels.find(c => c.id === activeChannelId) || null;
+
+  // TỰ ĐỘNG CẬP NHẬT LẠI URL NẾU SAI
+  useEffect(() => {
+    // Chỉ xử lý sau khi đã tải xong danh sách phòng từ Backend
+    if (!isLoading) {
+      if (channelFromUrl && !isChannelValid) {
+        // Trường hợp 1: Có ID trên URL nhưng bị sai/không có quyền -> Ép về phòng số 1
+        if (channels.length > 0) {
+          setSearchParams({ channel: channels[0].id }, { replace: true });
+        }
+      } else if (!channelFromUrl && channels.length > 0) {
+        // Trường hợp 2: URL trống trơn -> Tự điền ID phòng số 1 vào
+        setSearchParams({ channel: channels[0].id }, { replace: true });
+      }
+    }
+  }, [isLoading, channelFromUrl, isChannelValid, channels, setSearchParams]);
+
+  // Hàm xử lý khi click Sidebar
+  const handleChannelSelect = (id: string) => {
+    setSearchParams({ channel: id }); 
+    setIsMobileMenuOpen(false);       
+  };
 
   const handleCreateGroup = async (data: { name: string; type: 'public_group' | 'private_group'; memberIds: string[] }) => {
     try {
-      await chatApi.createConversation(data);
+      const newGroup = await chatApi.createConversation(data);
       setIsCreateModalOpen(false);
       fetchChannels(); 
+      if (newGroup && newGroup.id) {
+        setSearchParams({ channel: newGroup.id });
+      }
     } catch (error) {
       console.error("Lỗi khi tạo nhóm", error);
       alert("Đã xảy ra lỗi khi tạo nhóm!");
@@ -60,7 +99,7 @@ export function ChatPage() {
             channels={channels} 
             isLoading={isLoading}
             activeChannelId={activeChannelId || ""}
-            onChannelSelect={(id) => { setSelectedChannelId(id); setIsMobileMenuOpen(false); }}
+            onChannelSelect={handleChannelSelect}
             icons={{ 'edit': <SquarePen size={18} />, 'hash': <Hash /> }}
             onCreateGroupClick={() => setIsCreateModalOpen(true)}
             onRefreshChannels={fetchChannels}

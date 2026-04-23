@@ -12,7 +12,6 @@ import { AttachmentTags } from "../components/Tags/AttachmentTag"
 import { CommentItem } from "../components/Comment/CommentItem"
 import { CommentInput } from "../components/Comment/CommentInput"
 import { AnnouncementDetailLoading } from "../components/Loadings/AnnouncementDetailLoading"
-import { findUserById } from "../../../data/mockUserData"
 import { ProfileCard } from "../../../components/common/Card/ProfileCard"
 import type { AnnouncementData, CommentData } from "../types/AnnouncementTypes"
 import type { FullUserProfile } from "../../../types/userType"
@@ -20,6 +19,7 @@ import type { FullUserProfile } from "../../../types/userType"
 
 import { announcementApi } from "../services/announcementApi"
 import { formatAnnouncementData } from "../utils/announcementFormatter"
+import { userApi } from "../../profile/services/userApi"
 // import { usePresence } from "../../chat/context/PresenceContext"
 
 const flattenAllReplies = (replies: CommentData[], parentName?: string): CommentData[] => {
@@ -41,6 +41,7 @@ export function AnnouncementDetail() {
   // const { statuses } = usePresence()
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
+  const [authorProfile, setAuthorProfile] = useState<FullUserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true)
 
   const [isLiked, setIsLiked] = useState(false)
@@ -56,6 +57,9 @@ export function AnnouncementDetail() {
       try {
         if (id) {
           const rawData = await announcementApi.getById(id);
+          const data = await userApi.getFullUserProfile(String(rawData.authId));
+          setAuthorProfile(data);
+
           const formattedData = formatAnnouncementData([rawData])[0];
 
           if (formattedData && formattedData.comments) {
@@ -145,28 +149,27 @@ export function AnnouncementDetail() {
     return <div className="p-4 text-center text-neutral-500">No announcement available!</div>;
   }
 
-  // const authorLiveStatus = statuses[detail.authId] || "offline";
+  console.log("details: ", detail)
 
   const avatarImg = detail.avatarUrl ? detail.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(detail.authName)}&background=random`;
   const safeUtcDate = detail.date ? (detail.date.endsWith('Z') ? detail.date : `${detail.date}Z`) : "";
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
-  
-  const authorProfile = findUserById(detail.authId);
+
   const profileCardData: FullUserProfile = authorProfile ? {
     id: authorProfile.id,
     email: authorProfile.email,
     avatarUrl: authorProfile.avatarUrl,
-    firstName: authorProfile.name?.split(' ')[0] || '',
-    lastName: authorProfile.name?.split(' ').slice(1).join(' ') || '',
-    positionName: authorProfile.position,
-    departmentName: authorProfile.department,
+    firstName: authorProfile.firstName || '',
+    lastName: authorProfile.lastName || '',
+    positionName: authorProfile.positionName,
+    departmentName: authorProfile.departmentName,
   } : {
     id: "unknown",
     email: "unknown@company.com",
     avatarUrl: userProfileImg,
   };
 
-  const displayDeptName = detail.targetDepartmentName || "My department";
+  const displayDeptName = authorProfile?.departmentName || "My department";
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-70px)]">
@@ -200,7 +203,7 @@ export function AnnouncementDetail() {
               <div className="flex flex-col gap-0.5">
                 <p className="body-3-medium text-neutral-900">{detail.authName}</p>
                 <p className="body-4-regular text-neutral-500">
-                  {detail.position}<span className="mx-1">•</span>{timeAgoString}
+                  {authorProfile?.positionName}<span className="mx-1">•</span>{timeAgoString}
                 </p>
               </div>
             </div>

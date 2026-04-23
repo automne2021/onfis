@@ -52,7 +52,7 @@ export function UserProfile() {
   if (isLoading) return <Loading />
   if (!info) return <div className="p-10 text-center text-neutral-500">User not found!</div>
 
-  const avatarImg = info.avatarUrl ? info.avatarUrl : userProfileImg
+  const avatarImg = info.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(`${info.firstName} ${info.lastName}`)}&background=random` || userProfileImg 
 
   return (
     <section className="onfis-section">

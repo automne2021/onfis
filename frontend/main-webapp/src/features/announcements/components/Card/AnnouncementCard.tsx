@@ -54,7 +54,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
 
   useEffect(() => {
-    if (isProfileOpen && !authorProfile) {
+    if (!authorProfile) {
       const fetchAuthorProfile = async () => {
         setIsLoadingProfile(true);
         try {
@@ -132,7 +132,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
           <div className="flex flex-col gap-0.5">
             <p className="body-3-medium text-neutral-900">{authName}</p>
             <p className="body-4-regular text-neutral-500">
-              {position}<span className="mx-1">•</span>{timeAgoString}
+              {authorProfile?.positionName || position}<span className="mx-1">•</span>{timeAgoString}
             </p>
           </div>
         </div>

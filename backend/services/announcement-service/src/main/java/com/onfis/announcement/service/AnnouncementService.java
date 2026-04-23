@@ -2,6 +2,7 @@ package com.onfis.announcement.service;
 
 import com.onfis.announcement.client.UserClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onfis.announcement.client.ChatNotificationClient;
 import com.onfis.announcement.client.PositionClient;
 import com.onfis.announcement.dto.*;
 import com.onfis.announcement.entity.*;
@@ -34,6 +35,7 @@ public class AnnouncementService {
     
     private final UserClient userClient;
     private final PositionClient positionClient;
+    private final ChatNotificationClient chatNotificationClient;
     private final ObjectMapper objectMapper;
     private final SupabaseStorageService supabaseStorageService;
 
@@ -400,7 +402,15 @@ public class AnnouncementService {
             }
         }
 
-        return convertToDTO(token, companyIdStr, announcement, authorId);
+        // return convertToDTO(token, companyIdStr, announcement, authorId);
+
+        AnnouncementDTO finalDto = convertToDTO(token, companyIdStr, announcement, authorId);
+        try {
+            chatNotificationClient.sendAnnouncementNotification(token, companyIdStr, finalDto);
+        } catch (Exception e) {
+            log.warn("Không thể bắn notification cho announcement mới: {}", e.getMessage());
+        }
+        return finalDto;
     }
 
     public AnnouncementDetailDTO getMyLatestDraft(String token, String companyIdStr, UUID userId) {

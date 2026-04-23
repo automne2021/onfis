@@ -15,10 +15,13 @@ import com.onfis.chat.repository.ConversationRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -29,8 +32,9 @@ public class MessageService {
     private final ConversationMemberRepository memberRepository;
     private final RedisPublisher redisPublisher;
     private final UserClient userClient; 
-    private final AttachmentClient attachmentClient; // Khai báo đúng tên
+    private final AttachmentClient attachmentClient;
     private final ConversationRepository conversationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public void processAndSendMessage(ChatMessageRequestDTO request, UUID authenticatedUserId, UUID tenantId, String token) {
@@ -111,6 +115,21 @@ public class MessageService {
         }
 
         redisPublisher.publish(response);
+
+        try {
+            List<ConversationMember> members = memberRepository.findByConversationId(request.getConversationId());
+            for (ConversationMember member : members) {
+                // Không bắn thông báo cho chính người gửi
+                if (!member.getUserId().equals(authenticatedUserId)) {
+                    messagingTemplate.convertAndSend(
+                        "/topic/user." + member.getUserId() + ".chat_notifications", 
+                        response
+                    );
+                }
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi bắn WebSocket notification cho chat: ", e);
+        }
     }
 
     public ChatMessageResponseDTO convertToDTO(ChatMessage message, String token, String companyIdStr) {

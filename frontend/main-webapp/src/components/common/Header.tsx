@@ -9,6 +9,7 @@ import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
 import { useAuth } from '../../hooks/useAuth';
 import { signOut } from '../../services/auth';
+import { useNotifications } from '../../hooks/useNotifications';
 
 interface HeaderProps {
   companyName: string;
@@ -16,10 +17,16 @@ interface HeaderProps {
   notificationContents?: ContentItem[] | null;
 }
 
-export function Header({ companyName, messageContents, notificationContents }: HeaderProps) {
+export function Header({ companyName }: HeaderProps) {
   const { dbUser: authUser } = useAuth();
   const { tenant } = useParams<{ tenant: string }>();
   const navigate = useNavigate();
+  const { 
+    chatNotifs, 
+    announcementNotifs, 
+    unreadChatCount, 
+    unreadAnnouncementCount 
+  } = useNotifications();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
@@ -29,30 +36,48 @@ export function Header({ companyName, messageContents, notificationContents }: H
 
   const closeMenu = useCallback(() => setActiveMenu(null), []);
 
-  const avatarImg = authUser?.avatar || userProfileImg;
+  const avatarImg = authUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(authUser?.name || '')}&background=random` || userProfileImg;
 
   const iconButtons = useMemo(
     () => [
       {
         id: 'chat',
-        icon: <Chat />,
+        icon: (
+          <div className="relative">
+            <Chat fontSize='small'/>
+            {unreadChatCount > 0 && (
+              <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white shadow-sm">
+                {unreadChatCount > 99 ? '99+' : unreadChatCount}
+              </span>
+            )}
+          </div>
+        ),
         content: (
-          <ContentList data={messageContents} emptyLabel="No messages available" onItemClick={closeMenu} />
+          <ContentList data={chatNotifs} emptyLabel="No new messages" onItemClick={closeMenu} />
         ),
       },
       {
         id: 'noti',
-        icon: <Notifications />,
+        icon: (
+          <div className="relative">
+            <Notifications fontSize='small'/>
+            {unreadAnnouncementCount > 0 && (
+              <span className="absolute -top-2 -right-2 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white shadow-sm">
+                {unreadAnnouncementCount > 99 ? '99+' : unreadAnnouncementCount}
+              </span>
+            )}
+          </div>
+        ),
         content: (
           <ContentList
-            data={notificationContents}
-            emptyLabel="No notifications available"
+            data={announcementNotifs}
+            emptyLabel="No new announcements"
             onItemClick={closeMenu}
           />
         ),
       },
     ],
-    [messageContents, notificationContents, closeMenu]
+    [chatNotifs, announcementNotifs, unreadChatCount, unreadAnnouncementCount, closeMenu]
   );
 
   const profileContents: ContentItem[] = useMemo(

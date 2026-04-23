@@ -655,4 +655,17 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/internal/notify/announcement")
+    public ResponseEntity<?> broadcastAnnouncement(
+            @RequestBody Map<String, Object> payload, 
+            @RequestHeader("X-Company-ID") String tenantId) {
+        
+        if (payload.get("targetDepartmentId") == null) {
+            messagingTemplate.convertAndSend("/topic/tenant." + tenantId + ".announcements", payload);
+        } else {
+            messagingTemplate.convertAndSend("/topic/department." + payload.get("targetDepartmentId") + ".announcements", payload);
+        }
+        return ResponseEntity.ok().build();
+    }
+
 }
