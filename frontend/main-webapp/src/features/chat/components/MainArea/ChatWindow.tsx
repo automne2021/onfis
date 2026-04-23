@@ -58,7 +58,6 @@ export function ChatWindow({ activeChannelId, currentChannel, onRefreshChannels 
       .finally(() => setIsProfileLoading(false));
   }, [user?.id, isAuthLoading]);
 
-  // Hàm xử lý Pin nằm ở Component cha
   const handleTogglePin = async () => {
     if (!activeChannelId) return;
     try {
@@ -79,12 +78,11 @@ export function ChatWindow({ activeChannelId, currentChannel, onRefreshChannels 
       currentChannel={currentChannel}
       user={user as AuthUser} 
       dbUser={dbUser}
-      onTogglePin={handleTogglePin} // 2. SỬA: Truyền hàm này xuống component con
+      onTogglePin={handleTogglePin} 
     />
   );
 }
 
-// 3. SỬA: Thêm onTogglePin vào Interface của Component con
 interface ChatWindowContentProps {
   activeChannelId: string;
   currentChannel: ChatChannel | null;

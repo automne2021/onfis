@@ -66,4 +66,9 @@ export const announcementApi = {
     const response = await api.get(`/announcements/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`);
     return response.data;
   },
+
+  getMyDraft: async () => {
+    const response = await api.get('/announcements/draft');
+    return response.data; 
+  },
 }

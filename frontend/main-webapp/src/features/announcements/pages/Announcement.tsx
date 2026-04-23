@@ -213,10 +213,12 @@ export function Announcement() {
             <Suspense fallback={<AnnouncementFormLoading />}>
               <AnnouncementForm 
                 onClose={handleToggleAddForm} 
-                onSuccess={() => {
-                  setCurrentPage(0); 
-                  fetchMyAnnouncements();
-                }} 
+                onSuccess={(status) => {
+                  if (status === 'PUBLISHED') {
+                    setCurrentPage(0); 
+                    fetchMyAnnouncements();
+                  }
+                }}
               />
             </Suspense>
           </div>

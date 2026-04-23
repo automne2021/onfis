@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -123,7 +124,6 @@ public class AnnouncementService {
         return dto;
     }
 
-    // 🌟 SỬA LỖI 3: Đồng nhất UUID tenantId = UUID.fromString(companyIdStr);
     public Page<AnnouncementDTO> getAllAnnouncements(String token, String companyIdStr, UUID currentUserId, Pageable pageable) {
         if (companyIdStr == null || companyIdStr.isBlank()) return Page.empty();
         UUID tenantId = UUID.fromString(companyIdStr);
@@ -131,7 +131,7 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantId(tenantId, pageable)
+        return announcementRepository.findByTenantIdAndStatus(tenantId, "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 
@@ -140,7 +140,7 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantIdAndIsPinnedTrue(tenantId, pageable)
+        return announcementRepository.findByTenantIdAndIsPinnedTrueAndStatus(tenantId, "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 
@@ -149,7 +149,7 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantIdAndTargetDepartmentIdIsNull(tenantId, pageable)
+        return announcementRepository.findByTenantIdAndTargetDepartmentIdIsNullAndStatus(tenantId, "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 
@@ -172,7 +172,7 @@ public class AnnouncementService {
             Map<UUID, UserResponseDTO> userCache = new HashMap<>();
             Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
             
-            return announcementRepository.findByTenantIdAndTargetDepartmentId(tenantId, myDepartmentId, pageable)
+            return announcementRepository.findByTenantIdAndTargetDepartmentIdAndStatus(tenantId, myDepartmentId, "PUBLISHED", pageable)
                     .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
                     
         } catch (Exception e) {
@@ -358,31 +358,29 @@ public class AnnouncementService {
         UUID tenantId = UUID.fromString(companyIdStr);
         UUID targetDeptId = null;
 
-        if ("department".equalsIgnoreCase(request.getScope())) {
+        if ("department".equalsIgnoreCase(request.getScope()) && request.getDepartments() != null) {
             try {
-                String deptsJson = request.getDepartments();
-                if (deptsJson != null && !deptsJson.isBlank() && !deptsJson.equals("[]")) {
-                    
-                    // 🌟 KHÔNG new ObjectMapper() nữa, dùng biến được Inject ở trên
-                    List<String> deptIds = objectMapper.readValue(deptsJson, new TypeReference<List<String>>() {});
-                    if (!deptIds.isEmpty()) {
-                        targetDeptId = UUID.fromString(deptIds.get(0));
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Lỗi parse chuỗi JSON departments: {}", e.getMessage());
-            }
+                List<String> deptIds = objectMapper.readValue(request.getDepartments(), new TypeReference<List<String>>() {});
+                if (!deptIds.isEmpty()) targetDeptId = UUID.fromString(deptIds.get(0));
+            } catch (Exception e) { log.error("Lỗi parse JSON"); }
         }
 
-        Announcement announcement = Announcement.builder()
-                .tenantId(tenantId)
-                .authorId(authorId)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .isPinned(request.getIsPinned() != null ? request.getIsPinned() : false)
-                .targetDepartmentId(targetDeptId)
-                .build();
-        
+        Announcement announcement;
+        if (request.getId() != null) {
+            announcement = announcementRepository.findById(request.getId())
+                    .orElse(new Announcement());
+        } else {
+            announcement = new Announcement();
+            announcement.setTenantId(tenantId);
+            announcement.setAuthorId(authorId);
+        }
+
+        announcement.setTitle(request.getTitle());
+        announcement.setContent(request.getContent());
+        announcement.setPinned(request.getIsPinned() != null ? request.getIsPinned() : false);
+        announcement.setTargetDepartmentId(targetDeptId);
+        announcement.setStatus(request.getStatus().toUpperCase());
+
         announcement = announcementRepository.save(announcement);
 
         if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
@@ -405,6 +403,16 @@ public class AnnouncementService {
         return convertToDTO(token, companyIdStr, announcement, authorId);
     }
 
+    public AnnouncementDetailDTO getMyLatestDraft(String token, String companyIdStr, UUID userId) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+        Optional<Announcement> draftOpt = announcementRepository.findFirstByTenantIdAndAuthorIdAndStatusOrderByCreatedAtDesc(tenantId, userId, "DRAFT");
+        
+        if (draftOpt.isPresent()) {
+            return getAnnouncementById(token, companyIdStr, draftOpt.get().getId(), userId);
+        }
+        return null; // Không có nháp
+    }
+
     public Page<AnnouncementDTO> searchAnnouncements(String token, String companyIdStr, String keyword, UUID currentUserId, Pageable pageable) {
         if (companyIdStr == null || companyIdStr.isBlank() || keyword == null || keyword.trim().isEmpty()) {
             return Page.empty();
@@ -414,7 +422,42 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantIdAndTitleContainingIgnoreCase(tenantId, keyword.trim(), pageable)
+        return announcementRepository.findByTenantIdAndTitleContainingIgnoreCaseAndStatus(tenantId, keyword.trim(), "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
+    }
+
+    public AttachmentResponseDTO uploadStandaloneFile(String companyIdStr, UUID uploaderId, MultipartFile file) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+        String actualFileUrl = supabaseStorageService.uploadFile(file);
+
+        Attachment attachment = Attachment.builder()
+                .tenantId(tenantId)
+                // Không set announcementId vì file này dùng cho chat
+                .name(file.getOriginalFilename())
+                .fileType(file.getContentType())
+                .size((int) file.getSize())
+                .fileUrl(actualFileUrl)
+                .uploadedBy(uploaderId)
+                .build();
+
+        attachment = attachmentRepository.save(attachment);
+
+        return AttachmentResponseDTO.builder()
+                .id(attachment.getId())
+                .fileName(attachment.getName())
+                .url(attachment.getFileUrl())
+                .size(attachment.getSize())
+                .build();
+    }
+
+    public AttachmentResponseDTO getAttachmentById(UUID id) {
+        Attachment a = attachmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy file"));
+        return AttachmentResponseDTO.builder()
+                .id(a.getId())
+                .fileName(a.getName())
+                .url(a.getFileUrl())
+                .size(a.getSize())
+                .build();
     }
 }

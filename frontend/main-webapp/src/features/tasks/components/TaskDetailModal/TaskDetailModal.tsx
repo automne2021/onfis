@@ -13,7 +13,7 @@ import {
   CalendarSmallIcon,
 } from "../../../../components/common/Icons";
 import Button from "../../../../components/common/Button";
-import { useAuth } from "../../../../contexts/AuthContext";
+import { useAuth } from "../../../../hooks/useAuth";
 import { useToast } from "../../../../contexts/useToast";
 import { useRole } from "../../../../hooks/useRole";
 import { RichTextEditor } from "../../../../components/common";
@@ -269,13 +269,13 @@ export default function TaskDetailModal({
   const [showBlockedPrompt, setShowBlockedPrompt] = useState(false);
   const [blockedReasonDraft, setBlockedReasonDraft] = useState("");
   const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
-  const { currentUser } = useAuth();
+  const { dbUser: currentUser } = useAuth();
   const { showToast } = useToast();
   const { isManager, isEmployee } = useRole();
 
   // Determine role-based permissions
-  const isAssignee = task.assignees.some((a) => a.id === currentUser.id);
-  const isReporter = task.reporterId === currentUser.id;
+  const isAssignee = task.assignees.some((a) => a.id === currentUser?.id);
+  const isReporter = task.reporterId === currentUser?.id;
   const isInReview = task.status === "IN_REVIEW";
   const canReview = isInReview && (isReporter || isManager);
   const isLockedForAssignee = isInReview && isAssignee && !isReporter && !isManager;
@@ -338,9 +338,9 @@ export default function TaskDetailModal({
   const handleApprove = useCallback(() => {
     const newReview: ReviewComment = {
       id: `rc-${Date.now()}`,
-      authorId: currentUser.id,
-      authorName: currentUser.name,
-      authorAvatar: currentUser.avatar,
+      authorId: currentUser?.id || "",
+      authorName: currentUser?.name || "N/A",
+      authorAvatar: currentUser?.avatar,
       action: "approved",
       content: "",
       createdAt: "Just now",
@@ -356,9 +356,9 @@ export default function TaskDetailModal({
     (reason: string) => {
       const newReview: ReviewComment = {
         id: `rc-${Date.now()}`,
-        authorId: currentUser.id,
-        authorName: currentUser.name,
-        authorAvatar: currentUser.avatar,
+        authorId: currentUser?.id || '',
+        authorName: currentUser?.name || "N/A",
+        authorAvatar: currentUser?.avatar,
         action: "changes_requested",
         content: reason,
         createdAt: "Just now",

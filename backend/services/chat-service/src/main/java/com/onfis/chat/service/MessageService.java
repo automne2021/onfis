@@ -1,6 +1,8 @@
 package com.onfis.chat.service;
 
+import com.onfis.chat.client.AttachmentClient;
 import com.onfis.chat.client.UserClient;
+import com.onfis.chat.dto.AttachmentResponseDTO;
 import com.onfis.chat.dto.ChatMessageRequestDTO;
 import com.onfis.chat.dto.ChatMessageResponseDTO;
 import com.onfis.chat.dto.UserResponseDTO;
@@ -27,6 +29,7 @@ public class MessageService {
     private final ConversationMemberRepository memberRepository;
     private final RedisPublisher redisPublisher;
     private final UserClient userClient; 
+    private final AttachmentClient attachmentClient; // Khai báo đúng tên
     private final ConversationRepository conversationRepository;
 
     @Transactional
@@ -93,6 +96,74 @@ public class MessageService {
                 .updatedAt(savedMessage.getUpdatedAt())
                 .build();
 
+        if (savedMessage.getAttachmentId() != null) {
+            try {
+                String bearerToken = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                AttachmentResponseDTO fileData = attachmentClient.getAttachmentById(bearerToken, tenantId.toString(), savedMessage.getAttachmentId());
+                if (fileData != null) {
+                    response.setFileUrl(fileData.getUrl());
+                    response.setFileName(fileData.getFileName());
+                    response.setFileSize(fileData.getSize());
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi Feign lấy thông tin file ID {}: {}", savedMessage.getAttachmentId(), e.getMessage());
+            }
+        }
+
         redisPublisher.publish(response);
+    }
+
+    public ChatMessageResponseDTO convertToDTO(ChatMessage message, String token, String companyIdStr) {
+        
+        String fullName = "Unknown User";
+        String avatar = null;
+        String currentStatus = "offline"; 
+        
+        try {
+            String bearerToken = token.startsWith("Bearer ") ? token : "Bearer " + token;
+            UserResponseDTO sender = userClient.getUserProfile(bearerToken, companyIdStr, message.getUserId());
+            
+            if (sender != null) {
+                String fName = sender.firstName() != null ? sender.firstName() : "";
+                String lName = sender.lastName() != null ? sender.lastName() : "";
+                fullName = (fName + " " + lName).trim();
+                avatar = sender.avatarUrl();
+                currentStatus = sender.status() != null ? sender.status() : "offline";
+            }
+        } catch (Exception e) {
+            log.warn("Không thể lấy thông tin user {}: {}", message.getUserId(), e.getMessage());
+        }
+
+        ChatMessageResponseDTO.ChatMessageResponseDTOBuilder responseBuilder = ChatMessageResponseDTO.builder()
+                .id(message.getId())
+                .conversationId(message.getConversationId())
+                .userId(message.getUserId())
+                .senderName(fullName)
+                .senderAvatar(avatar)
+                .senderStatus(currentStatus) 
+                .content(message.getContent())
+                .type(message.getType())
+                .isEdited(message.isEdited())
+                .attachmentId(message.getAttachmentId())
+                .parentId(message.getParentId())
+                .createdAt(message.getCreatedAt() != null ? message.getCreatedAt() : java.time.ZonedDateTime.now())
+                .updatedAt(message.getUpdatedAt());
+
+        // 3. Gọi qua announcement-service lấy thông tin File
+        if (message.getAttachmentId() != null) {
+            try {
+                AttachmentResponseDTO fileData = attachmentClient.getAttachmentById(token, companyIdStr, message.getAttachmentId());
+                if (fileData != null) {
+                    responseBuilder.fileUrl(fileData.getUrl());
+                    responseBuilder.fileName(fileData.getFileName());
+                    responseBuilder.fileSize(fileData.getSize());
+                }
+            } catch (Exception e) {
+                log.warn("Lỗi khi lấy thông tin file từ announcement-service cho attachment_id: {}", message.getAttachmentId());
+                responseBuilder.fileName("File bị lỗi hoặc đã xóa");
+            }
+        }
+
+        return responseBuilder.build();
     }
 }

@@ -19,13 +19,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
             try {
-                console.log("Starting to fetch DB user for ID:", supabaseUser.id);
+                // console.log("Starting to fetch DB user for ID:", supabaseUser.id);
                 const me = await getCurrentUser();
-                console.log("Fetch DB user success:", me);
+                // console.log("Fetch DB user success:", me);
                 if (mounted) {
                     setDbUser({
                         id: me.id,
-                        name: me.name,
+                        name: `${me.firstName || ''} ${me.lastName || ''}`.trim() || "N/A",
                         avatar: undefined,
                         role: me.role as UserRole,
                         permissions: me.permissions || [],

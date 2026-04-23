@@ -72,7 +72,12 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
             type: (msg.type === 'meeting' || msg.type === 'MEETING') ? 'meeting' : (msg.type.toLowerCase() as MessageType),
             content: msg.content || "",
             meeting: msg.meeting || undefined,
-            file: msg.attachmentId ? { name: "Attached File", size: "Unknown", type: "unknown", url: "#" } : undefined
+            file: msg.attachmentId ? { 
+                name: msg.fileName || "Attached File", 
+                size: msg.fileSize ? `${(msg.fileSize / (1024 * 1024)).toFixed(2)} MB` : "Unknown size", 
+                type: "unknown", 
+                url: msg.fileUrl || "#" 
+            } : undefined
           };
         });
 
@@ -168,9 +173,14 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
             id: newMsg.id,
             channelId: newMsg.conversationId,
             content: newMsg.content || (isMeeting ? "Started a meeting" : ""),
-            type: (isMeeting ? 'meeting' : newMsg.type === 'TEXT' ? 'text' : 'file') as MessageType,
-            meeting: newMsg.meeting ? newMsg.meeting : undefined, 
-            
+            type: (isMeeting ? 'meeting' : newMsg.attachmentId ? 'file' : 'text') as MessageType,
+            meeting: newMsg.meeting ? newMsg.meeting : undefined,
+            file: newMsg.attachmentId ? { 
+                name: newMsg.fileName || "Attached File", 
+                size: newMsg.fileSize ? `${(newMsg.fileSize / (1024 * 1024)).toFixed(2)} MB` : "Unknown size", 
+                type: "unknown", 
+                url: newMsg.fileUrl || "#" 
+            } : undefined,
             timestamp: timeString,
             dateSeparator: newDateSeparator,
             sender: resolveSenderInfo(newMsg)

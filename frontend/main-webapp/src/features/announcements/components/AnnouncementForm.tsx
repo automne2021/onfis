@@ -14,7 +14,7 @@ import type { FullUserProfile } from '../../../types/userType';
 
 interface AnnouncementFormProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (status: 'DRAFT' | 'PUBLISHED') => void;
 }
 
 export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) {
@@ -31,10 +31,28 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
   const [messageContent, setMessageContent] = useState<string | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
-  
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDraft = async () => {
+      try {
+        const draft = await announcementApi.getMyDraft();
+        if (draft && draft.id) {
+          setDraftId(draft.id);
+          setTitle(draft.title || '');
+          setMessageContent(draft.content || '');
+          setIsPinned(draft.isPinned || false);
+          setSelectedOption(draft.scope || 'company');
+        }
+      } catch (error: unknown) {
+        console.error("No draft found or error fetching draft: ", error);
+      }
+    };
+    fetchDraft();
+  }, []);
 
   useEffect(() => {
     if (user?.id) {
@@ -45,7 +63,7 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
             setIsAdmin(true);
           }
         })
-        .catch((err: unknown) => { // Thay any bằng unknown
+        .catch((err: unknown) => { 
         console.error("Failed to fetch user role:", err);
       });
     }
@@ -75,12 +93,12 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     if (formError) setFormError(null); 
   }, [formError]);
 
-  const submitAnnouncement = async (status: 'draft' | 'published') => {
+  const submitAnnouncement = async (status: 'DRAFT' | 'PUBLISHED') => {
     setFormError(null); 
     
     const cleanContent = messageContent ? messageContent.replace(/<\/?p[^>]*>/g, "") : '';
 
-    if (status === 'published') {
+    if (status === 'PUBLISHED') {
       const newErrors: { title?: string; content?: string } = {};
 
       if (!title.trim()) {
@@ -98,8 +116,12 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     }
 
     setIsSubmitting(true);
-
     const formData = new FormData();
+
+    if (draftId) {
+      formData.append('id', draftId); 
+    }
+
     formData.append('title', title);
     formData.append('content', cleanContent.trim());
     formData.append('scope', selectedOption);
@@ -119,18 +141,17 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     try {
       await announcementApi.createAnnouncement(formData);
 
-      toast.success(status === 'published' ? "Announcement published successfully!" : "Draft saved successfully!", {
-        position: "top-right",
-        autoClose: 1500,
-      });
+      toast.success(status === 'PUBLISHED' ? "Published successfully!" : "Draft saved!")
       
-      if (onSuccess) {
-        onSuccess();
+      if (status === 'PUBLISHED') {
+          setDraftId(null);
       }
+
+      if (onSuccess) onSuccess(status);
       onClose();
-    } catch (error) {
-      console.error("Failed to process announcement", error);
-      setFormError("An error occurred while saving the announcement. Please check your connection or try again later.");
+    } catch (error: unknown) {
+      console.error(error);
+      setFormError("An error occurred while saving. Please try again: ");
     } finally {
       setIsSubmitting(false);
     }
@@ -276,12 +297,12 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
       <div className='py-2 border-t border-neutral-200 flex items-center justify-end gap-2 px-4'>
         <Button
           title='Save as Draft'
-          onClick={() => submitAnnouncement('draft')}
+          onClick={() => submitAnnouncement('DRAFT')}
           style='sub'
         />
         <Button
           title='Publish Now'
-          onClick={() => submitAnnouncement('published')}
+          onClick={() => submitAnnouncement('PUBLISHED')}
           style='primary'
           loading={isSubmitting}
         />

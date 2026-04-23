@@ -15,8 +15,6 @@ export function useRole(): UseRoleReturn {
 
     const role = dbUser?.role || null;
 
-    console.log(role)
-
     return {
         role,
         isManager: role === "MANAGER",

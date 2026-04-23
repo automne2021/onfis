@@ -26,6 +26,7 @@ app:
     secret: ${JWT_SECRET}
     services:
       user: ${USER_SERVICE_URL:http://onfis-user-service:8081}
+      announcement: ${ANNOUNCEMENT_SERVICE_URL:http://onfis-user-service:8086}
 livekit:
   api-key: ${LIVEKIT_API_KEY}
   api-secret: ${LIVEKIT_API_SECRET}

@@ -68,6 +68,9 @@ export interface BackendMessageDTO {
   createdAt: string;
   updatedAt: string | null;
   meeting?: MeetingData | null;
+  fileName?: string;
+  fileSize?: number;
+  fileUrl?: string;
 }
 
 export interface ActionModalState {
