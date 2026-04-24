@@ -7,14 +7,6 @@ interface DelegationFormProps {
   onCancel: () => void;
 }
 
-const TYPES: { value: ExecutiveRequest["type"]; label: string; icon: string }[] = [
-  { value: "TASK_DELEGATION", label: "Giao việc", icon: "📋" },
-  { value: "APPROVAL_REQUEST", label: "Phê duyệt", icon: "✅" },
-  { value: "POLICY_DIRECTIVE", label: "Chỉ thị", icon: "📜" },
-  { value: "RESOURCE_REQUEST", label: "Yêu cầu nguồn lực", icon: "📦" },
-  { value: "OTHER", label: "Khác", icon: "📌" },
-];
-
 const PRIORITIES: { value: ExecutiveRequest["priority"]; label: string; color: string }[] = [
   { value: "URGENT", label: "Khẩn cấp", color: "bg-red-100 text-red-700 border-red-200" },
   { value: "HIGH", label: "Cao", color: "bg-orange-100 text-orange-700 border-orange-200" },
@@ -24,7 +16,6 @@ const PRIORITIES: { value: ExecutiveRequest["priority"]; label: string; color: s
 
 export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: DelegationFormProps) {
   const [form, setForm] = useState<CreateExecutiveRequest>({
-    type: "TASK_DELEGATION",
     title: "",
     description: "",
     priority: "HIGH",
@@ -55,27 +46,6 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
         </button>
-      </div>
-
-      {/* Type selector */}
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-neutral-700">Loại yêu cầu</label>
-        <div className="flex flex-wrap gap-2">
-          {TYPES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setForm({ ...form, type: t.value })}
-              className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1.5
-                ${form.type === t.value
-                  ? "bg-indigo-50 border-indigo-300 text-indigo-700 ring-2 ring-indigo-200"
-                  : "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-                }`}
-            >
-              <span>{t.icon}</span> {t.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Title */}

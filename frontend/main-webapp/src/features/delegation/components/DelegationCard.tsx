@@ -5,14 +5,6 @@ interface DelegationCardProps {
   onStatusChange?: (id: string, status: ExecutiveRequest["status"]) => void;
 }
 
-const typeLabels: Record<ExecutiveRequest["type"], { label: string; icon: string }> = {
-  TASK_DELEGATION: { label: "Giao việc", icon: "📋" },
-  APPROVAL_REQUEST: { label: "Phê duyệt", icon: "✅" },
-  POLICY_DIRECTIVE: { label: "Chỉ thị", icon: "📜" },
-  RESOURCE_REQUEST: { label: "Nguồn lực", icon: "📦" },
-  OTHER: { label: "Khác", icon: "📌" },
-};
-
 const statusConfig: Record<ExecutiveRequest["status"], { label: string; color: string }> = {
   PENDING: { label: "Chờ xử lý", color: "bg-amber-100 text-amber-700" },
   IN_PROGRESS: { label: "Đang xử lý", color: "bg-blue-100 text-blue-700" },
@@ -28,7 +20,6 @@ const priorityConfig: Record<ExecutiveRequest["priority"], { label: string; dot:
 };
 
 export default function DelegationCard({ request, onStatusChange }: DelegationCardProps) {
-  const type = typeLabels[request.type];
   const status = statusConfig[request.status];
   const priority = priorityConfig[request.priority];
 
@@ -46,8 +37,8 @@ export default function DelegationCard({ request, onStatusChange }: DelegationCa
     <div className="bg-white rounded-xl border border-neutral-200/80 p-5 hover:shadow-md transition-all card-hover">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{type.icon}</span>
-          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{type.label}</span>
+          <div className={`w-2.5 h-2.5 rounded-full ${priority.dot}`} />
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{priority.label}</span>
         </div>
         <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${status.color}`}>
           {status.label}
@@ -62,10 +53,6 @@ export default function DelegationCard({ request, onStatusChange }: DelegationCa
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${priority.dot}`} />
-            <span className="text-[11px] text-neutral-500">{priority.label}</span>
-          </div>
           {request.targetRole && (
             <span className="text-[11px] text-neutral-400">
               → {request.targetRole === "ADMIN" ? "Admin" : "Manager"}

@@ -4,7 +4,8 @@ import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import { PersonIcon, LockIcon, PasskeyIcon } from "../../../components/common/Icons";
 import logo from "../../../assets/logo-without-text.svg";
-import { signInWithPassword } from "../../../services/auth";
+import { signInWithPassword, signOut } from "../../../services/auth";
+import { supabase } from "../../../services/supabaseClient";
 
 export default function SignInPage() {
   const navigate = useNavigate();
@@ -26,7 +27,35 @@ export default function SignInPage() {
     }
 
     try {
-      await signInWithPassword(email, password);
+      const { user } = await signInWithPassword(email, password);
+
+      // Validate that the user belongs to the tenant in the URL
+      if (user) {
+        const { data: tenantRow } = await supabase
+          .from("tenants")
+          .select("id")
+          .eq("slug", tenant)
+          .single();
+
+        if (!tenantRow) {
+          await signOut();
+          setErrorMessage("Công ty không tồn tại.");
+          return;
+        }
+
+        const { data: userRow } = await supabase
+          .from("users")
+          .select("tenant_id")
+          .eq("id", user.id)
+          .single();
+
+        if (!userRow || userRow.tenant_id !== tenantRow.id) {
+          await signOut();
+          setErrorMessage("Tài khoản không thuộc công ty này. Vui lòng kiểm tra lại đường dẫn.");
+          return;
+        }
+      }
+
       navigate(`/${tenant}/dashboard`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Sign in failed";

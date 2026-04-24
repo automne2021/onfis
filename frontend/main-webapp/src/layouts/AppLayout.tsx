@@ -17,6 +17,7 @@ export default function AppLayout() {
   const { tenant } = useParams<{ tenant: string }>();
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [tenantMismatch, setTenantMismatch] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
   // Scroll main content to top on route change
@@ -32,8 +33,38 @@ export default function AppLayout() {
       if (!mounted) {
         return;
       }
-      setIsAuthenticated(Boolean(data.session?.access_token));
-      setCheckedAuth(true);
+
+      const hasSession = Boolean(data.session?.access_token);
+      setIsAuthenticated(hasSession);
+
+      // Validate tenant membership for authenticated users
+      if (hasSession && data.session?.user && tenant) {
+        try {
+          const { data: tenantRow } = await supabase
+            .from("tenants")
+            .select("id")
+            .eq("slug", tenant)
+            .single();
+
+          const { data: userRow } = await supabase
+            .from("users")
+            .select("tenant_id")
+            .eq("id", data.session.user.id)
+            .single();
+
+          if (!tenantRow || !userRow || userRow.tenant_id !== tenantRow.id) {
+            await supabase.auth.signOut();
+            if (mounted) {
+              setTenantMismatch(true);
+              setIsAuthenticated(false);
+            }
+          }
+        } catch {
+          // If validation fails, allow access (don't lock out users due to network issues)
+        }
+      }
+
+      if (mounted) setCheckedAuth(true);
     };
 
     void checkSession();
@@ -47,13 +78,13 @@ export default function AppLayout() {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [tenant]);
 
   if (!checkedAuth) {
     return <div className="h-screen bg-neutral-50" />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || tenantMismatch) {
     return <Navigate to={`/${tenant ?? ""}/auth/login`} replace />;
   }
 

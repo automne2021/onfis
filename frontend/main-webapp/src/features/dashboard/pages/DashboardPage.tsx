@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Navigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
 import ProjectTable from "../components/ProjectTable";
 import RecentActivities from "../components/RecentActivities";
@@ -6,6 +7,7 @@ import { PieChart, BarChart, LineChart } from "../components/Charts";
 import { FolderIcon, TaskIcon, CalendarClockIcon as CalendarIcon } from "../../../components/common/Icons";
 import { useRole } from "../../../hooks/useRole";
 import { useAuth } from "../../../hooks/useAuth";
+import { useTenantPath } from "../../../hooks/useTenantPath";
 import { listProjects, getProjectMembers, type ApiProject } from "../../../services/projectService";
 import { listMyTasks, type ApiTask } from "../../../services/taskService";
 import { getTimeAgo, formatVNDate } from "../../../utils/getTime";
@@ -14,7 +16,13 @@ const WORKLOAD_COLORS = ["#0B68F7", "#00A63E", "#FF6900", "#8B5CF6", "#EC4899", 
 
 export default function DashboardPage() {
   const { dbUser: currentUser, isLoading: isAuthLoading } = useAuth();
-  const { isManager } = useRole();
+  const { isManager, isSuperAdmin } = useRole();
+  const { withTenant } = useTenantPath();
+
+  // SUPER_ADMIN should be redirected to the leader dashboard
+  if (!isAuthLoading && isSuperAdmin) {
+    return <Navigate to={withTenant("/leader-dashboard")} replace />;
+  }
 
   const [projects, setProjects] = useState<ApiProject[]>([]);
   const [assignedTasks, setAssignedTasks] = useState<ApiTask[]>([]);

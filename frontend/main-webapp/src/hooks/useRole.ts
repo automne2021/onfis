@@ -19,7 +19,7 @@ export function useRole(): UseRoleReturn {
     return {
         role,
         isSuperAdmin: role === "SUPER_ADMIN",
-        isManager: role === "MANAGER",
+        isManager: role === "MANAGER" || role === "SUPER_ADMIN",
         isAdmin: role === "ADMIN" || role === "SUPER_ADMIN",
         isEmployee: role === "EMPLOYEE",
         permissions: dbUser?.permissions || [],

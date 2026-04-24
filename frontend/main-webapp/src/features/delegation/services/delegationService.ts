@@ -3,7 +3,6 @@ export interface ExecutiveRequest {
   tenantId: string;
   createdBy: string;
   assignedTo: string | null;
-  type: "TASK_DELEGATION" | "APPROVAL_REQUEST" | "POLICY_DIRECTIVE" | "RESOURCE_REQUEST" | "OTHER";
   title: string;
   description: string;
   priority: "URGENT" | "HIGH" | "MEDIUM" | "LOW";
@@ -15,7 +14,6 @@ export interface ExecutiveRequest {
 }
 
 export interface CreateExecutiveRequest {
-  type: ExecutiveRequest["type"];
   title: string;
   description: string;
   assignedTo?: string;
@@ -60,7 +58,6 @@ export const delegationService = {
         tenant_id: dbUser.tenant_id,
         created_by: user.id,
         assigned_to: req.assignedTo || null,
-        type: req.type,
         title: req.title,
         description: req.description,
         priority: req.priority,
@@ -97,7 +94,6 @@ function mapSnakeToCamel(row: Record<string, unknown>): ExecutiveRequest {
     tenantId: row.tenant_id as string,
     createdBy: row.created_by as string,
     assignedTo: row.assigned_to as string | null,
-    type: row.type as ExecutiveRequest["type"],
     title: row.title as string,
     description: (row.description || "") as string,
     priority: row.priority as ExecutiveRequest["priority"],

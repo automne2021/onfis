@@ -212,7 +212,7 @@ export default function Sidebar() {
   ];
 
   const navItems: Omit<NavItemProps, "isCollapsed">[] = [
-    { to: withTenant("/dashboard"), icon: "dashboard", label: "Dashboard" },
+    { to: withTenant(isSuperAdmin ? "/leader-dashboard" : "/dashboard"), icon: "dashboard", label: "Dashboard" },
     { to: withTenant("/announcements"), icon: "campaign", label: "Announce" },
     { to: withTenant("/discuss"), icon: "forum", label: "Discuss" },
     { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
