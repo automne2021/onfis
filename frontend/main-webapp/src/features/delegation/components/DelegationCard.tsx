@@ -19,6 +19,17 @@ const priorityConfig: Record<ExecutiveRequest["priority"], { label: string; dot:
   LOW: { label: "Thấp", dot: "bg-neutral-400" },
 };
 
+function getInitials(firstName: string | null, lastName: string | null): string {
+  const f = firstName?.charAt(0)?.toUpperCase() || "";
+  const l = lastName?.charAt(0)?.toUpperCase() || "";
+  return f + l || "?";
+}
+
+function getFullName(user: { firstName: string | null; lastName: string | null; email: string }): string {
+  const parts = [user.lastName, user.firstName].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : user.email;
+}
+
 export default function DelegationCard({ request, onStatusChange }: DelegationCardProps) {
   const status = statusConfig[request.status];
   const priority = priorityConfig[request.priority];
@@ -51,9 +62,44 @@ export default function DelegationCard({ request, onStatusChange }: DelegationCa
         <p className="text-xs text-neutral-500 leading-relaxed mb-3 line-clamp-2">{request.description}</p>
       )}
 
+      {/* Assignees */}
+      {request.assignees && request.assignees.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[11px] text-neutral-400 flex-shrink-0">→</span>
+          <div className="flex items-center -space-x-1.5">
+            {request.assignees.slice(0, 4).map((user) => (
+              <div
+                key={user.id}
+                title={`${getFullName(user)} (${user.role})`}
+                className="w-6 h-6 rounded-full border-2 border-white flex-shrink-0"
+              >
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-700 flex items-center justify-center text-[8px] font-bold">
+                    {getInitials(user.firstName, user.lastName)}
+                  </div>
+                )}
+              </div>
+            ))}
+            {request.assignees.length > 4 && (
+              <div className="w-6 h-6 rounded-full border-2 border-white bg-neutral-100 flex items-center justify-center text-[8px] font-bold text-neutral-500 flex-shrink-0">
+                +{request.assignees.length - 4}
+              </div>
+            )}
+          </div>
+          <span className="text-[11px] text-neutral-500 truncate">
+            {request.assignees.length === 1
+              ? getFullName(request.assignees[0])
+              : `${request.assignees.length} người được giao`}
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {request.targetRole && (
+          {/* Fallback: show targetRole if no assignees */}
+          {(!request.assignees || request.assignees.length === 0) && request.targetRole && (
             <span className="text-[11px] text-neutral-400">
               → {request.targetRole === "ADMIN" ? "Admin" : "Manager"}
             </span>
