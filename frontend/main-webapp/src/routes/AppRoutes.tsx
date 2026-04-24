@@ -1,12 +1,22 @@
 import { createBrowserRouter, createRoutesFromElements, Route, Navigate } from 'react-router-dom';
 import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
+import SetupLayout from '../layouts/SetupLayout';
 
 // Auth
 import SignInPage from '../features/auth/pages/SignInPage';
 
+// Setup Wizard
+import SetupWizardPage from '../features/setup/pages/SetupWizardPage';
+
 // Dashboard
 import { DashboardPage } from '../features/dashboard';
+
+// Leader Dashboard
+import LeaderDashboardPage from '../features/leader-dashboard/pages/LeaderDashboardPage';
+
+// Delegation
+import DelegationPage from '../features/delegation/pages/DelegationPage';
 
 // Announcements (existing)
 import { Announcement } from '../features/announcements/pages/Announcement';
@@ -51,10 +61,18 @@ export const router = createBrowserRouter(
           <Route path="register" element={<PlaceholderPage title="Register" />} />
         </Route>
 
+        {/* Setup Wizard Routes (full-screen, no sidebar) */}
+        <Route path="setup" element={<SetupLayout />}>
+          <Route index element={<SetupWizardPage />} />
+        </Route>
+
         {/* App Routes (with sidebar/header) */}
         <Route path="" element={<AppLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="leader-dashboard" element={<LeaderDashboardPage />} />
+
+          <Route path="delegation" element={<DelegationPage />} />
 
           <Route path="announcements">
             <Route index element={<Announcement />} />

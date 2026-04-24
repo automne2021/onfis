@@ -3,6 +3,7 @@ import type { UserRole } from "./useAuth";
 
 interface UseRoleReturn {
     role: UserRole | null;
+    isSuperAdmin: boolean;
     isManager: boolean;
     isAdmin: boolean;
     isEmployee: boolean;
@@ -15,10 +16,9 @@ export function useRole(): UseRoleReturn {
 
     const role = dbUser?.role || null;
 
-    console.log(role)
-
     return {
         role,
+        isSuperAdmin: role === "SUPER_ADMIN",
         isManager: role === "MANAGER",
         isAdmin: role === "ADMIN" || role === "SUPER_ADMIN",
         isEmployee: role === "EMPLOYEE",

@@ -33,7 +33,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
             } catch (error) {
                 console.error("Failed to load project user profile:", error);
-                if (mounted) setDbUser(null);
+                // Fallback: read role from Supabase user metadata
+                // This allows the UI to function when the backend API is unavailable
+                const meta = supabaseUser.user_metadata;
+                if (mounted && meta?.role) {
+                    console.warn("Using Supabase metadata fallback for role:", meta.role);
+                    setDbUser({
+                        id: supabaseUser.id,
+                        name: meta.username || supabaseUser.email?.split("@")[0] || "User",
+                        avatar: undefined,
+                        role: meta.role as UserRole,
+                        permissions: [],
+                    });
+                } else if (mounted) {
+                    setDbUser(null);
+                }
             }
         };
 

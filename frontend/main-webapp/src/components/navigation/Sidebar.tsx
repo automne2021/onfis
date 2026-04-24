@@ -202,7 +202,7 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { withTenant } = useTenantPath();
-  const { isManager } = useRole();
+  const { isManager, isSuperAdmin } = useRole();
 
   const projectSubItems: SubItem[] = [
     { to: withTenant("/projects"), label: "All Projects", icon: "view_kanban" },
@@ -216,6 +216,7 @@ export default function Sidebar() {
     { to: withTenant("/announcements"), icon: "campaign", label: "Announce" },
     { to: withTenant("/discuss"), icon: "forum", label: "Discuss" },
     { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
+    ...(isSuperAdmin ? [{ to: withTenant("/delegation"), icon: "assignment_ind", label: "Delegate" }] : []),
   ];
 
   return (
@@ -262,7 +263,7 @@ export default function Sidebar() {
       <div className={`h-px bg-neutral-100 transition-all duration-300 ${isCollapsed ? "w-8" : "w-full"}`} />
 
       {/* Settings Button */}
-      {isManager && (
+      {(isManager || isSuperAdmin) && (
         <NavItem
           to={withTenant("/settings")}
           icon="settings"
