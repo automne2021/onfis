@@ -113,8 +113,8 @@ export default function PositionStep({ departments, positions, onUpdate, onNext,
                   onChange={(e) => setCustomInputs({ ...customInputs, [dept]: e.target.value })}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomPosition(dept); } }}
                   placeholder="Thêm vị trí khác..."
-                  className="flex-1 px-3 py-2 rounded-lg bg-white/8 border border-white/15 text-sm text-white placeholder-white/25
-                             focus:outline-none focus:border-blue-400 transition-all"
+                  className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-sm text-white placeholder-white/30
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 transition-all"
                 />
                 <button type="button" onClick={() => addCustomPosition(dept)} className="px-4 py-2 rounded-lg bg-white/10 text-white/60 text-xs font-medium hover:bg-white/15 transition-all">
                   +

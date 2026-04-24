@@ -148,9 +148,9 @@ export default function SetupWizardPage() {
       {currentStep === "welcome" ? (
         <WelcomeStep onNext={() => setCurrentStep(1)} />
       ) : (
-        <div className="flex-1 flex flex-col py-8 px-6">
+        <div className="flex-1 flex flex-col py-8 px-6 overflow-hidden">
           {/* Step indicator at top */}
-          <div className="mb-10">
+          <div className="mb-10 shrink-0">
             <StepIndicator
               currentStep={currentStep as number}
               totalSteps={4}

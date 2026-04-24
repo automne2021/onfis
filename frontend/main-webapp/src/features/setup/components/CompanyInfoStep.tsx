@@ -8,10 +8,10 @@ interface CompanyInfoStepProps {
 }
 
 const COMPANY_SIZES = [
-  { value: "1-10", label: "1–10", desc: "Startup" },
-  { value: "11-50", label: "11–50", desc: "Nhỏ" },
-  { value: "51-200", label: "51–200", desc: "Vừa" },
-  { value: "201-500", label: "201–500", desc: "Lớn" },
+  { value: "1-10", label: "1–10" },
+  { value: "11-50", label: "11–50" },
+  { value: "51-200", label: "51–200" },
+  { value: "201-500", label: "201–500" },
 ];
 
 export default function CompanyInfoStep({ data, onUpdate, onNext, onBack }: CompanyInfoStepProps) {
@@ -139,7 +139,6 @@ export default function CompanyInfoStep({ data, onUpdate, onNext, onBack }: Comp
                 }`}
             >
               <span className="text-lg font-bold">{s.label}</span>
-              <span className="text-[11px] opacity-70">{s.desc}</span>
             </button>
           ))}
         </div>

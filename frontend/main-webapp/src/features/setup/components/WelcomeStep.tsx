@@ -52,8 +52,8 @@ export default function WelcomeStep({ onNext }: WelcomeStepProps) {
   return (
     <div className="flex h-full w-full">
       {/* Left Half — Text */}
-      <div className="w-1/2 flex flex-col justify-center px-16 relative z-10">
-        <div className="max-w-lg">
+      <div className="w-1/2 flex flex-col justify-center px-24 lg:px-32 relative z-10">
+        <div className="max-w-lg mx-auto">
           <h1
             className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6"
             style={{ minHeight: "3.5rem" }}
@@ -77,11 +77,10 @@ export default function WelcomeStep({ onNext }: WelcomeStepProps) {
           )}
 
           <div
-            className={`transition-all duration-700 ease-out ${
-              showButton
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-4 pointer-events-none"
-            }`}
+            className={`transition-all duration-700 ease-out ${showButton
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4 pointer-events-none"
+              }`}
           >
             <button
               type="button"
