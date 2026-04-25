@@ -5,6 +5,7 @@ import Icon from "../../../components/common/Icon";
 import DepartmentWorkload from "../components/DepartmentWorkload";
 import CriticalAlerts from "../components/CriticalAlerts";
 import QuickActions from "../components/QuickActions";
+import { Button } from "../../../components/common/Buttons/Button";
 
 interface DashboardData {
   totalEmployees: number;
@@ -14,6 +15,30 @@ interface DashboardData {
   pendingApprovals: number;
   departments: { name: string; load: number; maxLoad: number }[];
   alerts: { id: string; type: "overdue" | "pending" | "bottleneck"; title: string; description: string; severity: "high" | "medium" | "low"; createdAt: string }[];
+}
+
+function LeaderDashboardSkeleton() {
+  return (
+    <div className="flex flex-col gap-6 p-6 animate-pulse w-full h-full">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="h-8 w-48 bg-neutral-200 rounded mb-2" />
+          <div className="h-4 w-32 bg-neutral-100 rounded" />
+        </div>
+        <div className="h-10 w-40 bg-neutral-200 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-28 bg-neutral-100 rounded-2xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-3 h-80 bg-neutral-100 rounded-2xl" />
+        <div className="lg:col-span-2 h-80 bg-neutral-100 rounded-2xl" />
+      </div>
+      <div className="h-32 bg-neutral-100 rounded-2xl" />
+    </div>
+  );
 }
 
 export default function LeaderDashboardPage() {
@@ -90,14 +115,7 @@ export default function LeaderDashboardPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-sm text-neutral-400">Loading data...</p>
-        </div>
-      </div>
-    );
+    return <LeaderDashboardSkeleton />;
   }
 
   return (
@@ -109,13 +127,13 @@ export default function LeaderDashboardPage() {
           <p className="text-sm text-neutral-500 mt-0.5">Enterprise overview</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
+          <Button
+            title="Create Delegation"
+            iconLeft={<Icon name="add" size={20} color="currentColor" />}
             onClick={() => navigate(`/${tenant}/delegation`)}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 btn-hover shadow-md shadow-indigo-600/20 flex items-center gap-2"
-          >
-            <Icon name="add" size={20} color="currentColor" />
-            Create Delegation
-          </button>
+            style="primary"
+            textStyle="body-4-medium"
+          />
         </div>
       </div>
 

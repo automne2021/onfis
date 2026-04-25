@@ -10,6 +10,7 @@ import {
   updateCompanyTag,
   type ApiCompanyTag,
 } from "../../../services/projectService";
+import { Button } from "../../../components/common/Buttons/Button";
 
 const DEFAULT_TAG_COLOR = "#64748B";
 
@@ -228,7 +229,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="pt-6 border-t border-neutral-100 flex justify-end">
-                  <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">{t("Save Changes")}</button>
+                  <Button title={t("Save Changes")} style="primary" textStyle="body-4-medium" />
                 </div>
               </div>
             </div>
@@ -258,14 +259,13 @@ export default function SettingsPage() {
                   aria-label="Tag color"
                   className="h-11 w-11 p-1 rounded-xl border border-neutral-200 bg-white cursor-pointer hover:border-indigo-300 transition-colors"
                 />
-                <button
-                  type="button"
+                <Button
+                  title="Add Tag"
+                  iconLeft={<Icon name="add" size={18} color="currentColor" />}
                   onClick={() => void handleCreate()}
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
-                >
-                  <Icon name="add" size={18} color="currentColor" />
-                  Add Tag
-                </button>
+                  style="primary"
+                  textStyle="body-4-medium"
+                />
               </div>
 
               <div className="space-y-3">
@@ -310,20 +310,18 @@ export default function SettingsPage() {
 
                       {isEditing ? (
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
+                          <Button
+                            title="Save"
                             onClick={() => void handleSaveEdit()}
-                            className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
+                            style="primary"
+                            textStyle="text-xs font-semibold"
+                          />
+                          <Button
+                            title="Cancel"
                             onClick={handleCancelEdit}
-                            className="px-4 py-2 text-xs font-semibold text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200 transition-colors"
-                          >
-                            Cancel
-                          </button>
+                            style="sub"
+                            textStyle="text-xs font-semibold"
+                          />
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -361,14 +359,14 @@ export default function SettingsPage() {
                     <h3 className="text-sm font-semibold text-neutral-900">Two-Factor Authentication (2FA)</h3>
                     <p className="text-xs text-neutral-500 mt-1">Add an extra layer of security to your account.</p>
                   </div>
-                  <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-medium hover:bg-neutral-50">Enable</button>
+                  <Button title="Enable" style="sub" textStyle="body-4-medium" />
                 </div>
                 <div className="p-4 border border-neutral-200 rounded-xl bg-neutral-50 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-semibold text-neutral-900">Change Password</h3>
                     <p className="text-xs text-neutral-500 mt-1">Update your password to keep your account secure.</p>
                   </div>
-                  <button className="px-4 py-2 bg-white border border-neutral-200 rounded-lg text-sm font-medium hover:bg-neutral-50">Update</button>
+                  <Button title="Update" style="sub" textStyle="body-4-medium" />
                 </div>
               </div>
             </div>
