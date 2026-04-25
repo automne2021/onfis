@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ExecutiveRequest } from "../services/delegationService";
 import DelegationCard from "./DelegationCard";
 import Icon from "../../../components/common/Icon";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface DelegationListProps {
   requests: ExecutiveRequest[];
@@ -11,24 +12,26 @@ interface DelegationListProps {
   onFilterChange: (filter: string) => void;
 }
 
-const FILTERS = [
-  { value: "all", label: "Tất cả" },
-  { value: "PENDING", label: "Chờ xử lý" },
-  { value: "IN_PROGRESS", label: "Đang xử lý" },
-  { value: "COMPLETED", label: "Hoàn thành" },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: "all", label: "Mức độ ưu tiên" },
-  { value: "URGENT", label: "Khẩn cấp" },
-  { value: "HIGH", label: "Cao" },
-  { value: "MEDIUM", label: "Trung bình" },
-  { value: "LOW", label: "Thấp" },
-];
-
-const ITEMS_PER_PAGE = 10;
-
 export default function DelegationList({ requests, onStatusChange, onDelete, filter, onFilterChange }: DelegationListProps) {
+  const { t } = useLanguage();
+
+  const FILTERS = [
+    { value: "all", label: t("All") },
+    { value: "PENDING", label: t("Pending") },
+    { value: "IN_PROGRESS", label: t("In Progress") },
+    { value: "COMPLETED", label: t("Completed") },
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { value: "all", label: t("Priority") },
+    { value: "URGENT", label: t("Urgent") },
+    { value: "HIGH", label: t("High") },
+    { value: "MEDIUM", label: t("Medium") },
+    { value: "LOW", label: t("Low") },
+  ];
+
+  const ITEMS_PER_PAGE = 10;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -118,7 +121,7 @@ export default function DelegationList({ requests, onStatusChange, onDelete, fil
             </span>
             <input
               type="text"
-              placeholder="Tìm kiếm..."
+              placeholder={t("Search...")}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-xl outline-none focus:border-indigo-500 w-[200px]"
@@ -148,7 +151,7 @@ export default function DelegationList({ requests, onStatusChange, onDelete, fil
           <span className="text-3xl text-neutral-300 inline-block mb-3">
             <Icon name="inbox" size={48} color="currentColor" />
           </span>
-          <p className="text-sm text-neutral-400">Chưa có yêu cầu nào phù hợp</p>
+          <p className="text-sm text-neutral-400">{t("No matching requests found")}</p>
         </div>
       ) : (
         <>

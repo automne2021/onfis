@@ -3,8 +3,10 @@ import DelegationForm from "../components/DelegationForm";
 import DelegationList from "../components/DelegationList";
 import { delegationService, type ExecutiveRequest, type CreateExecutiveRequest } from "../services/delegationService";
 import Icon from "../../../components/common/Icon";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 export default function DelegationPage() {
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<ExecutiveRequest[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +56,7 @@ export default function DelegationPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa ủy quyền này?")) return;
+    if (!window.confirm(t("Are you sure you want to delete this delegation?"))) return;
     try {
       await delegationService.delete(id);
       setRequests((prev) => prev.filter((r) => r.id !== id));
@@ -68,7 +70,7 @@ export default function DelegationPage() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-sm text-neutral-400">Đang tải...</p>
+          <p className="text-sm text-neutral-400">{t("Loading...")}</p>
         </div>
       </div>
     );
@@ -79,8 +81,8 @@ export default function DelegationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Khu vực Ủy quyền</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Quản lý và theo dõi các chỉ thị điều hành</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t("Delegation Hub")}</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">{t("Manage and track executive directives")}</p>
         </div>
         {!showForm && (
           <button
@@ -88,7 +90,7 @@ export default function DelegationPage() {
             className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 btn-hover shadow-md shadow-indigo-600/20 flex items-center gap-2"
           >
             <Icon name="add" size={20} color="currentColor" />
-            Tạo mới
+            {t("Create New")}
           </button>
         )}
       </div>

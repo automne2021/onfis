@@ -6,19 +6,8 @@ interface DelegationCardProps {
   onDelete?: (id: string) => void;
 }
 
-const statusConfig: Record<ExecutiveRequest["status"], { label: string; color: string }> = {
-  PENDING: { label: "Chờ xử lý", color: "bg-amber-100 text-amber-700" },
-  IN_PROGRESS: { label: "Đang xử lý", color: "bg-blue-100 text-blue-700" },
-  COMPLETED: { label: "Hoàn thành", color: "bg-emerald-100 text-emerald-700" },
-  CANCELLED: { label: "Đã hủy", color: "bg-neutral-100 text-neutral-500" },
-};
-
-const priorityConfig: Record<ExecutiveRequest["priority"], { label: string; dot: string }> = {
-  URGENT: { label: "Khẩn cấp", dot: "bg-red-500" },
-  HIGH: { label: "Cao", dot: "bg-orange-500" },
-  MEDIUM: { label: "Trung bình", dot: "bg-blue-500" },
-  LOW: { label: "Thấp", dot: "bg-neutral-400" },
-};
+import Icon from "../../../components/common/Icon";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 function getInitials(firstName: string | null, lastName: string | null): string {
   const f = firstName?.charAt(0)?.toUpperCase() || "";
@@ -31,9 +20,23 @@ function getFullName(user: { firstName: string | null; lastName: string | null; 
   return parts.length > 0 ? parts.join(" ") : user.email;
 }
 
-import Icon from "../../../components/common/Icon";
-
 export default function DelegationCard({ request, onStatusChange, onDelete }: DelegationCardProps) {
+  const { t } = useLanguage();
+
+  const statusConfig: Record<ExecutiveRequest["status"], { label: string; color: string }> = {
+    PENDING: { label: t("Pending"), color: "bg-amber-100 text-amber-700" },
+    IN_PROGRESS: { label: t("In Progress"), color: "bg-blue-100 text-blue-700" },
+    COMPLETED: { label: t("Completed"), color: "bg-emerald-100 text-emerald-700" },
+    CANCELLED: { label: t("Cancelled"), color: "bg-neutral-100 text-neutral-500" },
+  };
+
+  const priorityConfig: Record<ExecutiveRequest["priority"], { label: string; dot: string }> = {
+    URGENT: { label: t("Urgent"), dot: "bg-red-500" },
+    HIGH: { label: t("High"), dot: "bg-orange-500" },
+    MEDIUM: { label: t("Medium"), dot: "bg-blue-500" },
+    LOW: { label: t("Low"), dot: "bg-neutral-400" },
+  };
+
   const status = statusConfig[request.status];
   const priority = priorityConfig[request.priority];
 
@@ -62,7 +65,7 @@ export default function DelegationCard({ request, onStatusChange, onDelete }: De
             <button
               onClick={() => onDelete(request.id)}
               className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-              title="Xóa ủy quyền"
+              title={t("Delete delegation")}
             >
               <Icon name="delete" size={16} color="currentColor" />
             </button>
@@ -105,7 +108,7 @@ export default function DelegationCard({ request, onStatusChange, onDelete }: De
           <span className="text-[11px] text-neutral-500 truncate">
             {request.assignees.length === 1
               ? getFullName(request.assignees[0])
-              : `${request.assignees.length} người được giao`}
+              : `${request.assignees.length} ${t("assignees")}`}
           </span>
         </div>
       )}
@@ -129,13 +132,13 @@ export default function DelegationCard({ request, onStatusChange, onDelete }: De
             onClick={() => onStatusChange(request.id, "IN_PROGRESS")}
             className="flex-1 py-1.5 rounded-lg text-[11px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all"
           >
-            Bắt đầu xử lý
+            {t("Start processing")}
           </button>
           <button
             onClick={() => onStatusChange(request.id, "CANCELLED")}
             className="py-1.5 px-3 rounded-lg text-[11px] font-medium text-neutral-500 bg-neutral-50 hover:bg-neutral-100 transition-all"
           >
-            Hủy
+            {t("Cancel")}
           </button>
         </div>
       )}

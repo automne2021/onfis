@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRole } from "../../../hooks/useRole";
+import { useLanguage, type Language } from "../../../contexts/LanguageContext";
 import { useToast } from "../../../contexts/useToast";
 import Icon from "../../../components/common/Icon";
 import {
@@ -54,6 +55,7 @@ function SettingsSkeleton() {
 export default function SettingsPage() {
   const { isManager, isAuthLoading } = useRole();
   const { showToast } = useToast();
+  const { language, setLanguage, t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<TabId>("workspace");
   const [tags, setTags] = useState<ApiCompanyTag[]>([]);
@@ -168,8 +170,8 @@ export default function SettingsPage() {
     <div className="onfis-section h-full flex flex-col">
       <div className="navbar-style flex-shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">System Settings</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">Manage your system configurations and workspace preferences</p>
+          <h1 className="text-xl font-bold text-neutral-900">{t("System Settings")}</h1>
+          <p className="text-sm text-neutral-400 mt-0.5">{t("Manage your system configurations and workspace preferences")}</p>
         </div>
       </div>
 
@@ -188,7 +190,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <Icon name={tab.icon} size={20} color="currentColor" />
-                {tab.label}
+                {t(tab.label)}
               </button>
             ))}
           </nav>
@@ -198,15 +200,15 @@ export default function SettingsPage() {
         <div className="flex-1 overflow-y-auto pb-10 pr-2">
           {activeTab === "general" && (
             <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
-              <h2 className="text-lg font-bold text-neutral-900 mb-6">General Settings</h2>
+              <h2 className="text-lg font-bold text-neutral-900 mb-6">{t("General Settings")}</h2>
               <div className="space-y-6 max-w-2xl">
                 <div className="grid grid-cols-1 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Company Name</label>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Company Name")}</label>
                     <input type="text" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none" defaultValue="Onfis Enterprise" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Timezone</label>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Timezone")}</label>
                     <select className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none">
                       <option>Asia/Ho_Chi_Minh (GMT+7)</option>
                       <option>America/New_York (GMT-5)</option>
@@ -214,15 +216,19 @@ export default function SettingsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Language</label>
-                    <select className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none">
-                      <option>English</option>
-                      <option>Vietnamese</option>
+                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Language")}</label>
+                    <select 
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value as Language)}
+                      className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
+                    >
+                      <option value="en">{t("English")}</option>
+                      <option value="vi">{t("Vietnamese")}</option>
                     </select>
                   </div>
                 </div>
                 <div className="pt-6 border-t border-neutral-100 flex justify-end">
-                  <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">Save Changes</button>
+                  <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-sm">{t("Save Changes")}</button>
                 </div>
               </div>
             </div>
