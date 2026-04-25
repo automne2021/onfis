@@ -1,3 +1,5 @@
+import Icon from "../../../components/common/Icon";
+
 interface KPICardsProps {
   totalEmployees: number;
   activeProjects: number;
@@ -9,15 +11,8 @@ interface KPICardsProps {
 const kpiConfig = [
   {
     key: "employees" as const,
-    label: "Tổng nhân sự",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
+    label: "Total Employees",
+    icon: <Icon name="group" size={24} color="currentColor" />,
     color: "from-blue-500 to-blue-600",
     bgLight: "bg-blue-50",
     textColor: "text-blue-600",
@@ -25,12 +20,8 @@ const kpiConfig = [
   },
   {
     key: "projects" as const,
-    label: "Dự án đang hoạt động",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
+    label: "Active Projects",
+    icon: <Icon name="folder_open" size={24} color="currentColor" />,
     color: "from-emerald-500 to-emerald-600",
     bgLight: "bg-emerald-50",
     textColor: "text-emerald-600",
@@ -38,13 +29,8 @@ const kpiConfig = [
   },
   {
     key: "ontime" as const,
-    label: "Tỷ lệ đúng hạn",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
+    label: "On-time Rate",
+    icon: <Icon name="pie_chart" size={24} color="currentColor" />,
     color: "from-amber-500 to-orange-500",
     bgLight: "bg-amber-50",
     textColor: "text-amber-600",
@@ -52,13 +38,8 @@ const kpiConfig = [
   },
   {
     key: "approvals" as const,
-    label: "Chờ phê duyệt",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M9 11l3 3L22 4" />
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-      </svg>
-    ),
+    label: "Pending Approvals",
+    icon: <Icon name="checklist" size={24} color="currentColor" />,
     color: "from-violet-500 to-purple-600",
     bgLight: "bg-violet-50",
     textColor: "text-violet-600",
@@ -68,10 +49,10 @@ const kpiConfig = [
 
 export default function KPICards({ totalEmployees, activeProjects, totalProjects, onTimeRate, pendingApprovals }: KPICardsProps) {
   const values: Record<string, { value: string; sub?: string }> = {
-    employees: { value: totalEmployees.toString(), sub: "người đang hoạt động" },
-    projects: { value: `${activeProjects}`, sub: `trên tổng ${totalProjects} dự án` },
-    ontime: { value: `${onTimeRate}%`, sub: onTimeRate >= 80 ? "Tốt" : onTimeRate >= 60 ? "Cần cải thiện" : "Cảnh báo" },
-    approvals: { value: pendingApprovals.toString(), sub: "yêu cầu đang chờ" },
+    employees: { value: totalEmployees.toString(), sub: "active people" },
+    projects: { value: `${activeProjects}`, sub: `out of ${totalProjects} total projects` },
+    ontime: { value: `${onTimeRate}%`, sub: onTimeRate >= 80 ? "Good" : onTimeRate >= 60 ? "Needs Improvement" : "Warning" },
+    approvals: { value: pendingApprovals.toString(), sub: "pending requests" },
   };
 
   return (

@@ -3,6 +3,7 @@ import type { ExecutiveRequest } from "../services/delegationService";
 interface DelegationCardProps {
   request: ExecutiveRequest;
   onStatusChange?: (id: string, status: ExecutiveRequest["status"]) => void;
+  onDelete?: (id: string) => void;
 }
 
 const statusConfig: Record<ExecutiveRequest["status"], { label: string; color: string }> = {
@@ -30,7 +31,9 @@ function getFullName(user: { firstName: string | null; lastName: string | null; 
   return parts.length > 0 ? parts.join(" ") : user.email;
 }
 
-export default function DelegationCard({ request, onStatusChange }: DelegationCardProps) {
+import Icon from "../../../components/common/Icon";
+
+export default function DelegationCard({ request, onStatusChange, onDelete }: DelegationCardProps) {
   const status = statusConfig[request.status];
   const priority = priorityConfig[request.priority];
 
@@ -51,9 +54,20 @@ export default function DelegationCard({ request, onStatusChange }: DelegationCa
           <div className={`w-2.5 h-2.5 rounded-full ${priority.dot}`} />
           <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{priority.label}</span>
         </div>
-        <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${status.color}`}>
-          {status.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${status.color}`}>
+            {status.label}
+          </span>
+          {onDelete && (
+            <button
+              onClick={() => onDelete(request.id)}
+              className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+              title="Xóa ủy quyền"
+            >
+              <Icon name="delete" size={16} color="currentColor" />
+            </button>
+          )}
+        </div>
       </div>
 
       <h4 className="text-sm font-semibold text-neutral-900 mb-1.5 leading-snug">{request.title}</h4>

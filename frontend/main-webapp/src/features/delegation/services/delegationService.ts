@@ -136,6 +136,24 @@ export const delegationService = {
     }
   },
 
+  async delete(id: string): Promise<void> {
+    // Delete assignees first (though foreign key cascade might handle this, it's safer to explicitly delete or rely on cascade if configured)
+    await supabase
+      .from("executive_request_assignees")
+      .delete()
+      .eq("request_id", id);
+
+    const { error } = await supabase
+      .from("executive_requests")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Failed to delete executive request:", error);
+      throw error;
+    }
+  },
+
   /** Fetch users with ADMIN or MANAGER role in the same tenant */
   async listAssignableUsers(): Promise<AssigneeUser[]> {
     const { data: { user } } = await supabase.auth.getUser();

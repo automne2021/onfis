@@ -4,9 +4,9 @@ interface DepartmentWorkloadProps {
 
 export default function DepartmentWorkload({ departments }: DepartmentWorkloadProps) {
   const getColor = (load: number) => {
-    if (load >= 90) return { bar: "bg-red-500", text: "text-red-600", bg: "bg-red-50", label: "Quá tải" };
-    if (load >= 70) return { bar: "bg-amber-500", text: "text-amber-600", bg: "bg-amber-50", label: "Cao" };
-    return { bar: "bg-emerald-500", text: "text-emerald-600", bg: "bg-emerald-50", label: "Ổn định" };
+    if (load >= 90) return { bar: "bg-red-500", text: "text-red-600", bg: "bg-red-50", label: "Overloaded" };
+    if (load >= 70) return { bar: "bg-amber-500", text: "text-amber-600", bg: "bg-amber-50", label: "High" };
+    return { bar: "bg-emerald-500", text: "text-emerald-600", bg: "bg-emerald-50", label: "Stable" };
   };
 
   const sorted = [...departments].sort((a, b) => b.load - a.load);
@@ -15,8 +15,8 @@ export default function DepartmentWorkload({ departments }: DepartmentWorkloadPr
     <div className="bg-white rounded-2xl border border-neutral-200/80 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-base font-semibold text-neutral-900">Phân bổ nguồn lực</h3>
-          <p className="text-xs text-neutral-400 mt-0.5">Tỷ lệ tải công việc theo phòng ban</p>
+          <h3 className="text-base font-semibold text-neutral-900">Resource Allocation</h3>
+          <p className="text-xs text-neutral-400 mt-0.5">Workload distribution by department</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">

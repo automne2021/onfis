@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DelegationForm from "../components/DelegationForm";
 import DelegationList from "../components/DelegationList";
 import { delegationService, type ExecutiveRequest, type CreateExecutiveRequest } from "../services/delegationService";
+import Icon from "../../../components/common/Icon";
 
 export default function DelegationPage() {
   const [requests, setRequests] = useState<ExecutiveRequest[]>([]);
@@ -52,6 +53,16 @@ export default function DelegationPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa ủy quyền này?")) return;
+    try {
+      await delegationService.delete(id);
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Failed to delete delegation:", err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -76,9 +87,7 @@ export default function DelegationPage() {
             onClick={() => setShowForm(true)}
             className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 btn-hover shadow-md shadow-indigo-600/20 flex items-center gap-2"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Icon name="add" size={20} color="currentColor" />
             Tạo mới
           </button>
         )}
@@ -99,6 +108,7 @@ export default function DelegationPage() {
       <DelegationList
         requests={requests}
         onStatusChange={handleStatusChange}
+        onDelete={handleDelete}
         filter={filter}
         onFilterChange={setFilter}
       />
