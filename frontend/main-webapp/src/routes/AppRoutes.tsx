@@ -41,6 +41,13 @@ import ReviewQueuePage from '../features/tasks/pages/ReviewQueuePage';
 import { PositionTreePage } from '../features/positions';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 
+// Admin module
+import RequestCenterPage from '../features/admin/pages/RequestCenterPage';
+import UserManagementPage from '../features/admin/pages/UserManagementPage';
+import SystemSettingsPage from '../features/admin/pages/SystemSettingsPage';
+import AuditLogsPage from '../features/admin/pages/AuditLogsPage';
+import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
+
 // Placeholder component for pages not yet implemented
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center h-full">
@@ -101,6 +108,16 @@ export const router = createBrowserRouter(
           </Route>
 
           <Route path="settings" element={<SettingsPage />} />
+
+          {/* Admin module */}
+          <Route path="admin">
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="requests" element={<RequestCenterPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="system" element={<SystemSettingsPage />} />
+            <Route path="audit" element={<AuditLogsPage />} />
+          </Route>
         </Route>
       </Route>
     </>

@@ -184,11 +184,10 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabId)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  activeTab === tab.id
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${activeTab === tab.id
                     ? "bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100"
                     : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 border border-transparent"
-                }`}
+                  }`}
               >
                 <Icon name={tab.icon} size={20} color="currentColor" />
                 {t(tab.label)}
@@ -218,7 +217,7 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Language")}</label>
-                    <select 
+                    <select
                       value={language}
                       onChange={(e) => setLanguage(e.target.value as Language)}
                       className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none"
