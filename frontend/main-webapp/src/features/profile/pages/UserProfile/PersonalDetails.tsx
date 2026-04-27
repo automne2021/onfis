@@ -16,23 +16,25 @@ import { FamilyAndEmergency } from '../../components/PersonalDetails/FamilyAndEm
 import { PayrollAndCompensation } from '../../components/PersonalDetails/PayrollAndCompensation';
 import { EmploymentContract } from '../../components/PersonalDetails/EmploymentContract';
 
-export function PersonalDetails({ userInfo, role } : { userInfo: FullUserProfile, role?: string }) {
+export function PersonalDetails({ userInfo } : { userInfo: FullUserProfile }) {
   
-  const allowedRole = ['hr', 'admin']
+  // Backend trả về null nếu không có quyền. Ta chỉ cần ép kiểu sang boolean để check.
+  const hasEmergency = !!userInfo.emergencyContact;
+  const hasBanking = !!userInfo.bankingInfo;
+  const hasPayroll = !!userInfo.compensationInfo;
+  const hasContract = !!userInfo.contractInfo;
   
   return(
     <div className='flex flex-col gap-2'>
-      <ContactInformation icon={<ContactsOutlined />} userInfo={userInfo} role={role}/>
-      <Identification icon={<FingerprintOutlined />} userInfo={userInfo} role={role} />
+      <ContactInformation icon={<ContactsOutlined />} userInfo={userInfo} />
+      <Identification icon={<FingerprintOutlined />} userInfo={userInfo} />
       <Education icon={<SchoolOutlined />} userInfo={userInfo} />
-      {role && allowedRole.includes(role) && (
-        <>
-          <FamilyAndEmergency icon={<EmergencyOutlined />} userInfo={userInfo} />
-          <BankingAndTax icon={<PaymentOutlined />} userInfo={userInfo} />
-          <PayrollAndCompensation icon={<PaymentsOutlined />} userInfo={userInfo} />
-          <EmploymentContract icon={<HistoryEduOutlined />} userInfo={userInfo} />
-        </>
-      )}
+      
+      {/* Chỉ render khi Backend cho phép (có trả về data) */}
+      {hasEmergency && <FamilyAndEmergency icon={<EmergencyOutlined />} userInfo={userInfo} />}
+      {hasBanking && <BankingAndTax icon={<PaymentOutlined />} userInfo={userInfo} />}
+      {hasPayroll && <PayrollAndCompensation icon={<PaymentsOutlined />} userInfo={userInfo} />}
+      {hasContract && <EmploymentContract icon={<HistoryEduOutlined />} userInfo={userInfo} />}
     </div>
   )
 }

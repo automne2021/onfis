@@ -1,18 +1,15 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
-import {
-  Flag,
-  PersonOutline,
-
-} from '@mui/icons-material';
+import { Flag, PersonOutline } from '@mui/icons-material';
 import { IdCard } from 'lucide-react';
 import { TitleHeader } from "../TitleHeader";
 
-export function Identification({ icon, userInfo, role }: OverviewProps & { role?: string }) {
-  const allowedRole = ['admin', 'hr']
-  const canViewNationalId = role && allowedRole.includes(role.toLowerCase())
+export function Identification({ icon, userInfo }: OverviewProps) {
+  
+  // Kiểm tra trực tiếp xem có nationId không
+  const hasNationalId = !!userInfo.nationId;
 
   const identificationInfo = [
-    ...(canViewNationalId
+    ...(hasNationalId
       ? [{ label: "National ID (SSN)", icon: <IdCard fontSize="small" />, content: userInfo.nationId }]
       : []
     ),

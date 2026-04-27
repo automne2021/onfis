@@ -29,7 +29,7 @@ export function UserProfile() {
 
   useEffect(() => {
     const fetchDetail = async () => {
-      if (!id) return; // Nếu không có id trên URL thì bỏ qua
+      if (!id) return; 
 
       setIsLoading(true);
       try {
@@ -37,9 +37,9 @@ export function UserProfile() {
         setInfo(userProfile);
       } catch (error) {
         console.error("Lỗi khi lấy thông tin user:", error);
-        setInfo(null); // Nếu lỗi (VD: 404, 500) thì set null để hiện "User not found!"
+        setInfo(null);
       } finally {
-        setIsLoading(false); // Luôn tắt loading dù thành công hay thất bại
+        setIsLoading(false); 
       }
     };
 
@@ -113,7 +113,7 @@ export function UserProfile() {
         )}
 
         {currentView === 'personal-details' && (
-          <PersonalDetails userInfo={info} role="admin" />
+          <PersonalDetails userInfo={info}/>
         )}
 
         {currentView === 'documents' && (

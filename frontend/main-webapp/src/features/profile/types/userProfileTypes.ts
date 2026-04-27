@@ -5,12 +5,6 @@ export interface OverviewProps {
   userInfo: FullUserProfile;
 }
 
-export interface PersonalDetailsProps {
-  icon?: React.ReactNode;
-  userInfo: FullUserProfile;
-  role?: string;
-}
-
 export interface DocumentsProps {
   userInfo: FullUserProfile;
 }
