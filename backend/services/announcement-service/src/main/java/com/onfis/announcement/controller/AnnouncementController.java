@@ -214,4 +214,37 @@ public ResponseEntity<List<DepartmentDTO>> getMyDepartments(
       boolean isPinned = announcementService.toggleAnnouncementPin(token, companyId, announcementId, userId);
       return ResponseEntity.ok(isPinned);
   }
+
+  @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<AnnouncementDTO> updateAnnouncement(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyIdStr,
+          @RequestHeader(value = "X-User-ID") UUID userId,
+          @PathVariable("id") UUID id,
+          @ModelAttribute AnnouncementCreateRequestDTO request) {
+      
+      return ResponseEntity.ok(announcementService.updateAnnouncement(token, companyIdStr, id, userId, request));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteAnnouncement(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyIdStr,
+          @RequestHeader(value = "X-User-ID") UUID userId,
+          @PathVariable("id") UUID id) {
+      
+      announcementService.deleteAnnouncement(token, companyIdStr, id, userId);
+      return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/attachments/{id}")
+  public ResponseEntity<Void> deleteAttachment(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyIdStr,
+          @RequestHeader("X-User-ID") UUID userId,
+          @PathVariable("id") UUID attachmentId) {
+      
+      announcementService.deleteAttachment(token, companyIdStr, attachmentId, userId);
+      return ResponseEntity.noContent().build();
+  }
 }

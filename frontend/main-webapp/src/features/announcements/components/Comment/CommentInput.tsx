@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { AttachFileOutlined, SendOutlined, CloseOutlined } from '@mui/icons-material';
+import { SendOutlined, CloseOutlined } from '@mui/icons-material';
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
+import { useAuth } from "../../../../hooks/useAuth";
 
 export interface CommentInputProps {
   currentUserAvatar?: string;
@@ -15,6 +16,8 @@ export function CommentInput({
   onCancelReply, 
   onSubmit 
 }: CommentInputProps) {
+  
+  const { dbUser: currentUser } = useAuth();
   
   const [content, setContent] = useState("");
   const inputRef = useRef<HTMLInputElement>(null); 
@@ -39,7 +42,7 @@ export function CommentInput({
     }
   };
 
-  const avatarImg = currentUserAvatar || userProfileImg;
+  const avatarImg = currentUserAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || '')}&background=random` || userProfileImg;
 
   return(
     <div className="flex items-start gap-3 w-full mt-4">
@@ -82,10 +85,6 @@ export function CommentInput({
 
           {/* Các nút hành động (Đính kèm & Gửi) */}
           <div className="flex items-center gap-2 shrink-0 ml-2">
-            <button className="p-1.5 text-neutral-400 hover:text-neutral-700 transition rounded-full hover:bg-neutral-100 flex items-center justify-center">
-              <AttachFileOutlined sx={{ fontSize: 20, transform: "rotate(45deg)" }} />
-            </button>
-
             <button 
               onClick={handleSubmit}
               disabled={!content.trim()} // Vô hiệu hóa nút nếu chưa nhập gì

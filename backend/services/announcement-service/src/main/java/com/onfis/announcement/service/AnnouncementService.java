@@ -77,7 +77,6 @@ public class AnnouncementService {
         try {
             UUID authorId = ann.getAuthorId();
             
-            // 🌟 SỬA LỖI 1: Dùng containsKey thay cho computeIfAbsent để ép Java lưu cả giá trị NULL (Tránh thủng Cache)
             if (!userCache.containsKey(authorId)) {
                 try {
                     userCache.put(authorId, userClient.getUserProfile(token, companyIdStr, authorId));
@@ -522,5 +521,126 @@ public class AnnouncementService {
         announcementRepository.save(announcement);
 
         return newPinStatus;
+    }
+
+    private void checkEditDeletePermission(String token, String companyIdStr, Announcement ann, UUID userId) {
+        if (ann.getAuthorId().equals(userId)) return; // Tác giả luôn có quyền
+
+        try {
+            UserResponseDTO user = userClient.getUserProfile(token, companyIdStr, userId);
+            if (user == null) throw new RuntimeException("User not found");
+
+            String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+            if (role.equals("ADMIN") || role.equals("SUPER_ADMIN")) return; // Admin luôn có quyền
+
+            if (role.equals("MANAGER")) {
+                PositionResponseDTO position = positionClient.getPositionById(token, companyIdStr, user.getPositionId());
+                if (position != null && position.getDepartmentId() != null 
+                    && position.getDepartmentId().equals(ann.getTargetDepartmentId())) {
+                    return; // Manager của phòng ban đó có quyền
+                }
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi check permission: {}", e.getMessage());
+        }
+
+        throw new RuntimeException("You do not have permission to modify this announcement");
+    }
+
+    @Transactional
+    public AnnouncementDTO updateAnnouncement(String token, String companyIdStr, UUID id, UUID userId, AnnouncementCreateRequestDTO request) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Announcement not found"));
+
+        // Kiểm tra quyền
+        checkEditDeletePermission(token, companyIdStr, announcement, userId);
+
+        UUID targetDeptId = null;
+        if ("department".equalsIgnoreCase(request.getScope()) && request.getDepartments() != null) {
+            try {
+                List<String> deptIds = objectMapper.readValue(request.getDepartments(), new TypeReference<List<String>>() {});
+                if (!deptIds.isEmpty()) targetDeptId = UUID.fromString(deptIds.get(0));
+            } catch (Exception e) { log.error("Lỗi parse JSON"); }
+        }
+
+        announcement.setTitle(request.getTitle());
+        announcement.setContent(request.getContent());
+        announcement.setPinned(request.getIsPinned() != null ? request.getIsPinned() : false);
+        announcement.setTargetDepartmentId(targetDeptId);
+        if (request.getStatus() != null) {
+            announcement.setStatus(request.getStatus().toUpperCase());
+        }
+
+        announcement = announcementRepository.save(announcement);
+
+        // Upload thêm file mới nếu có
+        if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
+            for (MultipartFile file : request.getAttachments()) {
+                String actualFileUrl = supabaseStorageService.uploadFile(file);
+                Attachment attachment = Attachment.builder()
+                        .tenantId(tenantId)
+                        .announcementId(announcement.getId())
+                        .name(file.getOriginalFilename())
+                        .fileType(file.getContentType())
+                        .size((int) file.getSize())
+                        .fileUrl(actualFileUrl)
+                        .uploadedBy(userId)
+                        .build();
+                attachmentRepository.save(attachment);
+            }
+        }
+
+        return convertToDTO(token, companyIdStr, announcement, announcement.getAuthorId());
+    }
+
+    @Transactional
+    public void deleteAnnouncement(String token, String companyIdStr, UUID id, UUID userId) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Announcement not found"));
+
+        checkEditDeletePermission(token, companyIdStr, announcement, userId);
+
+        UUID tenantId = UUID.fromString(companyIdStr);
+        attachmentRepository.deleteByTenantIdAndAnnouncementId(tenantId, id);
+        likeRepository.deleteByTenantIdAndAnnouncementId(tenantId, id);
+
+        List<UUID> commentIds = commentRepository.findByTenantIdAndAnnouncementIdOrderByCreatedAtAsc(tenantId, id)
+                .stream()
+                .map(AnnouncementComment::getId)
+                .toList();
+
+        if (!commentIds.isEmpty()) {
+            commentLikeRepository.deleteByTenantIdAndCommentIdIn(tenantId, commentIds);
+        }
+
+        commentRepository.deleteByTenantIdAndAnnouncementId(tenantId, id);
+        announcementRepository.delete(announcement);
+    }
+
+    @Transactional
+    public void deleteAttachment(String token, String companyIdStr, UUID attachmentId, UUID userId) {
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        // 1. Nếu file gắn với bài viết, kiểm tra quyền sửa bài viết đó
+        if (attachment.getAnnouncementId() != null) {
+            Announcement announcement = announcementRepository.findById(attachment.getAnnouncementId())
+                    .orElseThrow(() -> new RuntimeException("Announcement not found"));
+            
+            // Tái sử dụng hàm check permission đã viết
+            checkEditDeletePermission(token, companyIdStr, announcement, userId);
+        } else {
+            // 2. Nếu là file standalone (ví dụ từ chat), chỉ người upload mới được xóa
+            if (!attachment.getUploadedBy().equals(userId)) {
+                throw new RuntimeException("You do not have permission to delete this file");
+            }
+        }
+
+        // 3. (Tùy chọn) Xóa file vật lý trên Supabase Storage nếu cần
+        // supabaseStorageService.deleteFile(attachment.getFileUrl());
+
+        // 4. Xóa record trong Database
+        attachmentRepository.delete(attachment);
     }
 }

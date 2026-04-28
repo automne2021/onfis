@@ -83,4 +83,12 @@ export interface PaginatedResponse<T> {
   empty: boolean;
 }
 
+export interface AttachmentResponseDTO {
+  id: string | number;
+  fileName?: string;
+  name?: string; // Đề phòng backend trả về trường name thay vì fileName
+  url?: string;
+  size?: number;
+}
+
 export type AnnouncementFilterOption = 'newest' | 'oldest' | 'global' | 'department' | 'pinned' | 'all';

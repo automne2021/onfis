@@ -76,4 +76,21 @@ export const announcementApi = {
     const response = await api.post(`/announcements/${announcementId}/toggle-pin`);
     return response.data; 
   },
+
+  deleteAttachment: async (attachmentId: string | number) => {
+    const response = await api.delete(`/announcements/attachments/${attachmentId}`);
+    return response.data;
+  },
+
+  updateAnnouncement: async (id: string | number, formData: FormData) => {
+    const response = await api.put(`/announcements/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteAnnouncement: async (id: string | number) => {
+    const response = await api.delete(`/announcements/${id}`);
+    return response.data;
+  },
 }

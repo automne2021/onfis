@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { BreadCrumb } from "../components/navigation/BreadCrumb"
 import { getTimeAgo } from "../../../utils/getTime"
 import { Tags } from "../components/Tags/Tags"
 
-import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups, PushPin } from '@mui/icons-material';
+import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups, PushPin, MoreVert, EditOutlined, DeleteOutline } from '@mui/icons-material';
 
 import userProfileImg from "../../../assets/images/user-profile-img.png"
 import { getFileType } from "../../../config/fileConfig"
@@ -21,6 +21,13 @@ import { announcementApi } from "../services/announcementApi"
 import { formatAnnouncementData } from "../utils/announcementFormatter"
 import { userApi } from "../../profile/services/userApi"
 import { useAuth } from "../../../hooks/useAuth"
+import { toast } from "react-toastify"
+import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal"
+import { AnnouncementForm } from "../components/AnnouncementForm"
+import MenuItem from "@mui/material/MenuItem"
+import ListItemIcon from "@mui/material/ListItemIcon"
+import ListItemText from "@mui/material/ListItemText"
+import Menu from '@mui/material/Menu';
 // import { usePresence } from "../../chat/context/PresenceContext"
 
 const flattenAllReplies = (replies: CommentData[], parentName?: string): CommentData[] => {
@@ -38,8 +45,9 @@ const flattenAllReplies = (replies: CommentData[], parentName?: string): Comment
 };
 
 export function AnnouncementDetail() {
-  const { id } = useParams<{ id: string }>()
+  const { tenant, id } = useParams<{ tenant: string; id: string }>();
   const { dbUser: currentUser } = useAuth();
+  const navigate = useNavigate();
   // const { statuses } = usePresence()
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
@@ -52,6 +60,11 @@ export function AnnouncementDetail() {
   
   const [replyingTo, setReplyingTo] = useState<{ id: string | number, name: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -89,6 +102,23 @@ export function AnnouncementDetail() {
 
     fetchDetail()
   }, [id])
+
+  const canEditDelete = useMemo(() => {
+    if (!currentUser || !detail) return false;
+    
+    // Tác giả luôn có quyền
+    if (String(detail.authId) === String(currentUser.id)) return true;
+
+    const userRole = currentUser.role?.toUpperCase() || "";
+    if (userRole === 'ADMIN' || userRole === "SUPER_ADMIN" || userRole === "SUPER ADMIN") return true;
+
+    // Manager quản lý phòng ban của bài viết
+    if (userRole === 'MANAGER') {
+      return detail.targetDepartmentId === currentUser.departmentId;
+    }
+
+    return false;
+  }, [currentUser, detail]);
 
   // Functions
   const togglePersonalInformationCard = () => {
@@ -167,6 +197,28 @@ export function AnnouncementDetail() {
     }
   }
 
+  const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const handleOpenEdit = () => { handleMenuClose(); setIsEditModalOpen(true); };
+  const handleOpenDelete = () => { handleMenuClose(); setIsDeleteModalOpen(true); };
+
+  const confirmDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      await announcementApi.deleteAnnouncement(id);
+      toast.success("Announcement deleted successfully!");
+      setIsDeleteModalOpen(false);
+      navigate(`/${tenant}/announcements`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete announcement.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return <AnnouncementDetailLoading />
   }
@@ -199,6 +251,28 @@ export function AnnouncementDetail() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-70px)]">
+
+      <ConfirmDeleteModal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => setIsDeleteModalOpen(false)} 
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
+
+      {isEditModalOpen && detail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+           <AnnouncementForm 
+              onClose={() => setIsEditModalOpen(false)} 
+              onSuccess={() => {
+                setIsEditModalOpen(false);
+                // Tải lại trang hoặc gọi lại fetchDetail()
+                window.location.reload(); 
+              }}
+              editData={detail}
+           />
+        </div>
+      )}
+
       <section className="onfis-section">
         {/* Toolbar */}
         <nav className="navbar-style">
@@ -208,36 +282,68 @@ export function AnnouncementDetail() {
         {/* Body */}
         <div className="w-full pt-6 md:px-5 xl:px-8 2xl:px-10 flex flex-col justify-center bg-white border-b-2 border-neutral-200 mt-2 rounded-xl shadow-sm">
           {/* Header */}
-          <div className="flex items-center gap-4">
-            <p className="header-h4 leading-snug text-neutral-900">{detail.title}</p>
-            {canPin && (
-              <button
-                onClick={handleTogglePin}
-                className={`p-2 shrink-0 rounded-full transition-colors duration-200 flex items-center justify-center
-                  ${detail.isPinned 
-                    ? "text-primary hover:bg-primary/10" 
-                    : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
-                  }`}
-                title={detail.isPinned ? "" : "Is Pinned"}
-              >
-                {detail.isPinned ? (
-                  <PushPin
-                    sx={{ 
-                      fontSize: 22, 
-                      transition: 'transform 0.2s' 
-                    }} 
-                  />
-                ) : (
-                  <PushPinOutlined 
-                    sx={{ 
-                      fontSize: 22, 
-                      transition: 'transform 0.2s' 
-                    }} 
-                  />
-                )}
-              </button>
-            )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <p className="header-h4 leading-snug text-neutral-900">{detail.title}</p>
+              {canPin && (
+                <button
+                  onClick={handleTogglePin}
+                  className={`p-2 shrink-0 rounded-full transition-colors duration-200 flex items-center justify-center
+                    ${detail.isPinned 
+                      ? "text-primary hover:bg-primary/10" 
+                      : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                    }`}
+                  title={detail.isPinned ? "" : "Is Pinned"}
+                >
+                  {detail.isPinned ? (
+                    <PushPin
+                      sx={{ 
+                        fontSize: 22, 
+                        transition: 'transform 0.2s' 
+                      }} 
+                    />
+                  ) : (
+                    <PushPinOutlined 
+                      sx={{ 
+                        fontSize: 22, 
+                        transition: 'transform 0.2s' 
+                      }} 
+                    />
+                  )}
+                </button>
+              )}
+            </div>
+            {canEditDelete && (
+              <>
+                <button 
+                  onClick={handleMenuOpen}
+                  className="text-neutral-500 hover:bg-neutral-200 p-1 px-1.5 rounded-full transition"
+                >
+                  <MoreVert sx={{ fontSize: 18 }} />
+                </button>
 
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  PaperProps={{
+                    elevation: 2,
+                    sx: { mt: 1, minWidth: 150, borderRadius: 2 }
+                  }}
+                >
+                  <MenuItem onClick={handleOpenEdit}>
+                    <ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon>
+                    <ListItemText primaryTypographyProps={{ fontSize: 14 }}>Edit</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={handleOpenDelete} sx={{ color: 'error.main' }}>
+                    <ListItemIcon><DeleteOutline fontSize="small" color="error" /></ListItemIcon>
+                    <ListItemText primaryTypographyProps={{ fontSize: 14 }}>Delete</ListItemText>
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
           </div>
           <div className="flex items-center justify-between pt-4 pb-3 border-b border-neutral-200">
 
