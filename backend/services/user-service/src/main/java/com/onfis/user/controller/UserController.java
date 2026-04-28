@@ -65,9 +65,12 @@ public class UserController {
   }
 
   @GetMapping("/me") 
-  public ResponseEntity<UserResponseDTO> getCurrentUser(
+  public ResponseEntity<UserProfileResponseDTO> getCurrentUser(
+      @RequestHeader("Authorization") String token,
+      @RequestHeader("X-Company-ID") String tenantId,
       @RequestHeader("X-User-ID") UUID userId 
   ) {
-      return ResponseEntity.ok(userService.getBasicUserProfile(userId));
+      // Gọi getFullUserProfile: người yêu cầu (requesterId) và người bị xem (targetUserId) đều là chính user đó (userId)
+      return ResponseEntity.ok(userService.getFullUserProfile(token, userId, tenantId, userId));
   }
 }

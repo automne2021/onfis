@@ -10,6 +10,7 @@ export interface AuthUser {
     role: UserRole;
     permissions: string[];
     email?: string;
+    departmentId?: string;
 }
 
 export interface AuthContextType {

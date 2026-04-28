@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { BreadCrumb } from "../components/navigation/BreadCrumb"
 import { getTimeAgo } from "../../../utils/getTime"
 import { Tags } from "../components/Tags/Tags"
 
-import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups } from '@mui/icons-material';
+import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups, PushPin } from '@mui/icons-material';
 
 import userProfileImg from "../../../assets/images/user-profile-img.png"
 import { getFileType } from "../../../config/fileConfig"
@@ -20,6 +20,7 @@ import type { FullUserProfile } from "../../../types/userType"
 import { announcementApi } from "../services/announcementApi"
 import { formatAnnouncementData } from "../utils/announcementFormatter"
 import { userApi } from "../../profile/services/userApi"
+import { useAuth } from "../../../hooks/useAuth"
 // import { usePresence } from "../../chat/context/PresenceContext"
 
 const flattenAllReplies = (replies: CommentData[], parentName?: string): CommentData[] => {
@@ -38,6 +39,7 @@ const flattenAllReplies = (replies: CommentData[], parentName?: string): Comment
 
 export function AnnouncementDetail() {
   const { id } = useParams<{ id: string }>()
+  const { dbUser: currentUser } = useAuth();
   // const { statuses } = usePresence()
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
@@ -141,6 +143,30 @@ export function AnnouncementDetail() {
     }
   };
 
+  const canPin = useMemo(() => {
+    // 1. Nếu chưa có thông tin user hoặc bài viết, mặc định không cho pin
+    if (!currentUser || !detail) return false;
+
+    const userRole = currentUser.role?.toUpperCase();
+
+    if (userRole === 'ADMIN' || userRole === "SUPER_ADMIN") return true;
+
+    if (userRole === 'MANAGER') {
+      return detail.targetDepartmentId === currentUser.departmentId;
+    }
+
+    return false;
+  }, [currentUser, detail]);
+
+  const handleTogglePin = async () => {
+    try {
+      const newPinnedStatus = await announcementApi.toggleAnnouncementPin(id!);
+      setDetail(prev => prev ? { ...prev, isPinned: newPinnedStatus } : prev);
+    } catch (error) {
+      console.error("Toggling pin announcement error:", error);
+    }
+  }
+
   if (isLoading) {
     return <AnnouncementDetailLoading />
   }
@@ -182,7 +208,37 @@ export function AnnouncementDetail() {
         {/* Body */}
         <div className="w-full pt-6 md:px-5 xl:px-8 2xl:px-10 flex flex-col justify-center bg-white border-b-2 border-neutral-200 mt-2 rounded-xl shadow-sm">
           {/* Header */}
-          <p className="header-h4 leading-snug text-neutral-900">{detail.title}</p>
+          <div className="flex items-center gap-4">
+            <p className="header-h4 leading-snug text-neutral-900">{detail.title}</p>
+            {canPin && (
+              <button
+                onClick={handleTogglePin}
+                className={`p-2 shrink-0 rounded-full transition-colors duration-200 flex items-center justify-center
+                  ${detail.isPinned 
+                    ? "text-primary hover:bg-primary/10" 
+                    : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                  }`}
+                title={detail.isPinned ? "" : "Is Pinned"}
+              >
+                {detail.isPinned ? (
+                  <PushPin
+                    sx={{ 
+                      fontSize: 22, 
+                      transition: 'transform 0.2s' 
+                    }} 
+                  />
+                ) : (
+                  <PushPinOutlined 
+                    sx={{ 
+                      fontSize: 22, 
+                      transition: 'transform 0.2s' 
+                    }} 
+                  />
+                )}
+              </button>
+            )}
+
+          </div>
           <div className="flex items-center justify-between pt-4 pb-3 border-b border-neutral-200">
 
             {/* Avt + Name + Position */}

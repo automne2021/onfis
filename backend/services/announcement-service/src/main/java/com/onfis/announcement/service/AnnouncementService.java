@@ -470,4 +470,57 @@ public class AnnouncementService {
                 .size(a.getSize())
                 .build();
     }
+
+    @Transactional
+    public boolean toggleAnnouncementPin(String token, String companyIdStr, UUID announcementId, UUID userId) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+
+        // 1. Tìm bài thông báo trong database
+        Announcement announcement = announcementRepository.findById(announcementId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài thông báo với ID: " + announcementId));
+
+        // Thêm bước kiểm tra tenantId
+        if (!announcement.getTenantId().equals(tenantId)) {
+            throw new RuntimeException("Bài viết không thuộc quyền quản lý của công ty bạn!");
+        }
+
+        // 2. Lấy thông tin Profile và Vị trí của người dùng hiện tại để check quyền
+        UserResponseDTO myProfile = userClient.getUserProfile(token, companyIdStr, userId);
+        if (myProfile == null) {
+            throw new RuntimeException("Không tìm thấy thông tin người dùng.");
+        }
+
+        // LƯU Ý: Bạn hãy kiểm tra tên trường Role trong UserResponseDTO của bạn (ví dụ: getRole(), getRoleName()...)
+        String role = myProfile.getRole(); 
+
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            // Admin có quyền ghim/bỏ ghim mọi bài viết trong hệ thống
+        } else if ("MANAGER".equalsIgnoreCase(role)) {
+            // Manager chỉ được phép ghim bài nếu bài đó thuộc về phòng ban của họ
+            if (myProfile.getPositionId() == null) {
+                throw new RuntimeException("Manager chưa được gán vị trí công việc.");
+            }
+
+            // Gọi PositionClient để lấy DepartmentId của Manager
+            PositionResponseDTO position = positionClient.getPositionById(token, companyIdStr, myProfile.getPositionId());
+            UUID managerDeptId = position.getDepartmentId();
+
+            // Kiểm tra: Nếu bài viết là Global (targetDepartmentId == null) hoặc thuộc phòng ban khác
+            if (announcement.getTargetDepartmentId() == null || !announcement.getTargetDepartmentId().equals(managerDeptId)) {
+                throw new RuntimeException("Manager chỉ có quyền ghim các thông báo thuộc về phòng ban của mình.");
+            }
+        } else {
+            // Các vai trò khác (như Employee) không có quyền ghim
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này.");
+        }
+
+        // 3. Đảo ngược trạng thái Pin hiện tại
+        boolean newPinStatus = !announcement.isPinned();
+        announcement.setPinned(newPinStatus);
+
+        // 4. Lưu lại cập nhật vào Database
+        announcementRepository.save(announcement);
+
+        return newPinStatus;
+    }
 }

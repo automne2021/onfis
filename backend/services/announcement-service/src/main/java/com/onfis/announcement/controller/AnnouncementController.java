@@ -201,4 +201,17 @@ public ResponseEntity<List<DepartmentDTO>> getMyDepartments(
 
         return ResponseEntity.ok(announcementService.uploadStandaloneFile(companyIdStr, userId, file));
     }
+
+  @PostMapping("/{id}/toggle-pin")
+  public ResponseEntity<Boolean> toggleAnnouncementPin(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyId,
+          @RequestHeader("X-User-ID") UUID userId,
+          @PathVariable("id") UUID announcementId) {
+      
+      log.info("📥 [CONTROLLER] User {} đang thực hiện ghim/bỏ ghim bài viết ID: {}", userId, announcementId);
+      // Gọi qua service để xử lý logic và trả về trạng thái is_pinned mới nhất (true/false)
+      boolean isPinned = announcementService.toggleAnnouncementPin(token, companyId, announcementId, userId);
+      return ResponseEntity.ok(isPinned);
+  }
 }

@@ -114,12 +114,15 @@ public class UserService {
         // 3. Gọi sang position-service lấy thông tin chức vụ (Giữ nguyên logic Feign)
         String positionName = null;
         String departmentName = null;
+        UUID departmentId = null;
+
         if (targetUser.getPositionId() != null) {
             try {
                 PositionResponseDTO positionData = positionServiceClient.getPositionById(token, targetUser.getPositionId(), tenantId);
                 if (positionData != null) {
                     positionName = positionData.title();
                     departmentName = positionData.departmentName();
+                    departmentId = positionData.departmentId();
                 }
             } catch (Exception e) {
                 log.error("❌ Lỗi khi lấy thông tin chức vụ: {}", e.getMessage());
@@ -133,10 +136,11 @@ public class UserService {
         targetUser.getFirstName(),
         targetUser.getLastName(),
         targetUser.getAvatarUrl(),
-        targetUser.getEmail(), // Email công ty (Public)
+        targetUser.getEmail(), 
         targetUser.getRole(),
         targetUser.getPositionId(),
         positionName,    
+        departmentId,
         departmentName,  
         
         profile != null ? profile.getManagerId() : null,

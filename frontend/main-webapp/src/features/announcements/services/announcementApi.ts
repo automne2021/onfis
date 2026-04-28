@@ -71,4 +71,9 @@ export const announcementApi = {
     const response = await api.get('/announcements/draft');
     return response.data; 
   },
+
+  toggleAnnouncementPin: async (announcementId: string | number) => {
+    const response = await api.post(`/announcements/${announcementId}/toggle-pin`);
+    return response.data; 
+  },
 }

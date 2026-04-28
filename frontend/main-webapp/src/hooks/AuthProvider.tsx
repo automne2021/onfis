@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         avatar: undefined,
                         role: me.role as UserRole,
                         permissions: me.permissions || [],
+                        departmentId: me.departmentId
                     });
                 }
             } catch (error) {

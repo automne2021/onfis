@@ -82,6 +82,7 @@ export interface FullUserProfile {
   role?: string;
   positionId?: string;
   positionName?: string; 
+  departmentId?: string;
   departmentName?: string; 
 
   managerId?: string;
