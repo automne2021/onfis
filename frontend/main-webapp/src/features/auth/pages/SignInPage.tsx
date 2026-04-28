@@ -6,6 +6,7 @@ import { PersonIcon, LockIcon, PasskeyIcon } from "../../../components/common/Ic
 import logo from "../../../assets/logo-without-text.svg";
 import { signInWithPassword, signOut } from "../../../services/auth";
 import { supabase } from "../../../services/supabaseClient";
+import { normalizeRole } from "../../../utils/roles";
 
 export default function SignInPage() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export default function SignInPage() {
 
         const { data: userRow } = await supabase
           .from("users")
-          .select("tenant_id")
+          .select("tenant_id, role")
           .eq("id", user.id)
           .single();
 
@@ -54,9 +55,18 @@ export default function SignInPage() {
           setErrorMessage("Tài khoản không thuộc công ty này. Vui lòng kiểm tra lại đường dẫn.");
           return;
         }
-      }
 
-      navigate(`/${tenant}/dashboard`);
+        const normalizedRole = normalizeRole(userRow.role);
+        if (normalizedRole === "SUPER_ADMIN") {
+          navigate(`/${tenant}/leader-dashboard`);
+        } else if (normalizedRole === "ADMIN") {
+          navigate(`/${tenant}/admin/dashboard`);
+        } else {
+          navigate(`/${tenant}/dashboard`);
+        }
+      } else {
+        navigate(`/${tenant}/dashboard`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Sign in failed";
       setErrorMessage(message);

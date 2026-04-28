@@ -1,7 +1,8 @@
 import { createContext, useContext } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import type { CanonicalRole } from '../utils/roles';
 
-export type UserRole = "MANAGER" | "EMPLOYEE" | "ADMIN" | "SUPER_ADMIN";
+export type UserRole = CanonicalRole;
 
 export interface AuthUser {
     id: string;

@@ -6,16 +6,17 @@ import DepartmentWorkload from "../components/DepartmentWorkload";
 import CriticalAlerts from "../components/CriticalAlerts";
 import QuickActions from "../components/QuickActions";
 import { Button } from "../../../components/common/Buttons/Button";
+import { getLeaderDashboardData, type LeaderDashboardData } from "../services/leaderDashboardService";
 
-interface DashboardData {
-  totalEmployees: number;
-  activeProjects: number;
-  totalProjects: number;
-  onTimeRate: number;
-  pendingApprovals: number;
-  departments: { name: string; load: number; maxLoad: number }[];
-  alerts: { id: string; type: "overdue" | "pending" | "bottleneck"; title: string; description: string; severity: "high" | "medium" | "low"; createdAt: string }[];
-}
+const FALLBACK_DASHBOARD_DATA: LeaderDashboardData = {
+  totalEmployees: 0,
+  activeProjects: 0,
+  totalProjects: 0,
+  onTimeRate: 0,
+  pendingApprovals: 0,
+  departments: [],
+  alerts: [],
+};
 
 function LeaderDashboardSkeleton() {
   return (
@@ -44,15 +45,7 @@ function LeaderDashboardSkeleton() {
 export default function LeaderDashboardPage() {
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
-  const [data, setData] = useState<DashboardData>({
-    totalEmployees: 0,
-    activeProjects: 0,
-    totalProjects: 0,
-    onTimeRate: 0,
-    pendingApprovals: 0,
-    departments: [],
-    alerts: [],
-  });
+  const [data, setData] = useState<LeaderDashboardData>(FALLBACK_DASHBOARD_DATA);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -62,53 +55,11 @@ export default function LeaderDashboardPage() {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with real API calls
-      // For now, use mock data to demonstrate the UI
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      setData({
-        totalEmployees: 47,
-        activeProjects: 12,
-        totalProjects: 18,
-        onTimeRate: 78,
-        pendingApprovals: 5,
-        departments: [
-          { name: "Engineering (IT)", load: 85, maxLoad: 100 },
-          { name: "Sales", load: 72, maxLoad: 100 },
-          { name: "Marketing", load: 58, maxLoad: 100 },
-          { name: "Human Resources", load: 42, maxLoad: 100 },
-          { name: "Accounting", load: 35, maxLoad: 100 },
-          { name: "Administration", load: 20, maxLoad: 100 },
-        ],
-        alerts: [
-          {
-            id: "1",
-            type: "overdue",
-            title: "Website Redesign project is 3 days overdue",
-            description: "Q2 Milestone incomplete. 4 tasks are blocked.",
-            severity: "high",
-            createdAt: "2026-04-21T10:00:00Z",
-          },
-          {
-            id: "2",
-            type: "pending",
-            title: "Q3 Marketing budget approval request",
-            description: "Pending since Apr 19. Total: 150,000,000đ",
-            severity: "medium",
-            createdAt: "2026-04-19T14:00:00Z",
-          },
-          {
-            id: "3",
-            type: "bottleneck",
-            title: "IT Department overloaded - 85% capacity",
-            description: "3 simultaneous projects, resource reallocation needed.",
-            severity: "high",
-            createdAt: "2026-04-22T08:00:00Z",
-          },
-        ],
-      });
+      const dashboardData = await getLeaderDashboardData();
+      setData(dashboardData);
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
+      setData(FALLBACK_DASHBOARD_DATA);
     } finally {
       setIsLoading(false);
     }

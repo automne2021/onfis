@@ -1,4 +1,7 @@
 import { createBrowserRouter, createRoutesFromElements, Route, Navigate } from 'react-router-dom';
+import AdminGuard from './AdminGuard';
+import LeaderGuard from './LeaderGuard';
+import PlaceholderPage from './PlaceholderPage';
 import AuthLayout from '../layouts/AuthLayout';
 import AppLayout from '../layouts/AppLayout';
 import SetupLayout from '../layouts/SetupLayout';
@@ -48,16 +51,6 @@ import SystemSettingsPage from '../features/admin/pages/SystemSettingsPage';
 import AuditLogsPage from '../features/admin/pages/AuditLogsPage';
 import AdminDashboardPage from '../features/admin/pages/AdminDashboardPage';
 
-// Placeholder component for pages not yet implemented
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="flex items-center justify-center h-full">
-    <div className="text-center">
-      <h1 className="text-2xl font-bold text-neutral-900 mb-2">{title}</h1>
-      <p className="text-neutral-500">This page is under construction</p>
-    </div>
-  </div>
-);
-
 export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
@@ -77,7 +70,9 @@ export const router = createBrowserRouter(
         <Route path="" element={<AppLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="leader-dashboard" element={<LeaderDashboardPage />} />
+          <Route element={<LeaderGuard />}>
+            <Route path="leader-dashboard" element={<LeaderDashboardPage />} />
+          </Route>
 
           <Route path="delegation" element={<DelegationPage />} />
 
@@ -109,8 +104,8 @@ export const router = createBrowserRouter(
 
           <Route path="settings" element={<SettingsPage />} />
 
-          {/* Admin module */}
-          <Route path="admin">
+          {/* Admin module – ADMIN only */}
+          <Route path="admin" element={<AdminGuard />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
             <Route path="requests" element={<RequestCenterPage />} />

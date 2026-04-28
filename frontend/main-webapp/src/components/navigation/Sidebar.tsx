@@ -273,12 +273,15 @@ export default function Sidebar() {
     { to: withTenant("/admin/audit"), icon: "manage_search", label: "Audit Log" },
   ];
 
-  const dashboardPath = (isSuperAdmin || isAdmin)
-    ? withTenant("/admin/dashboard")
-    : withTenant("/dashboard");
+  const dashboardPath = isSuperAdmin
+    ? withTenant("/leader-dashboard")
+    : isAdmin
+      ? withTenant("/admin/dashboard")
+      : withTenant("/dashboard");
 
   const navItems: Omit<NavItemProps, "isCollapsed">[] = [
     { to: dashboardPath, icon: "dashboard", label: "Dashboard" },
+    ...(isSuperAdmin ? [{ to: withTenant("/delegation"), icon: "assignment_ind", label: "Delegate" }] : []),
     { to: withTenant("/announcements"), icon: "campaign", label: "Announce" },
     { to: withTenant("/discuss"), icon: "forum", label: "Discuss" },
     { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
@@ -330,8 +333,8 @@ export default function Sidebar() {
               subItems={projectSubItems}
             />
 
-            {/* Admin group – only for ADMIN and SUPER_ADMIN */}
-            {(isAdmin || isSuperAdmin) && (
+            {/* Admin group – ADMIN role only */}
+            {isAdmin && (
               <>
                 <div className={`h-px bg-neutral-100 my-1 ${isCollapsed ? "w-8" : "w-full"}`} />
                 <NavItemWithFlyout
