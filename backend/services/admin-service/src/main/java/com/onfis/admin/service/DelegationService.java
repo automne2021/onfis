@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -265,6 +266,13 @@ public class DelegationService {
                                     rs.getString("assignee_avatar_url")));
                         }
                     }
+                    // Load comments and merge
+                    if (!grouped.isEmpty()) {
+                        List<UUID> ids = new ArrayList<>(grouped.keySet());
+                        Map<UUID, List<DelegationResponse.Comment>> commentsByRequest = loadDelegationComments(ids);
+                        grouped.forEach((rid, delegation) -> delegation.comments
+                                .addAll(commentsByRequest.getOrDefault(rid, List.of())));
+                    }
                     return grouped.values().stream().map(MutableDelegation::toResponse).toList();
                 });
     }
@@ -391,6 +399,55 @@ public class DelegationService {
     private record AssigneeValidationRow(UUID id, String role, boolean isActive) {
     }
 
+    private Map<UUID, List<DelegationResponse.Comment>> loadDelegationComments(List<UUID> requestIds) {
+        if (requestIds.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = requestIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        return jdbcTemplate.query(
+                """
+                        SELECT
+                          c.id,
+                          c.request_id,
+                          c.author_id,
+                          c.content,
+                          c.is_internal,
+                          c.created_at,
+                          u.first_name,
+                          u.last_name,
+                          u.email,
+                          u.avatar_url
+                        FROM executive_request_comments c
+                        LEFT JOIN users u ON u.id = c.author_id
+                        WHERE c.request_id IN (
+                        """ + placeholders + ") ORDER BY c.created_at ASC",
+                ps -> {
+                    for (int i = 0; i < requestIds.size(); i++) {
+                        ps.setObject(i + 1, requestIds.get(i));
+                    }
+                },
+                rs -> {
+                    Map<UUID, List<DelegationResponse.Comment>> grouped = new LinkedHashMap<>();
+                    while (rs.next()) {
+                        UUID requestId = rs.getObject("request_id", UUID.class);
+                        String authorName = accessService.buildDisplayName(
+                                rs.getString("first_name"),
+                                rs.getString("last_name"),
+                                rs.getString("email"));
+                        DelegationResponse.Comment comment = new DelegationResponse.Comment(
+                                rs.getObject("id", UUID.class),
+                                rs.getObject("author_id", UUID.class),
+                                authorName,
+                                rs.getString("avatar_url"),
+                                rs.getString("content"),
+                                rs.getObject("created_at", OffsetDateTime.class),
+                                rs.getBoolean("is_internal"));
+                        grouped.computeIfAbsent(requestId, ignored -> new ArrayList<>()).add(comment);
+                    }
+                    return grouped;
+                });
+    }
+
     private static final class MutableDelegation {
         private final UUID id;
         private final UUID tenantId;
@@ -406,6 +463,7 @@ public class DelegationService {
         private final OffsetDateTime updatedAt;
         private final List<DelegationResponse.Assignee> assignees = new ArrayList<>();
         private final Set<UUID> seenAssigneeIds = new HashSet<>();
+        private final List<DelegationResponse.Comment> comments = new ArrayList<>();
 
         private MutableDelegation(
                 UUID id,
@@ -464,7 +522,8 @@ public class DelegationService {
                     metadata,
                     createdAt,
                     updatedAt,
-                    List.copyOf(assignees));
+                    List.copyOf(assignees),
+                    List.copyOf(comments));
         }
     }
 }

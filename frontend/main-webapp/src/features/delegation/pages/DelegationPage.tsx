@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DelegationForm from "../components/DelegationForm";
 import DelegationList from "../components/DelegationList";
 import { delegationService, type ExecutiveRequest, type CreateExecutiveRequest } from "../services/delegationService";
@@ -6,6 +6,7 @@ import Icon from "../../../components/common/Icon";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import { Button } from "../../../components/common/Buttons/Button";
 import Modal from "../../../components/common/Modal";
+import { useToast } from "../../../contexts/useToast";
 
 function DelegationSkeleton() {
   return (
@@ -164,6 +165,37 @@ function DelegationDetailModal({
   onClose: () => void;
 }) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
+  const [comments, setComments] = useState(request.comments ?? []);
+  const [noteText, setNoteText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddNote = async () => {
+    if (!noteText.trim()) return;
+    setIsSending(true);
+    try {
+      await delegationService.addNote(request.id, noteText.trim());
+      setComments((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          authorId: "",
+          authorName: t("You"),
+          avatarUrl: null,
+          content: noteText.trim(),
+          createdAt: new Date().toISOString(),
+          isInternal: true,
+        },
+      ]);
+      setNoteText("");
+      inputRef.current?.focus();
+    } catch {
+      showToast(t("Unable to add note."), "error");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const statusConfig: Record<ExecutiveRequest["status"], { label: string; bg: string; text: string; dot: string }> = {
     PENDING:     { label: t("Pending"),     bg: "bg-amber-50",   text: "text-amber-700",   dot: "bg-amber-400" },
@@ -248,6 +280,45 @@ function DelegationDetailModal({
             </div>
           </div>
         )}
+
+        {/* Internal Notes */}
+        <div>
+          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+            {t("Internal Notes")} ({comments.length})
+          </p>
+          <div className="flex flex-col gap-2 mb-3">
+            {comments.length === 0 && (
+              <p className="text-sm text-neutral-400 italic">{t("No notes yet.")}</p>
+            )}
+            {comments.map((c) => (
+              <div key={c.id} className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-blue-700">{c.authorName}</span>
+                  <span className="text-[10px] text-neutral-400">{formatDate(c.createdAt)}</span>
+                </div>
+                <p className="text-sm text-neutral-700">{c.content}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              className="flex-1 border border-neutral-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder={t("Add internal note...")}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void handleAddNote(); }}
+              disabled={isSending}
+            />
+            <Button
+              style="primary"
+              title={t("Send")}
+              onClick={() => void handleAddNote()}
+              loading={isSending}
+            />
+          </div>
+        </div>
       </div>
     </Modal>
   );

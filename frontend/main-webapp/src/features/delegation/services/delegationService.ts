@@ -13,6 +13,18 @@ export interface ExecutiveRequest {
   updatedAt: string;
   /** New: list of assigned user IDs from junction table */
   assignees: AssigneeUser[];
+  /** Internal notes / comments added by admin */
+  comments: DelegationComment[];
+}
+
+export interface DelegationComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  avatarUrl: string | null;
+  content: string;
+  createdAt: string;
+  isInternal: boolean;
 }
 
 export interface AssigneeUser {
@@ -57,5 +69,10 @@ export const delegationService = {
   async listAssignableUsers(): Promise<AssigneeUser[]> {
     const res = await api.get<AssigneeUser[]>("/admin/delegations/assignable-users");
     return res.data;
+  },
+
+  /** Add an internal note to a delegation (reuses the tickets comment endpoint — same table) */
+  async addNote(delegationId: string, content: string): Promise<void> {
+    await api.post(`/admin/tickets/${delegationId}/comments`, { content, isInternal: true });
   },
 };

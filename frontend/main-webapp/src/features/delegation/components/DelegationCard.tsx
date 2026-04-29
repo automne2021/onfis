@@ -62,7 +62,7 @@ export default function DelegationCard({ request, onStatusChange, onDelete, onVi
           <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{priority.label}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${status.color}`}>
+          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${status.color}`}>
             {status.label}
           </span>
           {onDelete && (
@@ -77,16 +77,16 @@ export default function DelegationCard({ request, onStatusChange, onDelete, onVi
         </div>
       </div>
 
-      <h4 className="text-sm font-semibold text-neutral-900 mb-1.5 leading-snug">{request.title}</h4>
+      <h4 className="text-base font-semibold text-neutral-900 mb-1.5 leading-snug">{request.title}</h4>
 
       {request.description && (
-        <p className="text-xs text-neutral-500 leading-relaxed mb-3 line-clamp-2">{request.description}</p>
+        <p className="text-sm text-neutral-500 leading-relaxed mb-3 line-clamp-2">{request.description}</p>
       )}
 
       {/* Assignees */}
       {request.assignees && request.assignees.length > 0 && (
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[11px] text-neutral-400 flex-shrink-0">→</span>
+          <span className="text-xs text-neutral-400 flex-shrink-0">→</span>
           <div className="flex items-center -space-x-1.5">
             {request.assignees.slice(0, 4).map((user) => (
               <div
@@ -104,12 +104,12 @@ export default function DelegationCard({ request, onStatusChange, onDelete, onVi
               </div>
             ))}
             {request.assignees.length > 4 && (
-              <div className="w-6 h-6 rounded-full border-2 border-white bg-neutral-100 flex items-center justify-center text-[8px] font-bold text-neutral-500 flex-shrink-0">
+              <div className="w-6 h-6 rounded-full border-2 border-white bg-neutral-100 flex items-center justify-center text-[9px] font-bold text-neutral-500 flex-shrink-0">
                 +{request.assignees.length - 4}
               </div>
             )}
           </div>
-          <span className="text-[11px] text-neutral-500 truncate">
+          <span className="text-xs text-neutral-500 truncate">
             {request.assignees.length === 1
               ? getFullName(request.assignees[0])
               : `${request.assignees.length} ${t("assignees")}`}
@@ -121,12 +121,12 @@ export default function DelegationCard({ request, onStatusChange, onDelete, onVi
         <div className="flex items-center gap-3">
           {/* Fallback: show targetRole if no assignees */}
           {(!request.assignees || request.assignees.length === 0) && request.targetRole && (
-            <span className="text-[11px] text-neutral-400">
+            <span className="text-xs text-neutral-400">
               → {request.targetRole === "ADMIN" ? "Admin" : "Manager"}
             </span>
           )}
         </div>
-        <span className="text-[10px] text-neutral-400">{formatDate(request.createdAt)}</span>
+        <span className="text-xs text-neutral-400">{formatDate(request.createdAt)}</span>
       </div>
 
       {/* Quick actions */}
@@ -134,7 +134,7 @@ export default function DelegationCard({ request, onStatusChange, onDelete, onVi
         <div className="flex gap-2 mt-3 pt-3 border-t border-neutral-100 justify-end">
           <button
             onClick={(e) => { e.stopPropagation(); onStatusChange(request.id, "CANCELLED"); }}
-            className="py-1.5 px-3 rounded-lg text-[11px] font-medium text-neutral-500 bg-neutral-50 hover:bg-neutral-100 transition-all"
+            className="py-1.5 px-3 rounded-lg text-xs font-medium text-neutral-500 bg-neutral-50 hover:bg-neutral-100 transition-all"
           >
             {t("Cancel")}
           </button>
