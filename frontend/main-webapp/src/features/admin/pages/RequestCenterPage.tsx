@@ -12,89 +12,6 @@ import type {
   TicketComment,
 } from "../types/adminTypes";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_TICKETS: Ticket[] = [
-  {
-    id: "1",
-    code: "TK-001",
-    title: "Add New Employee Accounts - Engineering Department",
-    description:
-      "Please create new accounts for 3 employees recently onboarded to Engineering. Full details are attached in the payload.",
-    requesterId: "ceo-001",
-    requesterName: "CEO User",
-    category: "ADD_ACCOUNT",
-    priority: "HIGH",
-    status: "PENDING",
-    createdAt: "2026-04-25T08:30:00Z",
-    updatedAt: "2026-04-25T08:30:00Z",
-    comments: [],
-    payload: {
-      employees: [
-        { name: "Trần Thị A", email: "trantha@company.vn", role: "EMPLOYEE" },
-        { name: "Lê Văn B", email: "levanb@company.vn", role: "EMPLOYEE" },
-        { name: "Phạm Thị C", email: "phamthic@company.vn", role: "MANAGER" },
-      ],
-    },
-  },
-  {
-    id: "2",
-    code: "TK-002",
-    title: "Role Change - Promote Hoang Minh Tuan to Manager",
-    description:
-      "After internal review, please upgrade Hoang Minh Tuan from EMPLOYEE to MANAGER.",
-    requesterId: "ceo-001",
-    requesterName: "CEO User",
-    category: "CHANGE_ROLE",
-    priority: "MEDIUM",
-    status: "IN_PROGRESS",
-    createdAt: "2026-04-24T14:00:00Z",
-    updatedAt: "2026-04-26T10:15:00Z",
-    assigneeId: "admin-001",
-    assigneeName: "Admin A",
-    comments: [
-      {
-        id: "c1",
-        authorId: "admin-001",
-        authorName: "Admin A",
-        content: "Profile has been reviewed and processing is in progress.",
-        createdAt: "2026-04-26T10:15:00Z",
-        isInternal: true,
-      },
-    ],
-  },
-  {
-    id: "3",
-    code: "TK-003",
-    title: "System Configuration - Change Timezone to UTC+7",
-    description:
-      "The system currently runs on UTC+0. Please update it to UTC+7 to align with business operations.",
-    requesterId: "ceo-001",
-    requesterName: "CEO User",
-    category: "SYSTEM_CONFIG",
-    priority: "CRITICAL",
-    status: "RESOLVED",
-    createdAt: "2026-04-20T09:00:00Z",
-    updatedAt: "2026-04-21T11:00:00Z",
-    resolvedAt: "2026-04-21T11:00:00Z",
-    comments: [],
-  },
-  {
-    id: "4",
-    code: "TK-004",
-    title: "Increase File Upload Size Limit",
-    description:
-      "The design team needs to upload larger PSD/AI files. Please increase the limit from 10MB to 50MB.",
-    requesterId: "ceo-001",
-    requesterName: "CEO User",
-    category: "STORAGE",
-    priority: "LOW",
-    status: "PENDING",
-    createdAt: "2026-04-27T07:00:00Z",
-    updatedAt: "2026-04-27T07:00:00Z",
-    comments: [],
-  },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
   ADD_ACCOUNT: "Add Account",
@@ -185,6 +102,7 @@ interface TicketDetailModalProps {
   ticket: Ticket | null;
   isOpen: boolean;
   onClose: () => void;
+  onAccept: (id: string) => Promise<void>;
   onApprove: (id: string) => Promise<void>;
   onReject: (id: string, reason: string) => Promise<void>;
   onComment: (id: string, content: string) => Promise<void>;
@@ -194,6 +112,7 @@ function TicketDetailModal({
   ticket,
   isOpen,
   onClose,
+  onAccept,
   onApprove,
   onReject,
   onComment,
@@ -217,14 +136,26 @@ function TicketDetailModal({
   const canAct =
     ticket.status === "PENDING" || ticket.status === "IN_PROGRESS";
 
+  const handleAccept = async () => {
+    setActing(true);
+    try {
+      await onAccept(ticket.id);
+      showToast("Task accepted.", "success");
+    } catch {
+      showToast("Unable to accept this task.", "error");
+    } finally {
+      setActing(false);
+    }
+  };
+
   const handleApprove = async () => {
     setActing(true);
     try {
       await onApprove(ticket.id);
-      showToast("Ticket approved and executed.", "success");
+      showToast("Task marked as complete.", "success");
       onClose();
     } catch {
-      showToast("Unable to execute this request.", "error");
+      showToast("Unable to complete this task.", "error");
     } finally {
       setActing(false);
     }
@@ -302,18 +233,6 @@ function TicketDetailModal({
           )}
         </div>
 
-        {/* Payload details */}
-        {ticket.payload && (
-          <div>
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-              Request Payload
-            </p>
-            <pre className="text-xs bg-neutral-900 text-green-400 rounded-lg p-4 overflow-x-auto">
-              {JSON.stringify(ticket.payload, null, 2)}
-            </pre>
-          </div>
-        )}
-
         {/* Comments */}
         <div>
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
@@ -366,14 +285,25 @@ function TicketDetailModal({
               Action Panel
             </p>
             {!rejectMode ? (
-              <div className="flex gap-3">
-                <Button
-                  style="primary"
-                  iconLeft={<Icon name="check_circle" size={16} color="#0014A8" />}
-                  title="Approve & Execute"
-                  onClick={() => void handleApprove()}
-                  loading={acting}
-                />
+              <div className="flex gap-3 justify-end">
+                {ticket.status === "PENDING" && (
+                  <Button
+                    style="primary"
+                    iconLeft={<Icon name="assignment_turned_in" size={16} color="#0014A8" />}
+                    title="Accept Task"
+                    onClick={() => void handleAccept()}
+                    loading={acting}
+                  />
+                )}
+                {ticket.status === "IN_PROGRESS" && (
+                  <Button
+                    style="primary"
+                    iconLeft={<Icon name="check_circle" size={16} color="#0014A8" />}
+                    title="Mark Complete"
+                    onClick={() => void handleApprove()}
+                    loading={acting}
+                  />
+                )}
                 <Button
                   style="danger"
                   iconLeft={<Icon name="cancel" size={16} color="#ef4444" />}
@@ -390,17 +320,17 @@ function TicketDetailModal({
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    style="sub"
+                    title="Cancel"
+                    onClick={() => setRejectMode(false)}
+                  />
                   <Button
                     style="danger"
                     title="Confirm Reject"
                     onClick={() => void handleReject()}
                     loading={acting}
-                  />
-                  <Button
-                    style="sub"
-                    title="Cancel"
-                    onClick={() => setRejectMode(false)}
                   />
                 </div>
               </div>
@@ -437,105 +367,87 @@ export default function RequestCenterPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { showToast } = useToast();
 
-  const load = useCallback(async (showLoading = false, forceRefresh = false) => {
-    if (showLoading) {
-      setIsLoading(true);
-    }
+  const upsertTicket = useCallback((updatedTicket: Ticket) => {
+    setTickets((prev) => {
+      const ticketExists = prev.some((ticket) => ticket.id === updatedTicket.id);
+      const nextTickets = ticketExists
+        ? prev.map((ticket) => (ticket.id === updatedTicket.id ? updatedTicket : ticket))
+        : [updatedTicket, ...prev];
 
-    try {
-      const data = await adminService.listTickets({ forceRefresh });
-      requestCenterTicketsSnapshot = data;
-      setTickets(data);
-    } catch {
-      // Fallback to mock data when backend is unavailable
-      const fallbackTickets = requestCenterTicketsSnapshot ?? MOCK_TICKETS;
-      requestCenterTicketsSnapshot = fallbackTickets;
-      setTickets(fallbackTickets);
-    } finally {
-      setIsLoading(false);
-    }
+      requestCenterTicketsSnapshot = nextTickets;
+      return nextTickets;
+    });
   }, []);
+
+  const load = useCallback(
+    async (showLoading = false, forceRefresh = false) => {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+
+      try {
+        const data = await adminService.listTickets({ forceRefresh });
+        requestCenterTicketsSnapshot = data;
+        setTickets(data);
+      } catch (error) {
+        console.error("Failed to load request center tickets:", error);
+        if (!requestCenterTicketsSnapshot) {
+          setTickets([]);
+        }
+        if (showLoading) {
+          showToast("Unable to refresh tickets.", "error");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [showToast]
+  );
+
+  const refreshTicket = useCallback(
+    async (ticketId: string) => {
+      const latest = await adminService.getTicket(ticketId, { forceRefresh: true });
+      upsertTicket(latest);
+      setSelectedTicket((prev) => (prev?.id === ticketId ? latest : prev));
+      return latest;
+    },
+    [upsertTicket]
+  );
+
+  const handleOpenTicket = useCallback(
+    async (ticket: Ticket) => {
+      setSelectedTicket(ticket);
+      try {
+        await refreshTicket(ticket.id);
+      } catch (error) {
+        console.error("Failed to load ticket detail:", error);
+      }
+    },
+    [refreshTicket]
+  );
 
   useEffect(() => {
     void load(!initialTickets, false);
   }, [initialTickets, load]);
 
+  const handleAccept = async (id: string) => {
+    await adminService.acceptTicket(id);
+    await refreshTicket(id);
+  };
+
   const handleApprove = async (id: string) => {
-    try {
-      await adminService.approveTicket(id);
-    } catch {
-      // mock: update locally
-    }
-    setTickets((prev) => {
-      const nextTickets = prev.map((t) =>
-        t.id === id ? { ...t, status: "RESOLVED" as TicketStatus } : t
-      );
-      requestCenterTicketsSnapshot = nextTickets;
-      return nextTickets;
-    });
-    showToast("Ticket approved.", "success");
+    await adminService.approveTicket(id);
+    await refreshTicket(id);
   };
 
   const handleReject = async (id: string, reason: string) => {
-    try {
-      await adminService.rejectTicket(id, reason);
-    } catch {
-      // mock: update locally
-    }
-    setTickets((prev) => {
-      const nextTickets = prev.map((t) =>
-        t.id === id ? { ...t, status: "REJECTED" as TicketStatus } : t
-      );
-      requestCenterTicketsSnapshot = nextTickets;
-      return nextTickets;
-    });
-    showToast("Ticket rejected.", "success");
+    await adminService.rejectTicket(id, reason);
+    await refreshTicket(id);
   };
 
   const handleComment = async (id: string, content: string) => {
     await adminService.addTicketComment(id, content, true);
-    setTickets((prev) => {
-      const nextTickets = prev.map((t) => {
-        if (t.id !== id) return t;
-        return {
-          ...t,
-          comments: [
-            ...t.comments,
-            {
-              id: crypto.randomUUID(),
-              authorId: "current-admin",
-              authorName: "You",
-              content,
-              createdAt: new Date().toISOString(),
-              isInternal: true,
-            },
-          ],
-        };
-      });
-      requestCenterTicketsSnapshot = nextTickets;
-      return nextTickets;
-    });
-    // Update selected ticket too
-    if (selectedTicket?.id === id) {
-      setSelectedTicket((prev) =>
-        prev
-          ? {
-              ...prev,
-              comments: [
-                ...prev.comments,
-                {
-                  id: crypto.randomUUID(),
-                  authorId: "current-admin",
-                  authorName: "You",
-                  content,
-                  createdAt: new Date().toISOString(),
-                  isInternal: true,
-                },
-              ],
-            }
-          : null
-      );
-    }
+    await refreshTicket(id);
   };
 
   const filtered = tickets.filter((t) => {
@@ -661,7 +573,7 @@ export default function RequestCenterPage() {
                   <tr
                     key={ticket.id}
                     className="hover:bg-neutral-50 transition-colors cursor-pointer group"
-                    onClick={() => setSelectedTicket(ticket)}
+                    onClick={() => void handleOpenTicket(ticket)}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-neutral-500">
                       {ticket.code}
@@ -694,7 +606,7 @@ export default function RequestCenterPage() {
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-neutral-100"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedTicket(ticket);
+                          void handleOpenTicket(ticket);
                         }}
                       >
                         <Icon name="open_in_new" size={14} color="#62748E" />
@@ -712,6 +624,7 @@ export default function RequestCenterPage() {
         ticket={selectedTicket}
         isOpen={selectedTicket !== null}
         onClose={() => setSelectedTicket(null)}
+        onAccept={handleAccept}
         onApprove={handleApprove}
         onReject={handleReject}
         onComment={handleComment}

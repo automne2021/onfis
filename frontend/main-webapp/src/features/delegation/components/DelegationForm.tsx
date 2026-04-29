@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { CreateExecutiveRequest, AssigneeUser } from "../services/delegationService";
 import { delegationService } from "../services/delegationService";
 import { useLanguage } from "../../../contexts/LanguageContext";
@@ -20,6 +20,21 @@ function getFullName(user: AssigneeUser): string {
   return parts.length > 0 ? parts.join(" ") : user.email;
 }
 
+function normalizeSearchValue(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function getRolePriority(role: string): number {
+  const normalized = role.trim().toUpperCase();
+  if (normalized === "ADMIN") return 0;
+  if (normalized === "MANAGER") return 1;
+  return 2;
+}
+
 
 export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: DelegationFormProps) {
   const { t } = useLanguage();
@@ -36,6 +51,7 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -61,13 +77,33 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const selectedUsers = availableUsers.filter((u) => form.assigneeIds.includes(u.id));
-  const filteredUsers = availableUsers.filter((u) => {
+  const sortedUsers = useMemo(() => {
+    return [...availableUsers].sort((left, right) => {
+      const byRole = getRolePriority(left.role) - getRolePriority(right.role);
+      if (byRole !== 0) return byRole;
+
+      const leftName = getFullName(left);
+      const rightName = getFullName(right);
+      return leftName.localeCompare(rightName, "vi");
+    });
+  }, [availableUsers]);
+
+  const selectedUsers = sortedUsers.filter((u) => form.assigneeIds.includes(u.id));
+  const normalizedQuery = normalizeSearchValue(searchQuery);
+  const filteredUsers = sortedUsers.filter((u) => {
     if (form.assigneeIds.includes(u.id)) return false;
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const fullName = getFullName(u).toLowerCase();
-    return fullName.includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q);
+    if (!normalizedQuery) return true;
+
+    const searchableValues = [
+      getFullName(u),
+      u.email,
+      u.role,
+      `${u.firstName ?? ""} ${u.lastName ?? ""}`,
+    ]
+      .map((value) => normalizeSearchValue(value))
+      .filter(Boolean);
+
+    return searchableValues.some((value) => value.includes(normalizedQuery));
   });
 
   const toggleUser = (userId: string) => {
@@ -79,6 +115,8 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
     }));
     setErrors((prev) => ({ ...prev, assignees: "" }));
     setSearchQuery("");
+    setIsDropdownOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const removeUser = (userId: string) => {
@@ -197,8 +235,13 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
           <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm transition-all
             ${errors.assignees ? "border-red-300" : isDropdownOpen ? "border-indigo-400 ring-2 ring-indigo-500/30" : "border-neutral-200"}
             bg-white`}
+            onClick={() => {
+              setIsDropdownOpen(true);
+              inputRef.current?.focus();
+            }}
           >
             <input
+              ref={inputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -208,9 +251,13 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
             />
           </div>
 
-          {isDropdownOpen && !isLoadingUsers && (
+          {isDropdownOpen && (
             <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white rounded-xl border border-neutral-200 shadow-lg max-h-60 overflow-y-auto">
-              {filteredUsers.length === 0 ? (
+              {isLoadingUsers ? (
+                <div className="py-6 text-center text-xs text-neutral-400">
+                  {t("Loading members...")}
+                </div>
+              ) : filteredUsers.length === 0 ? (
                 <div className="py-6 text-center text-xs text-neutral-400">
                   {searchQuery ? t("No results found") : t("All selected")}
                 </div>
@@ -222,6 +269,7 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
                       <p className="text-sm font-medium text-neutral-900">{getFullName(user)}</p>
                       <p className="text-[11px] text-neutral-400">{user.email}</p>
                     </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{user.role}</span>
                   </button>
                 ))
               )}

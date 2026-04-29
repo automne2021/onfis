@@ -5,6 +5,7 @@ import { delegationService, type ExecutiveRequest, type CreateExecutiveRequest }
 import Icon from "../../../components/common/Icon";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import { Button } from "../../../components/common/Buttons/Button";
+import Modal from "../../../components/common/Modal";
 
 function DelegationSkeleton() {
   return (
@@ -33,6 +34,7 @@ export default function DelegationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [selectedRequest, setSelectedRequest] = useState<ExecutiveRequest | null>(null);
 
   useEffect(() => {
     loadRequests();
@@ -125,9 +127,128 @@ export default function DelegationPage() {
         requests={requests}
         onStatusChange={handleStatusChange}
         onDelete={handleDelete}
+        onViewDetail={setSelectedRequest}
         filter={filter}
         onFilterChange={setFilter}
       />
+
+      {/* Delegation Detail Modal */}
+      {selectedRequest && (
+        <DelegationDetailModal
+          request={selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Detail Modal ──────────────────────────────────────────────────────────────
+
+function getInitials(firstName: string | null, lastName: string | null): string {
+  const f = firstName?.charAt(0)?.toUpperCase() || "";
+  const l = lastName?.charAt(0)?.toUpperCase() || "";
+  return f + l || "?";
+}
+
+function getFullName(user: { firstName: string | null; lastName: string | null; email: string }): string {
+  const parts = [user.lastName, user.firstName].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : user.email;
+}
+
+function DelegationDetailModal({
+  request,
+  onClose,
+}: {
+  request: ExecutiveRequest;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+
+  const statusConfig: Record<ExecutiveRequest["status"], { label: string; bg: string; text: string; dot: string }> = {
+    PENDING:     { label: t("Pending"),     bg: "bg-amber-50",   text: "text-amber-700",   dot: "bg-amber-400" },
+    IN_PROGRESS: { label: t("In Progress"), bg: "bg-blue-50",    text: "text-blue-700",    dot: "bg-blue-500" },
+    COMPLETED:   { label: t("Completed"),   bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500" },
+    CANCELLED:   { label: t("Cancelled"),   bg: "bg-neutral-100", text: "text-neutral-500", dot: "bg-neutral-400" },
+  };
+
+  const priorityConfig: Record<ExecutiveRequest["priority"], { label: string; bg: string; text: string }> = {
+    URGENT: { label: t("Urgent"), bg: "bg-red-50",     text: "text-red-600" },
+    HIGH:   { label: t("High"),   bg: "bg-orange-50",  text: "text-orange-600" },
+    MEDIUM: { label: t("Medium"), bg: "bg-blue-50",    text: "text-blue-600" },
+    LOW:    { label: t("Low"),    bg: "bg-neutral-100", text: "text-neutral-600" },
+  };
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString("vi-VN", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+
+  const s = statusConfig[request.status];
+  const p = priorityConfig[request.priority];
+
+  return (
+    <Modal isOpen onClose={onClose} title={t("Delegation Details")} maxWidth="md">
+      <div className="flex flex-col gap-5 px-8 py-5 overflow-y-auto max-h-[70vh]">
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+            {s.label}
+          </span>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-semibold ${p.bg} ${p.text}`}>
+            {p.label}
+          </span>
+        </div>
+
+        {/* Title & Description */}
+        <div>
+          <h3 className="text-base font-semibold text-neutral-900 mb-1">{request.title}</h3>
+          {request.description && (
+            <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{request.description}</p>
+          )}
+        </div>
+
+        {/* Meta info */}
+        <div className="grid grid-cols-2 gap-3 text-sm bg-neutral-50 rounded-xl p-4 border border-neutral-100">
+          <div>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Created At")}</p>
+            <p className="font-medium text-neutral-800">{formatDate(request.createdAt)}</p>
+          </div>
+          <div>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Last Updated")}</p>
+            <p className="font-medium text-neutral-800">{formatDate(request.updatedAt)}</p>
+          </div>
+        </div>
+
+        {/* Assignees */}
+        {request.assignees && request.assignees.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+              {t("Assigned to")} ({request.assignees.length})
+            </p>
+            <div className="flex flex-col gap-2">
+              {request.assignees.map((user) => (
+                <div key={user.id} className="flex items-center gap-3 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-100">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {getInitials(user.firstName, user.lastName)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 truncate">{getFullName(user)}</p>
+                    <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400 flex-shrink-0">{user.role}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }

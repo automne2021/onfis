@@ -123,6 +123,11 @@ export const adminService = {
     return res.data;
   },
 
+  async acceptTicket(id: string): Promise<void> {
+    await api.post(`/admin/tickets/${id}/accept`);
+    invalidateTicketCaches();
+  },
+
   async approveTicket(id: string): Promise<void> {
     await api.post(`/admin/tickets/${id}/approve`);
     invalidateTicketCaches();

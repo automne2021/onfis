@@ -47,8 +47,13 @@ public class TenantContextFilter extends OncePerRequestFilter {
         }
 
         Session session = entityManager.unwrap(Session.class);
-        Filter filter = session.enableFilter("tenantFilter");
-        filter.setParameter("tenantId", tenantId);
+        try {
+            Filter filter = session.enableFilter("tenantFilter");
+            filter.setParameter("tenantId", tenantId);
+        } catch (org.hibernate.UnknownFilterException ignored) {
+            // Service does not declare a tenantFilter (e.g. uses JdbcTemplate directly);
+            // skip Hibernate filter but still propagate JWT claims below.
+        }
         setJwtClaims(session, tenantId, userId);
 
         try {

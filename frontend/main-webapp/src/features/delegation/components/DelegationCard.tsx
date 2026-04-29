@@ -4,6 +4,7 @@ interface DelegationCardProps {
   request: ExecutiveRequest;
   onStatusChange?: (id: string, status: ExecutiveRequest["status"]) => void;
   onDelete?: (id: string) => void;
+  onViewDetail?: (request: ExecutiveRequest) => void;
 }
 
 import Icon from "../../../components/common/Icon";
@@ -20,7 +21,7 @@ function getFullName(user: { firstName: string | null; lastName: string | null; 
   return parts.length > 0 ? parts.join(" ") : user.email;
 }
 
-export default function DelegationCard({ request, onStatusChange, onDelete }: DelegationCardProps) {
+export default function DelegationCard({ request, onStatusChange, onDelete, onViewDetail }: DelegationCardProps) {
   const { t } = useLanguage();
 
   const statusConfig: Record<ExecutiveRequest["status"], { label: string; color: string }> = {
@@ -51,7 +52,10 @@ export default function DelegationCard({ request, onStatusChange, onDelete }: De
   };
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-200/80 p-5 hover:shadow-md transition-all card-hover">
+    <div
+      className="bg-white rounded-xl border border-neutral-200/80 p-5 hover:shadow-md transition-all card-hover cursor-pointer"
+      onClick={() => onViewDetail?.(request)}
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={`w-2.5 h-2.5 rounded-full ${priority.dot}`} />
@@ -63,7 +67,7 @@ export default function DelegationCard({ request, onStatusChange, onDelete }: De
           </span>
           {onDelete && (
             <button
-              onClick={() => onDelete(request.id)}
+              onClick={(e) => { e.stopPropagation(); onDelete(request.id); }}
               className="w-6 h-6 flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
               title={t("Delete delegation")}
             >
@@ -127,15 +131,9 @@ export default function DelegationCard({ request, onStatusChange, onDelete }: De
 
       {/* Quick actions */}
       {request.status === "PENDING" && onStatusChange && (
-        <div className="flex gap-2 mt-3 pt-3 border-t border-neutral-100">
+        <div className="flex gap-2 mt-3 pt-3 border-t border-neutral-100 justify-end">
           <button
-            onClick={() => onStatusChange(request.id, "IN_PROGRESS")}
-            className="flex-1 py-1.5 rounded-lg text-[11px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all"
-          >
-            {t("Start processing")}
-          </button>
-          <button
-            onClick={() => onStatusChange(request.id, "CANCELLED")}
+            onClick={(e) => { e.stopPropagation(); onStatusChange(request.id, "CANCELLED"); }}
             className="py-1.5 px-3 rounded-lg text-[11px] font-medium text-neutral-500 bg-neutral-50 hover:bg-neutral-100 transition-all"
           >
             {t("Cancel")}

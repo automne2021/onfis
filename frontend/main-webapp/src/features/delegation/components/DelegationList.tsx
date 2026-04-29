@@ -8,11 +8,12 @@ interface DelegationListProps {
   requests: ExecutiveRequest[];
   onStatusChange: (id: string, status: ExecutiveRequest["status"]) => void;
   onDelete: (id: string) => void;
+  onViewDetail: (request: ExecutiveRequest) => void;
   filter: string;
   onFilterChange: (filter: string) => void;
 }
 
-export default function DelegationList({ requests, onStatusChange, onDelete, filter, onFilterChange }: DelegationListProps) {
+export default function DelegationList({ requests, onStatusChange, onDelete, onViewDetail, filter, onFilterChange }: DelegationListProps) {
   const { t } = useLanguage();
 
   const FILTERS = [
@@ -158,7 +159,7 @@ export default function DelegationList({ requests, onStatusChange, onDelete, fil
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {currentData.map((req, i) => (
               <div key={req.id} className="animate-page-enter" style={{ animationDelay: `${(i % ITEMS_PER_PAGE) * 50}ms` }}>
-                <DelegationCard request={req} onStatusChange={onStatusChange} onDelete={onDelete} />
+                <DelegationCard request={req} onStatusChange={onStatusChange} onDelete={onDelete} onViewDetail={onViewDetail} />
               </div>
             ))}
           </div>

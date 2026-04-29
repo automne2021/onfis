@@ -37,6 +37,15 @@ public class AdminTicketController {
         return ResponseEntity.ok(adminTicketService.getTicket(tenantId, userId, ticketId));
     }
 
+    @PostMapping("/tickets/{id}/accept")
+    public ResponseEntity<Void> acceptTicket(
+            @RequestHeader("X-Company-ID") String tenantId,
+            @RequestHeader("X-User-ID") String userId,
+            @PathVariable("id") String ticketId) {
+        adminTicketService.acceptTicket(tenantId, userId, ticketId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/tickets/{id}/approve")
     public ResponseEntity<Void> approveTicket(
             @RequestHeader("X-Company-ID") String tenantId,

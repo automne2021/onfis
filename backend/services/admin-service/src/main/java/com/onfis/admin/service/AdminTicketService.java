@@ -91,6 +91,30 @@ public class AdminTicketService {
         return response;
     }
 
+    public void acceptTicket(String tenantIdHeader, String userIdHeader, String ticketIdRaw) {
+        UUID tenantId = accessService.parseUuidHeader(tenantIdHeader, "X-Company-ID");
+        UUID userId = accessService.parseUuidHeader(userIdHeader, "X-User-ID");
+        UUID ticketId = accessService.parseUuidHeader(ticketIdRaw, "ticketId");
+        AdminAccessService.UserContext actor = accessService.requireAdminOrSuperAdmin(tenantId, userId);
+
+        ActionableRequest request = loadActionableRequest(tenantId, actor, ticketId);
+        if (!"PENDING".equals(request.status())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only PENDING tickets can be accepted");
+        }
+
+        jdbcTemplate.update(
+                """
+                        UPDATE executive_requests
+                        SET status = 'IN_PROGRESS'
+                        WHERE id = ?
+                          AND tenant_id = ?
+                        """,
+                ticketId,
+                tenantId);
+
+        evictTicketCaches();
+    }
+
     public void approveTicket(String tenantIdHeader, String userIdHeader, String ticketIdRaw) {
         UUID tenantId = accessService.parseUuidHeader(tenantIdHeader, "X-Company-ID");
         UUID userId = accessService.parseUuidHeader(userIdHeader, "X-User-ID");
@@ -98,7 +122,9 @@ public class AdminTicketService {
         AdminAccessService.UserContext actor = accessService.requireAdminOrSuperAdmin(tenantId, userId);
 
         ActionableRequest request = loadActionableRequest(tenantId, actor, ticketId);
-        ensureNotFinalized(request.status());
+        if (!"IN_PROGRESS".equals(request.status())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only IN_PROGRESS tickets can be marked complete");
+        }
 
         jdbcTemplate.update(
                 """
