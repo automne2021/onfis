@@ -10,17 +10,17 @@ import type { TenantSettings, StorageSettings } from "../types/adminTypes";
 const MOCK_TENANT: TenantSettings = {
   id: "t1",
   name: "Onfis Demo",
-  legalName: "Công ty TNHH Onfis Technology",
+  legalName: "Onfis Technology Co., Ltd.",
   taxCode: "0123456789",
-  address: "123 Nguyễn Văn Linh, Quận 7, TP. HCM",
+  address: "123 Nguyen Van Linh, District 7, Ho Chi Minh City",
   timezone: "Asia/Ho_Chi_Minh",
   dateFormat: "DD/MM/YYYY",
   workingDays: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
   publicHolidays: [
-    { date: "2026-01-01", name: "Tết Dương lịch" },
-    { date: "2026-04-30", name: "Ngày Giải phóng" },
-    { date: "2026-05-01", name: "Ngày Quốc tế Lao động" },
-    { date: "2026-09-02", name: "Ngày Quốc khánh" },
+    { date: "2026-01-01", name: "New Year's Day" },
+    { date: "2026-04-30", name: "Reunification Day" },
+    { date: "2026-05-01", name: "International Workers' Day" },
+    { date: "2026-09-02", name: "National Day" },
   ],
 };
 
@@ -35,23 +35,23 @@ const MOCK_STORAGE: StorageSettings = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const WEEKDAY_LABELS: Record<string, string> = {
-  MONDAY: "Thứ 2",
-  TUESDAY: "Thứ 3",
-  WEDNESDAY: "Thứ 4",
-  THURSDAY: "Thứ 5",
-  FRIDAY: "Thứ 6",
-  SATURDAY: "Thứ 7",
-  SUNDAY: "Chủ nhật",
+  MONDAY: "Monday",
+  TUESDAY: "Tuesday",
+  WEDNESDAY: "Wednesday",
+  THURSDAY: "Thursday",
+  FRIDAY: "Friday",
+  SATURDAY: "Saturday",
+  SUNDAY: "Sunday",
 };
 
 const ALL_WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 const TIMEZONES = [
-  { value: "Asia/Ho_Chi_Minh", label: "UTC+7 – Hà Nội, TP. HCM" },
+  { value: "Asia/Ho_Chi_Minh", label: "UTC+7 - Hanoi, Ho Chi Minh City" },
   { value: "Asia/Bangkok", label: "UTC+7 – Bangkok" },
   { value: "Asia/Singapore", label: "UTC+8 – Singapore" },
   { value: "Asia/Tokyo", label: "UTC+9 – Tokyo" },
-  { value: "UTC", label: "UTC+0 – Coordinated Universal Time" },
+  { value: "UTC", label: "UTC+0 - Coordinated Universal Time" },
 ];
 
 const DATE_FORMATS = [
@@ -66,13 +66,13 @@ function StorageBar({ used, total }: { used: number; total: number }) {
   return (
     <div>
       <div className="flex justify-between text-xs text-neutral-500 mb-1">
-        <span>{(used / 1024).toFixed(1)} GB đã dùng</span>
-        <span>{(total / 1024).toFixed(1)} GB tổng</span>
+        <span>{(used / 1024).toFixed(1)} GB used</span>
+        <span>{(total / 1024).toFixed(1)} GB total</span>
       </div>
       <div className="w-full h-2.5 bg-neutral-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <p className="text-xs text-neutral-400 mt-1">{pct.toFixed(1)}% đã sử dụng</p>
+      <p className="text-xs text-neutral-400 mt-1">{pct.toFixed(1)}% used</p>
     </div>
   );
 }
@@ -120,9 +120,9 @@ function TenantTab({ settings, onSave }: TenantTabProps) {
     setSaving(true);
     try {
       await onSave(draft);
-      showToast("Cài đặt tenant đã được lưu.", "success");
+      showToast("Tenant settings saved.", "success");
     } catch {
-      showToast("Không thể lưu cài đặt.", "error");
+      showToast("Unable to save settings.", "error");
     } finally {
       setSaving(false);
     }
@@ -135,23 +135,23 @@ function TenantTab({ settings, onSave }: TenantTabProps) {
       {/* Legal info */}
       <div className="section-card p-5 space-y-4">
         <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-          <Icon name="business" size={16} color="#0014A8" /> Thông tin pháp lý
+          <Icon name="business" size={16} color="#0014A8" /> Legal Information
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Tên hiển thị</label>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Display Name</label>
             <input className={inputCls} value={draft.name} onChange={(e) => set("name", e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Tên pháp lý</label>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Legal Name</label>
             <input className={inputCls} value={draft.legalName} onChange={(e) => set("legalName", e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Mã số thuế</label>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Tax Code</label>
             <input className={inputCls} value={draft.taxCode} onChange={(e) => set("taxCode", e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Địa chỉ</label>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Address</label>
             <input className={inputCls} value={draft.address} onChange={(e) => set("address", e.target.value)} />
           </div>
         </div>
@@ -160,17 +160,17 @@ function TenantTab({ settings, onSave }: TenantTabProps) {
       {/* Time & Format */}
       <div className="section-card p-5 space-y-4">
         <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-          <Icon name="schedule" size={16} color="#0014A8" /> Múi giờ & Định dạng
+          <Icon name="schedule" size={16} color="#0014A8" /> Timezone & Format
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Múi giờ hệ thống</label>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">System Timezone</label>
             <select className={inputCls} value={draft.timezone} onChange={(e) => set("timezone", e.target.value)}>
               {TIMEZONES.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-neutral-500 mb-1">Định dạng ngày/tháng</label>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Date Format</label>
             <select className={inputCls} value={draft.dateFormat} onChange={(e) => set("dateFormat", e.target.value)}>
               {DATE_FORMATS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
@@ -181,7 +181,7 @@ function TenantTab({ settings, onSave }: TenantTabProps) {
       {/* Working days */}
       <div className="section-card p-5 space-y-3">
         <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-          <Icon name="date_range" size={16} color="#0014A8" /> Lịch làm việc
+          <Icon name="date_range" size={16} color="#0014A8" /> Working Days
         </p>
         <div className="flex flex-wrap gap-2">
           {ALL_WEEKDAYS.map((day) => {
@@ -207,7 +207,7 @@ function TenantTab({ settings, onSave }: TenantTabProps) {
       {/* Public holidays */}
       <div className="section-card p-5 space-y-3">
         <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-          <Icon name="celebration" size={16} color="#0014A8" /> Ngày nghỉ lễ
+          <Icon name="celebration" size={16} color="#0014A8" /> Public Holidays
         </p>
         <div className="space-y-1.5 max-h-48 overflow-y-auto">
           {draft.publicHolidays.map((h) => (
@@ -233,16 +233,16 @@ function TenantTab({ settings, onSave }: TenantTabProps) {
           <input
             type="text"
             className="flex-1 border border-neutral-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            placeholder="Tên ngày lễ"
+            placeholder="Holiday name"
             value={holidayDraft.name}
             onChange={(e) => setHolidayDraft((p) => ({ ...p, name: e.target.value }))}
           />
-          <Button style="sub" title="Thêm" onClick={addHoliday} />
+          <Button style="sub" title="Add" onClick={addHoliday} />
         </div>
       </div>
 
       <div className="flex justify-end">
-        <Button style="primary" title="Lưu cài đặt Tenant" loading={saving} onClick={() => void handleSave()} />
+        <Button style="primary" title="Save Tenant Settings" loading={saving} onClick={() => void handleSave()} />
       </div>
     </div>
   );
@@ -267,9 +267,9 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
     setSaving(true);
     try {
       await onSave(draft);
-      showToast("Cài đặt lưu trữ đã được lưu.", "success");
+      showToast("Storage settings saved.", "success");
     } catch {
-      showToast("Không thể lưu cài đặt.", "error");
+      showToast("Unable to save settings.", "error");
     } finally {
       setSaving(false);
     }
@@ -290,14 +290,14 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
       {/* Usage */}
       <div className="section-card p-5 space-y-4">
         <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-          <Icon name="storage" size={16} color="#0014A8" /> Mức sử dụng dung lượng
+          <Icon name="storage" size={16} color="#0014A8" /> Storage Usage
         </p>
         <StorageBar used={draft.usedMb} total={draft.totalQuotaMb} />
         <div className="grid grid-cols-3 gap-3 text-center">
           {[
-            { label: "Tổng quota", value: `${(draft.totalQuotaMb / 1024).toFixed(1)} GB`, color: "text-neutral-700" },
-            { label: "Đã dùng", value: `${(draft.usedMb / 1024).toFixed(1)} GB`, color: "text-orange-600" },
-            { label: "Còn trống", value: `${((draft.totalQuotaMb - draft.usedMb) / 1024).toFixed(1)} GB`, color: "text-green-600" },
+            { label: "Total Quota", value: `${(draft.totalQuotaMb / 1024).toFixed(1)} GB`, color: "text-neutral-700" },
+            { label: "Used", value: `${(draft.usedMb / 1024).toFixed(1)} GB`, color: "text-orange-600" },
+            { label: "Available", value: `${((draft.totalQuotaMb - draft.usedMb) / 1024).toFixed(1)} GB`, color: "text-green-600" },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-neutral-50 rounded-xl p-3 border border-neutral-100">
               <p className={`text-lg font-bold ${color}`}>{value}</p>
@@ -306,24 +306,24 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
           ))}
         </div>
         <div>
-          <label className="block text-xs font-medium text-neutral-500 mb-1">Tên bucket</label>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Bucket Name</label>
           <input
             className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm bg-neutral-50 text-neutral-500 cursor-not-allowed"
             value={draft.bucketName}
             readOnly
           />
-          <p className="text-[11px] text-neutral-400 mt-1">Được cấu hình trong Supabase Storage. Thay đổi qua dashboard.</p>
+          <p className="text-[11px] text-neutral-400 mt-1">Configured in Supabase Storage. Change it from the dashboard.</p>
         </div>
       </div>
 
       {/* Upload limits */}
       <div className="section-card p-5 space-y-4">
         <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
-          <Icon name="upload_file" size={16} color="#0014A8" /> Giới hạn upload
+          <Icon name="upload_file" size={16} color="#0014A8" /> Upload Limits
         </p>
         <div>
           <label className="block text-xs font-medium text-neutral-500 mb-1">
-            Kích thước tối đa mỗi file (MB): <span className="font-bold text-neutral-700">{draft.maxFileSizeMb} MB</span>
+            Maximum file size (MB): <span className="font-bold text-neutral-700">{draft.maxFileSizeMb} MB</span>
           </label>
           <input
             type="range"
@@ -341,7 +341,7 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-neutral-500 mb-2">Định dạng file được phép</label>
+          <label className="block text-xs font-medium text-neutral-500 mb-2">Allowed file formats</label>
           <div className="flex flex-wrap gap-1.5 mb-2 p-3 bg-neutral-50 rounded-lg border border-neutral-100 min-h-[40px]">
             {draft.allowedExtensions.map((ext) => (
               <span key={ext} className="inline-flex items-center gap-1 bg-white border border-neutral-200 text-neutral-600 text-xs px-2 py-0.5 rounded-md">
@@ -361,13 +361,13 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
               onChange={(e) => setExtDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") addExt(); }}
             />
-            <Button style="sub" title="Thêm" onClick={addExt} />
+            <Button style="sub" title="Add" onClick={addExt} />
           </div>
         </div>
       </div>
 
       <div className="flex justify-end">
-        <Button style="primary" title="Lưu cài đặt lưu trữ" loading={saving} onClick={() => void handleSave()} />
+        <Button style="primary" title="Save Storage Settings" loading={saving} onClick={() => void handleSave()} />
       </div>
     </div>
   );
@@ -378,53 +378,75 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
 type TabId = "tenant" | "storage";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "tenant", label: "Thiết lập Tenant", icon: "business" },
-  { id: "storage", label: "Quản lý lưu trữ", icon: "storage" },
+  { id: "tenant", label: "Tenant Settings", icon: "business" },
+  { id: "storage", label: "Storage Management", icon: "storage" },
 ];
 
+let tenantSettingsSnapshot: TenantSettings | null = null;
+let storageSettingsSnapshot: StorageSettings | null = null;
+
 export default function SystemSettingsPage() {
+  const [initialCache] = useState(() => ({
+    tenant: adminService.getCachedTenantSettings() ?? tenantSettingsSnapshot,
+    storage: adminService.getCachedStorageSettings() ?? storageSettingsSnapshot,
+  }));
+
   const [activeTab, setActiveTab] = useState<TabId>("tenant");
-  const [tenantSettings, setTenantSettings] = useState<TenantSettings>(MOCK_TENANT);
-  const [storageSettings, setStorageSettings] = useState<StorageSettings>(MOCK_STORAGE);
-  const [isLoading, setIsLoading] = useState(true);
+  const [tenantSettings, setTenantSettings] = useState<TenantSettings>(initialCache.tenant ?? MOCK_TENANT);
+  const [storageSettings, setStorageSettings] = useState<StorageSettings>(initialCache.storage ?? MOCK_STORAGE);
+  const [isLoading, setIsLoading] = useState(!(initialCache.tenant && initialCache.storage));
   const { showToast } = useToast();
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (showLoading = false, forceRefresh = false) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
+
     try {
       const [tenant, storage] = await Promise.all([
-        adminService.getTenantSettings(),
-        adminService.getStorageSettings(),
+        adminService.getTenantSettings({ forceRefresh }),
+        adminService.getStorageSettings({ forceRefresh }),
       ]);
+      tenantSettingsSnapshot = tenant;
+      storageSettingsSnapshot = storage;
       setTenantSettings(tenant);
       setStorageSettings(storage);
     } catch {
-      // Use mock data
+      const fallbackTenant = tenantSettingsSnapshot ?? MOCK_TENANT;
+      const fallbackStorage = storageSettingsSnapshot ?? MOCK_STORAGE;
+      tenantSettingsSnapshot = fallbackTenant;
+      storageSettingsSnapshot = fallbackStorage;
+      setTenantSettings(fallbackTenant);
+      setStorageSettings(fallbackStorage);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(!(initialCache.tenant && initialCache.storage), false); }, [initialCache.storage, initialCache.tenant, load]);
 
   const handleSaveTenant = async (s: TenantSettings) => {
     try {
       const updated = await adminService.updateTenantSettings(s);
+      tenantSettingsSnapshot = updated;
       setTenantSettings(updated);
     } catch {
+      tenantSettingsSnapshot = s;
       setTenantSettings(s); // optimistic
     }
-    showToast("Đã lưu cài đặt tenant.", "success");
+    showToast("Tenant settings saved.", "success");
   };
 
   const handleSaveStorage = async (s: StorageSettings) => {
     try {
       const updated = await adminService.updateStorageSettings(s);
+      storageSettingsSnapshot = updated;
       setStorageSettings(updated);
     } catch {
+      storageSettingsSnapshot = s;
       setStorageSettings(s);
     }
-    showToast("Đã lưu cài đặt lưu trữ.", "success");
+    showToast("Storage settings saved.", "success");
   };
 
   return (
@@ -434,8 +456,8 @@ export default function SystemSettingsPage() {
         <div className="flex items-center gap-3">
           <Icon name="tune" size={22} color="#0014A8" />
           <div>
-            <h1 className="text-base font-bold text-neutral-900">Cấu hình Hệ thống</h1>
-            <p className="text-xs text-neutral-500">Quản lý tenant, lưu trữ và cài đặt nâng cao</p>
+            <h1 className="text-base font-bold text-neutral-900">System Settings</h1>
+            <p className="text-xs text-neutral-500">Manage tenant, storage, and advanced platform settings</p>
           </div>
         </div>
       </div>

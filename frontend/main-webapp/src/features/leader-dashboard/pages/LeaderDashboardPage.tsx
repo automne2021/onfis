@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import KPICards from "../components/KPICards";
 import Icon from "../../../components/common/Icon";
@@ -6,7 +6,11 @@ import DepartmentWorkload from "../components/DepartmentWorkload";
 import CriticalAlerts from "../components/CriticalAlerts";
 import QuickActions from "../components/QuickActions";
 import { Button } from "../../../components/common/Buttons/Button";
-import { getLeaderDashboardData, type LeaderDashboardData } from "../services/leaderDashboardService";
+import {
+  getCachedLeaderDashboardData,
+  getLeaderDashboardData,
+  type LeaderDashboardData,
+} from "../services/leaderDashboardService";
 
 const FALLBACK_DASHBOARD_DATA: LeaderDashboardData = {
   totalEmployees: 0,
@@ -17,6 +21,8 @@ const FALLBACK_DASHBOARD_DATA: LeaderDashboardData = {
   departments: [],
   alerts: [],
 };
+
+let leaderDashboardSnapshot: LeaderDashboardData | null = null;
 
 function LeaderDashboardSkeleton() {
   return (
@@ -45,25 +51,44 @@ function LeaderDashboardSkeleton() {
 export default function LeaderDashboardPage() {
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
-  const [data, setData] = useState<LeaderDashboardData>(FALLBACK_DASHBOARD_DATA);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const [initialState] = useState(() => {
+    const cachedData = getCachedLeaderDashboardData();
+    const snapshotData = cachedData ?? leaderDashboardSnapshot;
+    return {
+      hasCache: snapshotData !== null,
+      data: snapshotData ?? FALLBACK_DASHBOARD_DATA,
+    };
+  });
 
-  const loadDashboardData = async () => {
-    setIsLoading(true);
+  const [data, setData] = useState<LeaderDashboardData>(initialState.data);
+  const [isLoading, setIsLoading] = useState(!initialState.hasCache);
+
+  const loadDashboardData = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
+
     try {
       const dashboardData = await getLeaderDashboardData();
+      leaderDashboardSnapshot = dashboardData;
       setData(dashboardData);
     } catch (err) {
       console.error("Failed to load dashboard data:", err);
-      setData(FALLBACK_DASHBOARD_DATA);
+      if (leaderDashboardSnapshot) {
+        setData(leaderDashboardSnapshot);
+      } else {
+        leaderDashboardSnapshot = FALLBACK_DASHBOARD_DATA;
+        setData(FALLBACK_DASHBOARD_DATA);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadDashboardData(!initialState.hasCache);
+  }, [initialState.hasCache, loadDashboardData]);
 
   if (isLoading) {
     return <LeaderDashboardSkeleton />;

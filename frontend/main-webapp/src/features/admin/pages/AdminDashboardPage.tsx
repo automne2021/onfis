@@ -17,16 +17,16 @@ const MOCK_STATS = {
 };
 
 const MOCK_RECENT_TICKETS = [
-  { id: "1", code: "TK-001", title: "Thêm tài khoản nhân viên mới – Phòng Kỹ thuật", priority: "HIGH", status: "PENDING", requester: "Nguyễn Văn CEO", createdAt: "2026-04-25T08:30:00Z" },
-  { id: "2", code: "TK-002", title: "Nâng cấp quyền lên Manager cho Hoàng Minh Tuấn", priority: "MEDIUM", status: "IN_PROGRESS", requester: "Nguyễn Văn CEO", createdAt: "2026-04-24T14:00:00Z" },
-  { id: "3", code: "TK-004", title: "Tăng giới hạn dung lượng upload file", priority: "LOW", status: "PENDING", requester: "Nguyễn Văn CEO", createdAt: "2026-04-27T07:00:00Z" },
+  { id: "1", code: "TK-001", title: "Add New Employee Accounts - Engineering Department", priority: "HIGH", status: "PENDING", requester: "CEO User", createdAt: "2026-04-25T08:30:00Z" },
+  { id: "2", code: "TK-002", title: "Promote Hoang Minh Tuan to Manager", priority: "MEDIUM", status: "IN_PROGRESS", requester: "CEO User", createdAt: "2026-04-24T14:00:00Z" },
+  { id: "3", code: "TK-004", title: "Increase File Upload Size Limit", priority: "LOW", status: "PENDING", requester: "CEO User", createdAt: "2026-04-27T07:00:00Z" },
 ];
 
 const MOCK_RECENT_AUDIT = [
   { id: "a1", action: "CREATE_USER", actor: "Admin", target: "trantha@company.vn", ts: "2026-04-27T09:10:00Z" },
-  { id: "a2", action: "UPDATE_USER_ROLE", actor: "Admin", target: "cuong.le@company.vn → MANAGER", ts: "2026-04-26T16:45:00Z" },
+  { id: "a2", action: "UPDATE_USER_ROLE", actor: "Admin", target: "cuong.le@company.vn -> MANAGER", ts: "2026-04-26T16:45:00Z" },
   { id: "a3", action: "DISABLE_USER", actor: "Admin", target: "em.hoang@company.vn", ts: "2026-04-26T10:00:00Z" },
-  { id: "a4", action: "UPDATE_SETTINGS", actor: "Admin", target: "Cấu hình múi giờ", ts: "2026-04-25T14:30:00Z" },
+  { id: "a4", action: "UPDATE_SETTINGS", actor: "Admin", target: "Timezone configuration", ts: "2026-04-25T14:30:00Z" },
   { id: "a5", action: "RESET_PASSWORD", actor: "Admin", target: "dung.pham@company.vn", ts: "2026-04-24T11:20:00Z" },
 ];
 
@@ -40,35 +40,35 @@ const MOCK_ROLE_DIST = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const PRIORITY_META: Record<string, { label: string; bg: string; text: string }> = {
-  CRITICAL: { label: "Khẩn cấp", bg: "bg-red-50", text: "text-red-700" },
-  HIGH: { label: "Cao", bg: "bg-orange-50", text: "text-orange-700" },
-  MEDIUM: { label: "Trung bình", bg: "bg-yellow-50", text: "text-yellow-700" },
-  LOW: { label: "Thấp", bg: "bg-neutral-100", text: "text-neutral-500" },
+  CRITICAL: { label: "Critical", bg: "bg-red-50", text: "text-red-700" },
+  HIGH: { label: "High", bg: "bg-orange-50", text: "text-orange-700" },
+  MEDIUM: { label: "Medium", bg: "bg-yellow-50", text: "text-yellow-700" },
+  LOW: { label: "Low", bg: "bg-neutral-100", text: "text-neutral-500" },
 };
 
 const STATUS_META: Record<string, { label: string; dot: string; text: string }> = {
-  PENDING: { label: "Chờ xử lý", dot: "bg-yellow-400", text: "text-yellow-700" },
-  IN_PROGRESS: { label: "Đang xử lý", dot: "bg-blue-500", text: "text-blue-700" },
-  RESOLVED: { label: "Đã giải quyết", dot: "bg-green-500", text: "text-green-700" },
-  REJECTED: { label: "Từ chối", dot: "bg-red-400", text: "text-red-600" },
+  PENDING: { label: "Pending", dot: "bg-yellow-400", text: "text-yellow-700" },
+  IN_PROGRESS: { label: "In Progress", dot: "bg-blue-500", text: "text-blue-700" },
+  RESOLVED: { label: "Resolved", dot: "bg-green-500", text: "text-green-700" },
+  REJECTED: { label: "Rejected", dot: "bg-red-400", text: "text-red-600" },
 };
 
 const AUDIT_ACTION_META: Record<string, { icon: string; label: string; color: string }> = {
-  CREATE_USER: { icon: "person_add", label: "Tạo tài khoản", color: "#0014A8" },
-  UPDATE_USER_ROLE: { icon: "manage_accounts", label: "Cập nhật quyền", color: "#7C3AED" },
-  DISABLE_USER: { icon: "block", label: "Vô hiệu hóa", color: "#EF4444" },
-  UPDATE_SETTINGS: { icon: "settings", label: "Cập nhật cài đặt", color: "#F59E0B" },
-  RESET_PASSWORD: { icon: "lock_reset", label: "Reset mật khẩu", color: "#0EA5E9" },
-  DELETE_USER: { icon: "person_remove", label: "Xóa tài khoản", color: "#EF4444" },
+  CREATE_USER: { icon: "person_add", label: "Create User", color: "#0014A8" },
+  UPDATE_USER_ROLE: { icon: "manage_accounts", label: "Update User Role", color: "#7C3AED" },
+  DISABLE_USER: { icon: "block", label: "Disable User", color: "#EF4444" },
+  UPDATE_SETTINGS: { icon: "settings", label: "Update Settings", color: "#F59E0B" },
+  RESET_PASSWORD: { icon: "lock_reset", label: "Reset Password", color: "#0EA5E9" },
+  DELETE_USER: { icon: "person_remove", label: "Delete User", color: "#EF4444" },
 };
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins} phút trước`;
+  if (mins < 60) return `${mins} minutes ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} giờ trước`;
-  return `${Math.floor(hrs / 24)} ngày trước`;
+  if (hrs < 24) return `${hrs} hours ago`;
+  return `${Math.floor(hrs / 24)} days ago`;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <h1 className="text-base font-bold text-neutral-900">Admin Dashboard</h1>
-            <p className="text-xs text-neutral-500">Tổng quan hệ thống & quản trị</p>
+            <p className="text-xs text-neutral-500">System overview and administration</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors"
           >
             <Icon name="person_add" size={14} color="#fff" />
-            Thêm nhân viên
+            Add Employee
           </button>
           <button
             type="button"
@@ -133,7 +133,7 @@ export default function AdminDashboardPage() {
             className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition-colors"
           >
             <Icon name="support_agent" size={14} color="#62748E" />
-            Yêu cầu
+            Requests
             {MOCK_STATS.pendingTickets > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {MOCK_STATS.pendingTickets}
@@ -147,21 +147,21 @@ export default function AdminDashboardPage() {
         {/* Stat cards */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
-            icon="group" label="Tổng tài khoản" value={MOCK_STATS.totalUsers}
-            sub={`+${MOCK_STATS.newThisMonth} tháng này`} color="#0014A8"
+            icon="group" label="Total Accounts" value={MOCK_STATS.totalUsers}
+            sub={`+${MOCK_STATS.newThisMonth} this month`} color="#0014A8"
             onClick={() => navigate(withTenant("/admin/users"))}
           />
           <StatCard
-            icon="check_circle" label="Đang hoạt động" value={MOCK_STATS.activeUsers}
-            sub={`${Math.round((MOCK_STATS.activeUsers / MOCK_STATS.totalUsers) * 100)}% tổng số`} color="#00A63E"
+            icon="check_circle" label="Active Accounts" value={MOCK_STATS.activeUsers}
+            sub={`${Math.round((MOCK_STATS.activeUsers / MOCK_STATS.totalUsers) * 100)}% of total`} color="#00A63E"
           />
           <StatCard
-            icon="pending_actions" label="Yêu cầu chờ xử lý" value={MOCK_STATS.pendingTickets}
-            sub={`${MOCK_STATS.resolvedToday} đã giải quyết hôm nay`} color="#F59E0B"
+            icon="pending_actions" label="Pending Requests" value={MOCK_STATS.pendingTickets}
+            sub={`${MOCK_STATS.resolvedToday} resolved today`} color="#F59E0B"
             onClick={() => navigate(withTenant("/admin/requests"))}
           />
           <StatCard
-            icon="account_tree" label="Phòng ban" value={MOCK_STATS.totalDepts}
+            icon="account_tree" label="Departments" value={MOCK_STATS.totalDepts}
             color="#7C3AED"
             onClick={() => navigate(withTenant("/admin/users"))}
           />
@@ -174,14 +174,14 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100">
               <div className="flex items-center gap-2">
                 <Icon name="support_agent" size={16} color="#0014A8" />
-                <h2 className="text-sm font-semibold text-neutral-800">Yêu cầu gần đây</h2>
+                <h2 className="text-sm font-semibold text-neutral-800">Recent Requests</h2>
               </div>
               <button
                 type="button"
                 onClick={() => navigate(withTenant("/admin/requests"))}
                 className="text-xs text-primary hover:underline font-medium"
               >
-                Xem tất cả
+                View all
               </button>
             </div>
             <div className="divide-y divide-neutral-50">
@@ -195,7 +195,7 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <p className="text-sm font-medium text-neutral-800 truncate max-w-sm">{ticket.title}</p>
-                    <p className="text-[11px] text-neutral-400">Từ {ticket.requester} · {timeAgo(ticket.createdAt)}</p>
+                    <p className="text-[11px] text-neutral-400">From {ticket.requester} - {timeAgo(ticket.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[ticket.status].dot}`} />
@@ -212,7 +212,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-neutral-100">
               <Icon name="pie_chart" size={16} color="#0014A8" />
-              <h2 className="text-sm font-semibold text-neutral-800">Phân bổ vai trò</h2>
+              <h2 className="text-sm font-semibold text-neutral-800">Role Distribution</h2>
             </div>
             <div className="px-5 py-4 space-y-3">
               {MOCK_ROLE_DIST.map((item) => {
@@ -233,18 +233,18 @@ export default function AdminDashboardPage() {
                 );
               })}
               <div className="pt-2 border-t border-neutral-100">
-                <p className="text-[11px] text-neutral-400 text-center">{totalRoles} tài khoản · {MOCK_STATS.totalDepts} phòng ban</p>
+                <p className="text-[11px] text-neutral-400 text-center">{totalRoles} accounts - {MOCK_STATS.totalDepts} departments</p>
               </div>
             </div>
 
             {/* Quick actions */}
             <div className="px-5 pb-4">
-              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2">Thao tác nhanh</p>
+              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2">Quick Actions</p>
               <div className="space-y-1.5">
                 {[
-                  { icon: "group", label: "Quản lý người dùng", path: "/admin/users" },
-                  { icon: "tune", label: "Cấu hình hệ thống", path: "/admin/system" },
-                  { icon: "manage_search", label: "Xem audit log", path: "/admin/audit" },
+                  { icon: "group", label: "Manage users", path: "/admin/users" },
+                  { icon: "tune", label: "System settings", path: "/admin/system" },
+                  { icon: "manage_search", label: "View audit logs", path: "/admin/audit" },
                 ].map((item) => (
                   <button
                     key={item.path}
@@ -266,14 +266,14 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100">
             <div className="flex items-center gap-2">
               <Icon name="manage_search" size={16} color="#0014A8" />
-              <h2 className="text-sm font-semibold text-neutral-800">Hoạt động hệ thống gần đây</h2>
+              <h2 className="text-sm font-semibold text-neutral-800">Recent System Activity</h2>
             </div>
             <button
               type="button"
               onClick={() => navigate(withTenant("/admin/audit"))}
               className="text-xs text-primary hover:underline font-medium"
             >
-              Xem đầy đủ
+              View full log
             </button>
           </div>
           <div className="divide-y divide-neutral-50">

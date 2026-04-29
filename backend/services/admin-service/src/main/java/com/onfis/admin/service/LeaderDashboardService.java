@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -16,13 +18,22 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class LeaderDashboardService {
 
+    private static final String LEADER_DASHBOARD_CACHE = "admin:leaderDashboard";
+
     private final JdbcTemplate jdbcTemplate;
+    private final CacheManager cacheManager;
 
     public LeaderDashboardResponse getLeaderDashboard(String tenantIdHeader, String userIdHeader) {
         UUID tenantId = parseUuidHeader(tenantIdHeader, "X-Company-ID");
         UUID userId = parseUuidHeader(userIdHeader, "X-User-ID");
 
         ensureSuperAdmin(tenantId, userId);
+
+        String cacheKey = tenantId.toString();
+        LeaderDashboardResponse cached = readFromCache(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
 
         int totalEmployees = queryCount("""
                 SELECT COUNT(*)
@@ -70,7 +81,7 @@ public class LeaderDashboardService {
         List<LeaderDashboardResponse.DepartmentWorkload> departments = buildDepartmentWorkload(tenantId);
         List<LeaderDashboardResponse.DashboardAlert> alerts = buildAlerts(tenantId, pendingApprovals, departments);
 
-        return new LeaderDashboardResponse(
+        LeaderDashboardResponse response = new LeaderDashboardResponse(
                 totalEmployees,
                 activeProjects,
                 totalProjects,
@@ -78,6 +89,25 @@ public class LeaderDashboardService {
                 pendingApprovals,
                 departments,
                 alerts);
+
+        writeToCache(cacheKey, response);
+        return response;
+    }
+
+    private LeaderDashboardResponse readFromCache(String cacheKey) {
+        Cache cache = cacheManager.getCache(LEADER_DASHBOARD_CACHE);
+        if (cache == null) {
+            return null;
+        }
+
+        return cache.get(cacheKey, LeaderDashboardResponse.class);
+    }
+
+    private void writeToCache(String cacheKey, LeaderDashboardResponse response) {
+        Cache cache = cacheManager.getCache(LEADER_DASHBOARD_CACHE);
+        if (cache != null) {
+            cache.put(cacheKey, response);
+        }
     }
 
     private void ensureSuperAdmin(UUID tenantId, UUID userId) {

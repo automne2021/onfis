@@ -17,11 +17,11 @@ const MOCK_TICKETS: Ticket[] = [
   {
     id: "1",
     code: "TK-001",
-    title: "Thêm tài khoản nhân viên mới – Phòng Kỹ thuật",
+    title: "Add New Employee Accounts - Engineering Department",
     description:
-      "Cần tạo tài khoản mới cho 3 nhân viên vừa onboard vào phòng Kỹ thuật. Thông tin chi tiết đính kèm trong payload.",
+      "Please create new accounts for 3 employees recently onboarded to Engineering. Full details are attached in the payload.",
     requesterId: "ceo-001",
-    requesterName: "Nguyễn Văn CEO",
+    requesterName: "CEO User",
     category: "ADD_ACCOUNT",
     priority: "HIGH",
     status: "PENDING",
@@ -39,11 +39,11 @@ const MOCK_TICKETS: Ticket[] = [
   {
     id: "2",
     code: "TK-002",
-    title: "Đổi quyền – Nâng cấp lên Manager cho Hoàng Minh Tuấn",
+    title: "Role Change - Promote Hoang Minh Tuan to Manager",
     description:
-      "Sau khi xét duyệt nội bộ, đề nghị nâng quyền tài khoản của nhân viên Hoàng Minh Tuấn từ EMPLOYEE lên MANAGER.",
+      "After internal review, please upgrade Hoang Minh Tuan from EMPLOYEE to MANAGER.",
     requesterId: "ceo-001",
-    requesterName: "Nguyễn Văn CEO",
+    requesterName: "CEO User",
     category: "CHANGE_ROLE",
     priority: "MEDIUM",
     status: "IN_PROGRESS",
@@ -56,7 +56,7 @@ const MOCK_TICKETS: Ticket[] = [
         id: "c1",
         authorId: "admin-001",
         authorName: "Admin A",
-        content: "Đã kiểm tra hồ sơ, đang tiến hành xử lý.",
+        content: "Profile has been reviewed and processing is in progress.",
         createdAt: "2026-04-26T10:15:00Z",
         isInternal: true,
       },
@@ -65,11 +65,11 @@ const MOCK_TICKETS: Ticket[] = [
   {
     id: "3",
     code: "TK-003",
-    title: "Cấu hình hệ thống – Thay đổi múi giờ sang UTC+7",
+    title: "System Configuration - Change Timezone to UTC+7",
     description:
-      "Hệ thống hiện đang dùng UTC+0, cần cập nhật sang UTC+7 (Giờ Việt Nam) để đồng bộ với hoạt động kinh doanh.",
+      "The system currently runs on UTC+0. Please update it to UTC+7 to align with business operations.",
     requesterId: "ceo-001",
-    requesterName: "Nguyễn Văn CEO",
+    requesterName: "CEO User",
     category: "SYSTEM_CONFIG",
     priority: "CRITICAL",
     status: "RESOLVED",
@@ -81,11 +81,11 @@ const MOCK_TICKETS: Ticket[] = [
   {
     id: "4",
     code: "TK-004",
-    title: "Tăng giới hạn dung lượng upload file",
+    title: "Increase File Upload Size Limit",
     description:
-      "Team thiết kế cần upload file PSD/AI lớn. Đề nghị nâng giới hạn từ 10MB lên 50MB.",
+      "The design team needs to upload larger PSD/AI files. Please increase the limit from 10MB to 50MB.",
     requesterId: "ceo-001",
-    requesterName: "Nguyễn Văn CEO",
+    requesterName: "CEO User",
     category: "STORAGE",
     priority: "LOW",
     status: "PENDING",
@@ -97,21 +97,21 @@ const MOCK_TICKETS: Ticket[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
-  ADD_ACCOUNT: "Thêm tài khoản",
-  CHANGE_ROLE: "Đổi quyền",
-  SYSTEM_CONFIG: "Cấu hình hệ thống",
-  STORAGE: "Lưu trữ",
-  OTHER: "Khác",
+  ADD_ACCOUNT: "Add Account",
+  CHANGE_ROLE: "Role Change",
+  SYSTEM_CONFIG: "System Configuration",
+  STORAGE: "Storage",
+  OTHER: "Other",
 };
 
 const PRIORITY_META: Record<
   TicketPriority,
   { label: string; bg: string; text: string }
 > = {
-  LOW: { label: "Thấp", bg: "bg-neutral-100", text: "text-neutral-600" },
-  MEDIUM: { label: "Trung bình", bg: "bg-blue-50", text: "text-blue-600" },
-  HIGH: { label: "Cao", bg: "bg-orange-50", text: "text-orange-600" },
-  CRITICAL: { label: "Khẩn cấp", bg: "bg-red-50", text: "text-red-600" },
+  LOW: { label: "Low", bg: "bg-neutral-100", text: "text-neutral-600" },
+  MEDIUM: { label: "Medium", bg: "bg-blue-50", text: "text-blue-600" },
+  HIGH: { label: "High", bg: "bg-orange-50", text: "text-orange-600" },
+  CRITICAL: { label: "Critical", bg: "bg-red-50", text: "text-red-600" },
 };
 
 const STATUS_META: Record<
@@ -119,25 +119,25 @@ const STATUS_META: Record<
   { label: string; bg: string; text: string; dot: string }
 > = {
   PENDING: {
-    label: "Chờ xử lý",
+    label: "Pending",
     bg: "bg-yellow-50",
     text: "text-yellow-700",
     dot: "bg-yellow-400",
   },
   IN_PROGRESS: {
-    label: "Đang xử lý",
+    label: "In Progress",
     bg: "bg-blue-50",
     text: "text-blue-700",
     dot: "bg-blue-500",
   },
   RESOLVED: {
-    label: "Đã giải quyết",
+    label: "Resolved",
     bg: "bg-green-50",
     text: "text-green-700",
     dot: "bg-green-500",
   },
   REJECTED: {
-    label: "Từ chối",
+    label: "Rejected",
     bg: "bg-red-50",
     text: "text-red-700",
     dot: "bg-red-500",
@@ -145,7 +145,7 @@ const STATUS_META: Record<
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("vi-VN", {
+  return new Date(iso).toLocaleString("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -221,10 +221,10 @@ function TicketDetailModal({
     setActing(true);
     try {
       await onApprove(ticket.id);
-      showToast("Ticket đã được chấp thuận & thực thi.", "success");
+      showToast("Ticket approved and executed.", "success");
       onClose();
     } catch {
-      showToast("Không thể thực thi yêu cầu.", "error");
+      showToast("Unable to execute this request.", "error");
     } finally {
       setActing(false);
     }
@@ -232,16 +232,16 @@ function TicketDetailModal({
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      showToast("Vui lòng nhập lý do từ chối.", "error");
+      showToast("Please enter a rejection reason.", "error");
       return;
     }
     setActing(true);
     try {
       await onReject(ticket.id, rejectReason);
-      showToast("Ticket đã bị từ chối.", "success");
+      showToast("Ticket rejected.", "success");
       onClose();
     } catch {
-      showToast("Không thể từ chối ticket.", "error");
+      showToast("Unable to reject this ticket.", "error");
     } finally {
       setActing(false);
     }
@@ -252,14 +252,14 @@ function TicketDetailModal({
     try {
       await onComment(ticket.id, commentText);
       setCommentText("");
-      showToast("Đã thêm ghi chú.", "success");
+      showToast("Note added.", "success");
     } catch {
-      showToast("Không thể thêm ghi chú.", "error");
+      showToast("Unable to add note.", "error");
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Chi tiết Ticket – ${ticket.code}`} maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Ticket Details - ${ticket.code}`} maxWidth="lg">
       <div className="flex flex-col gap-5 px-8 py-5 overflow-y-auto max-h-[70vh]">
         {/* Header info */}
         <div className="flex flex-wrap gap-3 items-center">
@@ -281,22 +281,22 @@ function TicketDetailModal({
 
         <div className="grid grid-cols-2 gap-3 text-sm bg-neutral-50 rounded-xl p-4 border border-neutral-100">
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Người yêu cầu</p>
+            <p className="text-neutral-400 text-xs mb-0.5">Requester</p>
             <p className="font-medium text-neutral-800">{ticket.requesterName}</p>
           </div>
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Thời gian tạo</p>
+            <p className="text-neutral-400 text-xs mb-0.5">Created At</p>
             <p className="font-medium text-neutral-800">{formatDate(ticket.createdAt)}</p>
           </div>
           {ticket.assigneeName && (
             <div>
-              <p className="text-neutral-400 text-xs mb-0.5">Người xử lý</p>
+              <p className="text-neutral-400 text-xs mb-0.5">Assignee</p>
               <p className="font-medium text-neutral-800">{ticket.assigneeName}</p>
             </div>
           )}
           {ticket.resolvedAt && (
             <div>
-              <p className="text-neutral-400 text-xs mb-0.5">Giải quyết lúc</p>
+              <p className="text-neutral-400 text-xs mb-0.5">Resolved At</p>
               <p className="font-medium text-neutral-800">{formatDate(ticket.resolvedAt)}</p>
             </div>
           )}
@@ -306,7 +306,7 @@ function TicketDetailModal({
         {ticket.payload && (
           <div>
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-              Thông tin yêu cầu
+              Request Payload
             </p>
             <pre className="text-xs bg-neutral-900 text-green-400 rounded-lg p-4 overflow-x-auto">
               {JSON.stringify(ticket.payload, null, 2)}
@@ -317,11 +317,11 @@ function TicketDetailModal({
         {/* Comments */}
         <div>
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-            Ghi chú nội bộ ({ticket.comments.length})
+            Internal Notes ({ticket.comments.length})
           </p>
           <div className="space-y-2 mb-3">
             {ticket.comments.length === 0 && (
-              <p className="text-sm text-neutral-400 italic">Chưa có ghi chú nào.</p>
+              <p className="text-sm text-neutral-400 italic">No notes yet.</p>
             )}
             {ticket.comments.map((c: TicketComment) => (
               <div
@@ -344,7 +344,7 @@ function TicketDetailModal({
             <input
               type="text"
               className="flex-1 border border-neutral-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder="Thêm ghi chú nội bộ..."
+              placeholder="Add internal note..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => {
@@ -353,7 +353,7 @@ function TicketDetailModal({
             />
             <Button
               style="primary"
-              title="Gửi"
+              title="Send"
               onClick={() => void handleComment()}
             />
           </div>
@@ -363,21 +363,21 @@ function TicketDetailModal({
         {canAct && (
           <div className="border-t border-neutral-100 pt-4">
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              Khu vực xử lý
+              Action Panel
             </p>
             {!rejectMode ? (
               <div className="flex gap-3">
                 <Button
                   style="primary"
                   iconLeft={<Icon name="check_circle" size={16} color="#0014A8" />}
-                  title="Chấp thuận & Thực thi"
+                  title="Approve & Execute"
                   onClick={() => void handleApprove()}
                   loading={acting}
                 />
                 <Button
                   style="danger"
                   iconLeft={<Icon name="cancel" size={16} color="#ef4444" />}
-                  title="Từ chối"
+                  title="Reject"
                   onClick={() => setRejectMode(true)}
                 />
               </div>
@@ -386,20 +386,20 @@ function TicketDetailModal({
                 <textarea
                   className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 resize-none"
                   rows={3}
-                  placeholder="Lý do từ chối (bắt buộc)..."
+                  placeholder="Rejection reason (required)..."
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                 />
                 <div className="flex gap-2">
                   <Button
                     style="danger"
-                    title="Xác nhận từ chối"
+                    title="Confirm Reject"
                     onClick={() => void handleReject()}
                     loading={acting}
                   />
                   <Button
                     style="sub"
-                    title="Hủy"
+                    title="Cancel"
                     onClick={() => setRejectMode(false)}
                   />
                 </div>
@@ -415,39 +415,50 @@ function TicketDetailModal({
 // ─── Filter bar ───────────────────────────────────────────────────────────────
 
 const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
-  { value: "ALL", label: "Tất cả" },
-  { value: "PENDING", label: "Chờ xử lý" },
-  { value: "IN_PROGRESS", label: "Đang xử lý" },
-  { value: "RESOLVED", label: "Đã giải quyết" },
-  { value: "REJECTED", label: "Từ chối" },
+  { value: "ALL", label: "All" },
+  { value: "PENDING", label: "Pending" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "RESOLVED", label: "Resolved" },
+  { value: "REJECTED", label: "Rejected" },
 ];
+
+let requestCenterTicketsSnapshot: Ticket[] | null = null;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function RequestCenterPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialTickets] = useState<Ticket[] | null>(
+    () => adminService.getCachedTickets() ?? requestCenterTicketsSnapshot
+  );
+  const [tickets, setTickets] = useState<Ticket[]>(initialTickets ?? []);
+  const [isLoading, setIsLoading] = useState(!initialTickets);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const { showToast } = useToast();
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
+  const load = useCallback(async (showLoading = false, forceRefresh = false) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
+
     try {
-      const data = await adminService.listTickets();
+      const data = await adminService.listTickets({ forceRefresh });
+      requestCenterTicketsSnapshot = data;
       setTickets(data);
     } catch {
       // Fallback to mock data when backend is unavailable
-      setTickets(MOCK_TICKETS);
+      const fallbackTickets = requestCenterTicketsSnapshot ?? MOCK_TICKETS;
+      requestCenterTicketsSnapshot = fallbackTickets;
+      setTickets(fallbackTickets);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(!initialTickets, false);
+  }, [initialTickets, load]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -455,12 +466,14 @@ export default function RequestCenterPage() {
     } catch {
       // mock: update locally
     }
-    setTickets((prev) =>
-      prev.map((t) =>
+    setTickets((prev) => {
+      const nextTickets = prev.map((t) =>
         t.id === id ? { ...t, status: "RESOLVED" as TicketStatus } : t
-      )
-    );
-    showToast("Ticket đã được chấp thuận.", "success");
+      );
+      requestCenterTicketsSnapshot = nextTickets;
+      return nextTickets;
+    });
+    showToast("Ticket approved.", "success");
   };
 
   const handleReject = async (id: string, reason: string) => {
@@ -469,18 +482,20 @@ export default function RequestCenterPage() {
     } catch {
       // mock: update locally
     }
-    setTickets((prev) =>
-      prev.map((t) =>
+    setTickets((prev) => {
+      const nextTickets = prev.map((t) =>
         t.id === id ? { ...t, status: "REJECTED" as TicketStatus } : t
-      )
-    );
-    showToast("Ticket đã bị từ chối.", "success");
+      );
+      requestCenterTicketsSnapshot = nextTickets;
+      return nextTickets;
+    });
+    showToast("Ticket rejected.", "success");
   };
 
   const handleComment = async (id: string, content: string) => {
     await adminService.addTicketComment(id, content, true);
-    setTickets((prev) =>
-      prev.map((t) => {
+    setTickets((prev) => {
+      const nextTickets = prev.map((t) => {
         if (t.id !== id) return t;
         return {
           ...t,
@@ -489,15 +504,17 @@ export default function RequestCenterPage() {
             {
               id: crypto.randomUUID(),
               authorId: "current-admin",
-              authorName: "Bạn",
+              authorName: "You",
               content,
               createdAt: new Date().toISOString(),
               isInternal: true,
             },
           ],
         };
-      })
-    );
+      });
+      requestCenterTicketsSnapshot = nextTickets;
+      return nextTickets;
+    });
     // Update selected ticket too
     if (selectedTicket?.id === id) {
       setSelectedTicket((prev) =>
@@ -509,7 +526,7 @@ export default function RequestCenterPage() {
                 {
                   id: crypto.randomUUID(),
                   authorId: "current-admin",
-                  authorName: "Bạn",
+                  authorName: "You",
                   content,
                   createdAt: new Date().toISOString(),
                   isInternal: true,
@@ -542,23 +559,23 @@ export default function RequestCenterPage() {
           <Icon name="support_agent" size={22} color="#0014A8" />
           <div>
             <h1 className="text-base font-bold text-neutral-900">
-              Trung tâm xử lý yêu cầu
+              Request Center
             </h1>
             <p className="text-xs text-neutral-500">
-              Quản lý ticket từ Ban lãnh đạo / CEO
+              Manage tickets from leadership / CEO
             </p>
           </div>
           {pendingCount > 0 && (
             <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              {pendingCount} chờ xử lý
+              {pendingCount} pending
             </span>
           )}
         </div>
         <Button
           style="sub"
           iconLeft={<Icon name="refresh" size={16} color="#62748E" />}
-          title="Làm mới"
-          onClick={() => void load()}
+          title="Refresh"
+          onClick={() => void load(true, true)}
         />
       </div>
 
@@ -573,7 +590,7 @@ export default function RequestCenterPage() {
           />
           <input
             type="text"
-            placeholder="Tìm mã ticket, tiêu đề, người yêu cầu..."
+            placeholder="Search ticket code, title, requester..."
             className="w-full pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -608,7 +625,7 @@ export default function RequestCenterPage() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-neutral-400">
             <Icon name="inbox" size={40} color="#D1D5DB" />
-            <p className="mt-2 text-sm">Không có ticket nào phù hợp.</p>
+            <p className="mt-2 text-sm">No matching tickets found.</p>
           </div>
         ) : (
           <div className="section-card overflow-hidden">
@@ -616,25 +633,25 @@ export default function RequestCenterPage() {
               <thead>
                 <tr className="border-b border-neutral-100 bg-neutral-50">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Mã
+                    Code
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Tiêu đề
+                    Title
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">
-                    Người yêu cầu
+                    Requester
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">
-                    Phân loại
+                    Category
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">
-                    Ưu tiên
+                    Priority
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">
-                    Thời gian tạo
+                    Created At
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Trạng thái
+                    Status
                   </th>
                   <th className="px-4 py-3" />
                 </tr>

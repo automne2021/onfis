@@ -267,9 +267,9 @@ export default function Sidebar() {
   ];
 
   const adminNavItems: SubItem[] = [
-    { to: withTenant("/admin/requests"), icon: "support_agent", label: "Yêu cầu" },
-    { to: withTenant("/admin/users"), icon: "group", label: "Người dùng" },
-    { to: withTenant("/admin/system"), icon: "tune", label: "Cấu hình" },
+    { to: withTenant("/admin/requests"), icon: "support_agent", label: "Requests" },
+    { to: withTenant("/admin/users"), icon: "group", label: "Users" },
+    { to: withTenant("/admin/system"), icon: "tune", label: "System Settings" },
     { to: withTenant("/admin/audit"), icon: "manage_search", label: "Audit Log" },
   ];
 
