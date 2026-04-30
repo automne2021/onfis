@@ -266,7 +266,7 @@ export default function ProjectDetailPage() {
   const navigate = useNavigate();
   const { withTenant } = useTenantPath();
   const location = useLocation();
-  const { isManagerLike: isManager } = useRole();
+  const { isManagerLike, isAdmin } = useRole();
   const { showToast } = useToast();
   const [project, setProject] = useState<ApiProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -295,9 +295,10 @@ export default function ProjectDetailPage() {
   const [descEditorDraft, setDescEditorDraft] = useState<string>("");
   const titleInputRef = useRef<HTMLInputElement>(null);
   const customerInputRef = useRef<HTMLInputElement>(null);
+  const canManageProject = (project?.canManage ?? false) || isManagerLike || isAdmin;
 
   const startEditing = (field: string, currentValue: string) => {
-    if (!isManager) return;
+    if (!canManageProject) return;
     setEditingField(field);
     setEditDraft(currentValue);
     if (field === 'description') setDescEditorDraft(currentValue);
@@ -309,7 +310,7 @@ export default function ProjectDetailPage() {
   }, [editingField]);
 
   const saveField = async (field: string, value: string) => {
-    if (!projectIdentifier || !project) return;
+    if (!canManageProject || !projectIdentifier || !project) return;
     setEditingField(null);
 
     const trimmed = value.trim();
@@ -346,7 +347,7 @@ export default function ProjectDetailPage() {
   };
 
   const saveDateField = async (field: 'startDate' | 'dueDate', value: string) => {
-    if (!projectIdentifier || !project) return;
+    if (!canManageProject || !projectIdentifier || !project) return;
     const current = field === 'startDate' ? project.startDate : project.dueDate;
     if ((value || null) === (current || null)) return;
 
@@ -378,7 +379,7 @@ export default function ProjectDetailPage() {
   };
 
   const savePriority = async (newPriority: Priority) => {
-    if (!projectIdentifier || !project) return;
+    if (!canManageProject || !projectIdentifier || !project) return;
     if (newPriority === project.priority) return;
 
     const prev = { ...project };
@@ -433,7 +434,7 @@ export default function ProjectDetailPage() {
   };
 
   const handleStatusChange = async (newStatus: ProjectStatus) => {
-    if (!projectIdentifier || !project) return;
+    if (!canManageProject || !projectIdentifier || !project) return;
     const prevStatus = status;
     setStatus(newStatus);
     setIsStatusOpen(false);
@@ -458,7 +459,7 @@ export default function ProjectDetailPage() {
   };
 
   const handleDeleteProject = async () => {
-    if (!projectIdentifier) return;
+    if (!canManageProject || !projectIdentifier) return;
     setShowDeleteConfirm(false);
     try {
       await deleteProject(projectIdentifier);
@@ -576,7 +577,7 @@ export default function ProjectDetailPage() {
     { to: withTenant(`/projects/${id}`), label: "Overview", icon: "dashboard" },
     { to: withTenant(`/projects/${id}/tasks`), label: "Tasks", icon: "task_alt" },
     { to: withTenant(`/projects/${id}/members`), label: "Team", icon: "group" },
-    ...(isManager ? [{ to: withTenant(`/projects/${id}/reviews`), label: "Reviews", icon: "rate_review" }] : []),
+    ...(canManageProject ? [{ to: withTenant(`/projects/${id}/reviews`), label: "Reviews", icon: "rate_review" }] : []),
   ];
 
   const isTabActive = (path: string) => location.pathname === path;
@@ -649,7 +650,7 @@ export default function ProjectDetailPage() {
             <KanbanIcon />
             Manage Tasks
           </Link>
-          {isManager && (
+          {canManageProject && (
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
@@ -681,9 +682,9 @@ export default function ProjectDetailPage() {
               />
             ) : (
               <p
-                className={`header-h6 leading-snug text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded px-1 -mx-1 transition-colors' : ''}`}
+                className={`header-h6 leading-snug text-neutral-900 ${canManageProject ? 'cursor-pointer hover:bg-neutral-50 rounded px-1 -mx-1 transition-colors' : ''}`}
                 onClick={() => startEditing('title', project.title)}
-                title={isManager ? 'Click to edit' : undefined}
+                title={canManageProject ? 'Click to edit' : undefined}
               >
                 {project.title}
               </p>
@@ -744,9 +745,9 @@ export default function ProjectDetailPage() {
               />
             ) : (
               <span
-                className={`text-xs leading-4 text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded px-1 -mx-1 transition-colors' : ''}`}
+                className={`text-xs leading-4 text-neutral-900 ${canManageProject ? 'cursor-pointer hover:bg-neutral-50 rounded px-1 -mx-1 transition-colors' : ''}`}
                 onClick={() => startEditing('customer', project.customer ?? '')}
-                title={isManager ? 'Click to edit' : undefined}
+                title={canManageProject ? 'Click to edit' : undefined}
               >
                 {project.customer ?? '—'}
               </span>
@@ -771,7 +772,7 @@ export default function ProjectDetailPage() {
             {/* Planned Date */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Planned Date</span>
             <div className="flex items-center gap-3">
-              {isManager ? (
+              {canManageProject ? (
                 <input
                   type="date"
                   value={project.startDate ?? ''}
@@ -782,7 +783,7 @@ export default function ProjectDetailPage() {
                 <span className="text-xs leading-4 text-neutral-900">{plannedStartDate}</span>
               )}
               <ArrowRightAltOutlined fontSize="small"/>
-              {isManager ? (
+              {canManageProject ? (
                 <input
                   type="date"
                   value={project.dueDate ?? project.endDate ?? ''}
@@ -796,7 +797,7 @@ export default function ProjectDetailPage() {
 
             {/* Priority */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Priority</span>
-            {isManager ? (
+            {canManageProject ? (
               <div className="relative">
                 <button
                   type="button"
@@ -828,36 +829,42 @@ export default function ProjectDetailPage() {
             {/* Status */}
             <span className="font-medium text-xs leading-4 text-neutral-900">Status</span>
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsStatusOpen(!isStatusOpen)}
-                className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
-              >
-                <StatusBadge status={status} />
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${isStatusOpen ? 'rotate-180' : ''}`}>
-                  <path d="M3 4.5L6 7.5L9 4.5" stroke="#90A1B9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <div
-                className={`absolute top-full left-0 mt-1 inline-flex flex-col bg-white border border-neutral-200 rounded-lg shadow-lg py-0.5 z-20 transition-all duration-200 ease-out origin-top ${isStatusOpen
-                  ? 'opacity-100 scale-y-100 pointer-events-auto'
-                  : 'opacity-0 scale-y-75 pointer-events-none'
-                  }`}
-              >
-                {statusOptions.map((option) => (
+              {canManageProject ? (
+                <>
                   <button
-                    key={option.value}
                     type="button"
-                    className={`text-left px-2 py-1 text-xs hover:bg-neutral-50 rounded transition-colors ${status === option.value ? 'font-bold' : ''
-                      }`}
-                    onClick={() => {
-                      void handleStatusChange(option.value);
-                    }}
+                    onClick={() => setIsStatusOpen(!isStatusOpen)}
+                    className="inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
                   >
-                    <StatusBadge status={option.value} />
+                    <StatusBadge status={status} />
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${isStatusOpen ? 'rotate-180' : ''}`}>
+                      <path d="M3 4.5L6 7.5L9 4.5" stroke="#90A1B9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
-                ))}
-              </div>
+                  <div
+                    className={`absolute top-full left-0 mt-1 inline-flex flex-col bg-white border border-neutral-200 rounded-lg shadow-lg py-0.5 z-20 transition-all duration-200 ease-out origin-top ${isStatusOpen
+                      ? 'opacity-100 scale-y-100 pointer-events-auto'
+                      : 'opacity-0 scale-y-75 pointer-events-none'
+                      }`}
+                  >
+                    {statusOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`text-left px-2 py-1 text-xs hover:bg-neutral-50 rounded transition-colors ${status === option.value ? 'font-bold' : ''
+                          }`}
+                        onClick={() => {
+                          void handleStatusChange(option.value);
+                        }}
+                      >
+                        <StatusBadge status={option.value} />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <StatusBadge status={status} />
+              )}
             </div>
           </div>
         </div>
@@ -870,7 +877,7 @@ export default function ProjectDetailPage() {
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
             Project Milestones
           </h2>
-          {isManager && (
+          {canManageProject && (
             <button
               type="button"
               onClick={handleStartCreateMilestone}
@@ -892,7 +899,7 @@ export default function ProjectDetailPage() {
             <div key={milestone.id} className="flex flex-col items-center gap-2">
               <MilestoneItem milestone={milestone} />
 
-              {isManager && (
+              {canManageProject && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -915,7 +922,7 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        {isManager && showMilestoneForm && (
+        {canManageProject && showMilestoneForm && (
           <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50">
             <h3 className="text-sm font-semibold text-neutral-900 mb-3">
               {milestoneEditingId ? "Edit Milestone" : "New Milestone"}
@@ -1016,7 +1023,7 @@ export default function ProjectDetailPage() {
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
             Description
           </h2>
-          {isManager && editingField !== 'description' && (
+          {canManageProject && editingField !== 'description' && (
             <button
               type="button"
               onClick={() => startEditing('description', project.description ?? '')}
@@ -1052,9 +1059,9 @@ export default function ProjectDetailPage() {
           </div>
         ) : (
           <div
-            className={`text-xs leading-4 text-neutral-900 ${isManager ? 'cursor-pointer hover:bg-neutral-50 rounded p-1 -m-1 transition-colors' : ''}`}
+            className={`text-xs leading-4 text-neutral-900 ${canManageProject ? 'cursor-pointer hover:bg-neutral-50 rounded p-1 -m-1 transition-colors' : ''}`}
             onClick={() => startEditing('description', project.description ?? '')}
-            title={isManager ? 'Click to edit' : undefined}
+            title={canManageProject ? 'Click to edit' : undefined}
           >
             {project.description
               ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: project.description }} />

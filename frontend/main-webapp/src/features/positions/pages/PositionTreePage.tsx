@@ -226,7 +226,8 @@ export default function PositionTreePage() {
   const [toolbarFilters, setToolbarFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUserLevel, setCurrentUserLevel] = useState<string | null>(null);
-  const { isManagerLike } = useRole();
+  const { isManagerLike, isAdmin } = useRole();
+  const canManagePositions = isManagerLike || isAdmin;
   const { showToast } = useToast();
 
   // ΓöÇΓöÇ Position detail modal state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -704,7 +705,7 @@ export default function PositionTreePage() {
             </div>
 
             {/* Add Position Button */}
-            {isManagerLike && (
+            {canManagePositions && (
               <Button
                 title="Add Position"
                 iconLeft={<Add fontSize="small" />}
@@ -719,10 +720,10 @@ export default function PositionTreePage() {
           <PositionTreeView
             positions={filteredPositionTree}
             onPositionClick={handlePositionClick}
-            onPositionMove={handlePositionMove}
-            unassignedEmployees={isManagerLike ? unassignedEmployees : []}
-            onEmployeeAssign={handleEmployeeAssign}
-            onEmployeeRemove={isManagerLike ? handleRemoveUnassignedUser : undefined}
+            onPositionMove={canManagePositions ? handlePositionMove : undefined}
+            unassignedEmployees={canManagePositions ? unassignedEmployees : []}
+            onEmployeeAssign={canManagePositions ? handleEmployeeAssign : undefined}
+            onEmployeeRemove={canManagePositions ? handleRemoveUnassignedUser : undefined}
             searchActive={treeSearchActive}
           />
         </div>
@@ -740,7 +741,7 @@ export default function PositionTreePage() {
                 <span className="text-status-off_track">{vacantPositions}</span>
               </span>
             </div>
-            {isManagerLike && (
+            {canManagePositions && (
               <Button
                 title="Add Position"
                 iconLeft={<Add fontSize="small" />}
@@ -767,7 +768,7 @@ export default function PositionTreePage() {
         onRefresh={handleRefreshAll}
         data={detailModal.data}
         currentUserLevel={currentUserLevel}
-        isManager={isManagerLike}
+        isManager={canManagePositions}
       />
 
       {/* Add Position Modal */}

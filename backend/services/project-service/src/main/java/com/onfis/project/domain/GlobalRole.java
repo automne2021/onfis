@@ -7,11 +7,11 @@ public enum GlobalRole {
     EMPLOYEE;
 
     /**
-     * SUPER_ADMIN and MANAGER both have manager-level authority in the project
-     * module.
+     * SUPER_ADMIN, ADMIN, and MANAGER all have manager-level authority in the
+     * project module.
      */
     public boolean isManagerLike() {
-        return this == SUPER_ADMIN || this == MANAGER;
+        return this == SUPER_ADMIN || this == ADMIN || this == MANAGER;
     }
 
     public static GlobalRole fromDbValue(String value) {

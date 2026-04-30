@@ -600,8 +600,8 @@ public class PositionService {
     // ── Write access guard ────────────────────────────────────────────────────
 
     /**
-     * Only MANAGER and SUPER_ADMIN (leader) may perform write operations on
-     * positions.
+     * Only ADMIN, MANAGER, and SUPER_ADMIN (leader) may perform write operations
+     * on positions.
      * Throws ForbiddenException for any other role.
      */
     private void requireWriteAccess(String requesterIdStr) {
@@ -617,8 +617,8 @@ public class PositionService {
         AppUserEntity requester = appUserRepository.findById(requesterId)
                 .orElseThrow(() -> new NotFoundException("Requesting user not found"));
         String role = requester.getRole() != null ? requester.getRole().toUpperCase().replace(" ", "_") : "";
-        if (!"MANAGER".equals(role) && !"SUPER_ADMIN".equals(role)) {
-            throw new ForbiddenException("Manager or leader role required for position management");
+        if (!"MANAGER".equals(role) && !"SUPER_ADMIN".equals(role) && !"ADMIN".equals(role)) {
+            throw new ForbiddenException("Admin, manager, or leader role required for position management");
         }
     }
 
