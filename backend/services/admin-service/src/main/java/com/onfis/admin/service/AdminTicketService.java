@@ -42,6 +42,7 @@ public class AdminTicketService {
     private final AdminAccessService accessService;
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
+    private final AuditLogService auditLogService;
 
     public List<TicketResponse> listTickets(String tenantIdHeader, String userIdHeader) {
         UUID tenantId = accessService.parseUuidHeader(tenantIdHeader, "X-Company-ID");
@@ -112,6 +113,9 @@ public class AdminTicketService {
                 ticketId,
                 tenantId);
 
+        auditLogService.logAction(tenantId, actor.userId(), actor.displayName(), actor.role(),
+                "EXECUTIVE_REQUEST", ticketId, "TICKET_ACCEPTED",
+                "Ticket accepted by admin", null, "SUCCESS");
         evictTicketCaches();
     }
 
@@ -136,6 +140,9 @@ public class AdminTicketService {
                 ticketId,
                 tenantId);
 
+        auditLogService.logAction(tenantId, actor.userId(), actor.displayName(), actor.role(),
+                "EXECUTIVE_REQUEST", ticketId, "TICKET_APPROVED",
+                "Ticket approved by admin", null, "SUCCESS");
         evictTicketCaches();
     }
 
@@ -168,6 +175,9 @@ public class AdminTicketService {
                 tenantId);
 
         insertComment(ticketId, actor.userId(), reason, true);
+        auditLogService.logAction(tenantId, actor.userId(), actor.displayName(), actor.role(),
+                "EXECUTIVE_REQUEST", ticketId, "TICKET_REJECTED",
+                "Ticket rejected: " + reason, null, "SUCCESS");
         evictTicketCaches();
     }
 

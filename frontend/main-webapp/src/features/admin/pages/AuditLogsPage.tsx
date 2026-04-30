@@ -103,23 +103,9 @@ const PAGE_SIZE = 15;
 let auditLogsSnapshot: AuditLog[] | null = null;
 
 export default function AuditLogsPage() {
-  const [initialLogs] = useState<{ logs: AuditLog[]; total: number } | null>(() => {
-    const cachedLogs = adminService.getCachedAuditLogs();
-    if (cachedLogs) {
-      return cachedLogs;
-    }
-
-    if (!auditLogsSnapshot) {
-      return null;
-    }
-
-    return {
-      logs: auditLogsSnapshot,
-      total: auditLogsSnapshot.length,
-    };
-  });
-  const [logs, setLogs] = useState<AuditLog[]>(initialLogs?.logs ?? []);
-  const [isLoading, setIsLoading] = useState(!initialLogs);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   const [filterAction, setFilterAction] = useState("");
@@ -130,39 +116,36 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(0);
 
   const load = useCallback(async (showLoading = false, forceRefresh = false) => {
-    if (showLoading) {
-      setIsLoading(true);
-    }
-
+    if (showLoading) setIsLoading(true);
     try {
-      const res = await adminService.listAuditLogs(undefined, { forceRefresh });
+      const res = await adminService.listAuditLogs(
+        {
+          userId: filterUser || undefined,
+          action: filterAction || undefined,
+          result: (filterResult as AuditResult) || undefined,
+          from: dateFrom || undefined,
+          to: dateTo || undefined,
+          page,
+          size: PAGE_SIZE,
+        },
+        { forceRefresh },
+      );
       auditLogsSnapshot = res.logs;
       setLogs(res.logs);
+      setTotal(res.total);
     } catch {
       const fallbackLogs = auditLogsSnapshot ?? MOCK_LOGS;
-      auditLogsSnapshot = fallbackLogs;
       setLogs(fallbackLogs);
+      setTotal(fallbackLogs.length);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [filterUser, filterAction, filterResult, dateFrom, dateTo, page]);
 
-  useEffect(() => { void load(!initialLogs, false); }, [initialLogs, load]);
+  useEffect(() => { void load(true, false); }, [load]);
 
-  const filtered = logs.filter((l) => {
-    const matchAction = !filterAction || l.action === filterAction;
-    const matchResult = !filterResult || l.result === filterResult;
-    const matchUser = !filterUser || l.userName.toLowerCase().includes(filterUser.toLowerCase()) || l.userId.includes(filterUser);
-    const ts = l.timestamp;
-    const matchFrom = !dateFrom || ts >= dateFrom;
-    const matchTo = !dateTo || ts <= dateTo + "T23:59:59Z";
-    return matchAction && matchResult && matchUser && matchFrom && matchTo;
-  });
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-  const uniqueActions = Array.from(new Set(logs.map((l) => l.action)));
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const paged = logs;
 
   const clearFilters = () => {
     setFilterAction(""); setFilterResult(""); setFilterUser("");
@@ -177,7 +160,7 @@ export default function AuditLogsPage() {
           <Icon name="manage_search" size={22} color="#0014A8" />
           <div>
             <h1 className="text-base font-bold text-neutral-900">Activity Logs</h1>
-            <p className="text-xs text-neutral-500">Audit logs - read-only · {logs.length} records</p>
+            <p className="text-xs text-neutral-500">Audit logs - read-only · {total} records</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -207,7 +190,7 @@ export default function AuditLogsPage() {
           className="border border-neutral-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 text-neutral-600"
         >
           <option value="">All actions</option>
-          {uniqueActions.map((a) => (
+          {(Object.keys(ACTION_META) as AuditAction[]).map((a) => (
             <option key={a} value={a}>{ACTION_META[a]?.label || a}</option>
           ))}
         </select>
@@ -242,7 +225,7 @@ export default function AuditLogsPage() {
                 <div key={i} className="h-12 bg-neutral-100 rounded-xl" />
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-neutral-400">
               <Icon name="search_off" size={40} color="#D1D5DB" />
               <p className="mt-2 text-sm">No logs found.</p>
@@ -299,7 +282,7 @@ export default function AuditLogsPage() {
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 text-sm text-neutral-500">
-                  <p>{filtered.length} logs · Page {page + 1}/{totalPages}</p>
+                  <p>{total} logs · Page {page + 1}/{totalPages}</p>
                   <div className="flex gap-1">
                     <button type="button" disabled={page === 0}
                       onClick={() => setPage((p) => Math.max(0, p - 1))}

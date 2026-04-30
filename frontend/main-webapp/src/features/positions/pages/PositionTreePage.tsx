@@ -230,13 +230,13 @@ export default function PositionTreePage() {
   const canManagePositions = isManagerLike || isAdmin;
   const { showToast } = useToast();
 
-  // ΓöÇΓöÇ Position detail modal state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // Position detail modal state
   const [detailModal, setDetailModal] = useState<{
     isOpen: boolean;
     data: PositionDetailData | null;
   }>({ isOpen: false, data: null });
 
-  // ΓöÇΓöÇ Confirm dialog state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // Confirm dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -308,7 +308,7 @@ export default function PositionTreePage() {
     fetchDepartmentList();
     getCurrentUserPositionInfo()
       .then((info) => setCurrentUserLevel(info.level))
-      .catch(() => {/* ignore ΓÇô level-based control degrades gracefully */});
+      .catch(() => {/* ignore — level-based control degrades gracefully */});
   }, [fetchTreeData, fetchListData, fetchDepartmentList]);
 
   const handleRefreshAll = useCallback(async () => {

@@ -118,3 +118,67 @@ export interface AuditLog {
   result: AuditResult;
   timestamp: string;
 }
+
+// ─── Admin Dashboard ──────────────────────────────────────────────────────────
+
+export interface AdminDashboardRecentTicket {
+  id: string;
+  code: string;
+  title: string;
+  priority: string;
+  status: string;
+  requester: string;
+  createdAt: string;
+}
+
+export interface AdminDashboardRecentAudit {
+  id: string;
+  action: string;
+  actor: string;
+  target: string;
+  ts: string;
+}
+
+export interface AdminDashboardRoleDistribution {
+  role: string;
+  count: number;
+}
+
+export interface AdminDashboardData {
+  totalUsers: number;
+  activeUsers: number;
+  inactiveUsers: number;
+  suspended: number;
+  pendingTickets: number;
+  resolvedToday: number;
+  totalDepts: number;
+  newThisMonth: number;
+  recentTickets: AdminDashboardRecentTicket[];
+  recentAudit: AdminDashboardRecentAudit[];
+  roleDistribution: AdminDashboardRoleDistribution[];
+}
+
+// ─── System Settings (new sections) ──────────────────────────────────────────
+
+export interface ModuleSettings {
+  chatEnabled: boolean;
+  announcementsEnabled: boolean;
+  meetingsEnabled: boolean;
+  projectManagementEnabled: boolean;
+}
+
+export interface SecuritySettings {
+  passwordMinLength: number;
+  sessionTimeoutMinutes: number;
+  mfaRequired: boolean;
+  loginMaxAttempts: number;
+  accountLockoutMinutes: number;
+}
+
+export interface OperationalSettings {
+  maintenanceMode: boolean;
+  newUserRegistrationEnabled: boolean;
+  dataExportEnabled: boolean;
+  supportContactEmail: string;
+}
+

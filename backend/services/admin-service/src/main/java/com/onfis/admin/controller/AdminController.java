@@ -1,6 +1,8 @@
 package com.onfis.admin.controller;
 
+import com.onfis.admin.dto.AdminDashboardResponse;
 import com.onfis.admin.dto.LeaderDashboardResponse;
+import com.onfis.admin.service.AdminDashboardService;
 import com.onfis.admin.service.LeaderDashboardService;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
   private final LeaderDashboardService leaderDashboardService;
+  private final AdminDashboardService adminDashboardService;
 
   @GetMapping("/health")
   public ResponseEntity<Map<String, String>> health(
@@ -32,5 +35,12 @@ public class AdminController {
       @RequestHeader("X-Company-ID") String tenantId,
       @RequestHeader("X-User-ID") String userId) {
     return ResponseEntity.ok(leaderDashboardService.getLeaderDashboard(tenantId, userId));
+  }
+
+  @GetMapping("/dashboard")
+  public ResponseEntity<AdminDashboardResponse> getAdminDashboard(
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") String userId) {
+    return ResponseEntity.ok(adminDashboardService.getDashboard(tenantId, userId));
   }
 }

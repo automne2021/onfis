@@ -1,41 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../../../components/common/Icon";
 import { useTenantPath } from "../../../hooks/useTenantPath";
+import { adminService } from "../services/adminService";
+import type { AdminDashboardData } from "../types/adminTypes";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const MOCK_STATS = {
-  totalUsers: 47,
-  activeUsers: 42,
-  inactiveUsers: 3,
-  suspended: 2,
-  pendingTickets: 5,
-  resolvedToday: 3,
-  totalDepts: 7,
-  newThisMonth: 4,
+const ROLE_COLORS: Record<string, string> = {
+  SUPER_ADMIN: "#7C3AED",
+  ADMIN: "#0014A8",
+  MANAGER: "#2563EB",
+  EMPLOYEE: "#64748B",
 };
-
-const MOCK_RECENT_TICKETS = [
-  { id: "1", code: "TK-001", title: "Add New Employee Accounts - Engineering Department", priority: "HIGH", status: "PENDING", requester: "CEO User", createdAt: "2026-04-25T08:30:00Z" },
-  { id: "2", code: "TK-002", title: "Promote Hoang Minh Tuan to Manager", priority: "MEDIUM", status: "IN_PROGRESS", requester: "CEO User", createdAt: "2026-04-24T14:00:00Z" },
-  { id: "3", code: "TK-004", title: "Increase File Upload Size Limit", priority: "LOW", status: "PENDING", requester: "CEO User", createdAt: "2026-04-27T07:00:00Z" },
-];
-
-const MOCK_RECENT_AUDIT = [
-  { id: "a1", action: "CREATE_USER", actor: "Admin", target: "trantha@company.vn", ts: "2026-04-27T09:10:00Z" },
-  { id: "a2", action: "UPDATE_USER_ROLE", actor: "Admin", target: "cuong.le@company.vn -> MANAGER", ts: "2026-04-26T16:45:00Z" },
-  { id: "a3", action: "DISABLE_USER", actor: "Admin", target: "em.hoang@company.vn", ts: "2026-04-26T10:00:00Z" },
-  { id: "a4", action: "UPDATE_SETTINGS", actor: "Admin", target: "Timezone configuration", ts: "2026-04-25T14:30:00Z" },
-  { id: "a5", action: "RESET_PASSWORD", actor: "Admin", target: "dung.pham@company.vn", ts: "2026-04-24T11:20:00Z" },
-];
-
-const MOCK_ROLE_DIST = [
-  { role: "SUPER_ADMIN", count: 1, color: "#7C3AED" },
-  { role: "ADMIN", count: 2, color: "#0014A8" },
-  { role: "MANAGER", count: 8, color: "#2563EB" },
-  { role: "EMPLOYEE", count: 36, color: "#64748B" },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -102,8 +79,36 @@ export default function AdminDashboardPage() {
   const { withTenant } = useTenantPath();
   const navigate = useNavigate();
   const [_tab, _setTab] = useState("overview");
+  const [data, setData] = useState<AdminDashboardData | null>(adminService.getCachedDashboard());
+  const [loading, setLoading] = useState(!data);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalRoles = MOCK_ROLE_DIST.reduce((s, r) => s + r.count, 0);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const result = await adminService.getDashboard({ forceRefresh: false });
+        if (!cancelled) {
+          setData(result);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) setError("Failed to load dashboard data");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const roleDistribution = data?.roleDistribution ?? [];
+  const totalRoles = roleDistribution.reduce((s, r) => s + r.count, 0);
+  const stats = data ?? {
+    totalUsers: 0, activeUsers: 0, inactiveUsers: 0, suspended: 0,
+    pendingTickets: 0, resolvedToday: 0, totalDepts: 0, newThisMonth: 0,
+    recentTickets: [], recentAudit: [], roleDistribution: [],
+  };
 
   return (
     <div className="onfis-section">
@@ -134,9 +139,9 @@ export default function AdminDashboardPage() {
           >
             <Icon name="support_agent" size={14} color="#62748E" />
             Requests
-            {MOCK_STATS.pendingTickets > 0 && (
+            {stats.pendingTickets > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                {MOCK_STATS.pendingTickets}
+                {stats.pendingTickets}
               </span>
             )}
           </button>
@@ -144,24 +149,35 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="px-6 py-5 space-y-6">
+        {/* Loading / Error states */}
+        {loading && (
+          <div className="flex items-center justify-center h-32 text-neutral-400 text-sm">
+            Loading dashboard...
+          </div>
+        )}
+        {error && !loading && (
+          <div className="bg-red-50 text-red-600 text-sm rounded-lg px-4 py-3">{error}</div>
+        )}
+
         {/* Stat cards */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
-            icon="group" label="Total Accounts" value={MOCK_STATS.totalUsers}
-            sub={`+${MOCK_STATS.newThisMonth} this month`} color="#0014A8"
+            icon="group" label="Total Accounts" value={stats.totalUsers}
+            sub={`+${stats.newThisMonth} this month`} color="#0014A8"
             onClick={() => navigate(withTenant("/admin/users"))}
           />
           <StatCard
-            icon="check_circle" label="Active Accounts" value={MOCK_STATS.activeUsers}
-            sub={`${Math.round((MOCK_STATS.activeUsers / MOCK_STATS.totalUsers) * 100)}% of total`} color="#00A63E"
+            icon="check_circle" label="Active Accounts" value={stats.activeUsers}
+            sub={stats.totalUsers > 0 ? `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of total` : ""}
+            color="#00A63E"
           />
           <StatCard
-            icon="pending_actions" label="Pending Requests" value={MOCK_STATS.pendingTickets}
-            sub={`${MOCK_STATS.resolvedToday} resolved today`} color="#F59E0B"
+            icon="pending_actions" label="Pending Requests" value={stats.pendingTickets}
+            sub={`${stats.resolvedToday} resolved today`} color="#F59E0B"
             onClick={() => navigate(withTenant("/admin/requests"))}
           />
           <StatCard
-            icon="account_tree" label="Departments" value={MOCK_STATS.totalDepts}
+            icon="account_tree" label="Departments" value={stats.totalDepts}
             color="#7C3AED"
             onClick={() => navigate(withTenant("/admin/users"))}
           />
@@ -185,7 +201,7 @@ export default function AdminDashboardPage() {
               </button>
             </div>
             <div className="divide-y divide-neutral-50">
-              {MOCK_RECENT_TICKETS.map((ticket) => (
+              {stats.recentTickets.map((ticket) => (
                 <div key={ticket.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 transition-colors">
                   <div className="flex flex-col items-start gap-1.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -215,8 +231,9 @@ export default function AdminDashboardPage() {
               <h2 className="text-sm font-semibold text-neutral-800">Role Distribution</h2>
             </div>
             <div className="px-5 py-4 space-y-3">
-              {MOCK_ROLE_DIST.map((item) => {
-                const pct = Math.round((item.count / totalRoles) * 100);
+              {roleDistribution.map((item) => {
+                const pct = totalRoles > 0 ? Math.round((item.count / totalRoles) * 100) : 0;
+                const color = ROLE_COLORS[item.role] ?? "#94A3B8";
                 return (
                   <div key={item.role}>
                     <div className="flex justify-between items-center mb-1">
@@ -226,14 +243,14 @@ export default function AdminDashboardPage() {
                     <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%`, backgroundColor: item.color }}
+                        style={{ width: `${pct}%`, backgroundColor: color }}
                       />
                     </div>
                   </div>
                 );
               })}
               <div className="pt-2 border-t border-neutral-100">
-                <p className="text-[11px] text-neutral-400 text-center">{totalRoles} accounts - {MOCK_STATS.totalDepts} departments</p>
+                <p className="text-[11px] text-neutral-400 text-center">{totalRoles} accounts - {stats.totalDepts} departments</p>
               </div>
             </div>
 
@@ -277,7 +294,7 @@ export default function AdminDashboardPage() {
             </button>
           </div>
           <div className="divide-y divide-neutral-50">
-            {MOCK_RECENT_AUDIT.map((log) => {
+            {stats.recentAudit.map((log) => {
               const meta = AUDIT_ACTION_META[log.action] ?? { icon: "history", label: log.action, color: "#62748E" };
               return (
                 <div key={log.id} className="flex items-center gap-4 px-5 py-3 hover:bg-neutral-50 transition-colors">

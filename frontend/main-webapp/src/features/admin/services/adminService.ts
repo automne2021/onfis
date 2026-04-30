@@ -11,6 +11,10 @@ import type {
   StorageSettings,
   AuditLog,
   OnboardingForm,
+  AdminDashboardData,
+  ModuleSettings,
+  SecuritySettings,
+  OperationalSettings,
 } from "../types/adminTypes";
 
 type CacheOptions = {
@@ -53,11 +57,15 @@ function serializeParams(params?: Record<string, unknown>): string {
 }
 
 const cacheKeys = {
+  dashboard: `${ADMIN_CACHE_PREFIX}dashboard`,
   tickets: `${ADMIN_CACHE_PREFIX}tickets`,
   ticketById: (id: string) => `${ADMIN_CACHE_PREFIX}ticket:${id}`,
   users: (params?: ListUsersParams) => `${ADMIN_CACHE_PREFIX}users:${serializeParams(params)}`,
   tenant: `${ADMIN_CACHE_PREFIX}tenant`,
   storage: `${ADMIN_CACHE_PREFIX}storage`,
+  modules: `${ADMIN_CACHE_PREFIX}modules`,
+  security: `${ADMIN_CACHE_PREFIX}security`,
+  operations: `${ADMIN_CACHE_PREFIX}operations`,
   audit: (params?: ListAuditParams) => `${ADMIN_CACHE_PREFIX}audit:${serializeParams(params)}`,
 };
 
@@ -75,6 +83,10 @@ function invalidateUserCaches() {
 // ─── Tickets ─────────────────────────────────────────────────────────────────
 
 export const adminService = {
+  getCachedDashboard(): AdminDashboardData | null {
+    return getCachedResource<AdminDashboardData>(cacheKeys.dashboard);
+  },
+
   getCachedTickets(): Ticket[] | null {
     return getCachedResource<Ticket[]>(cacheKeys.tickets);
   },
@@ -89,6 +101,18 @@ export const adminService = {
 
   getCachedStorageSettings(): StorageSettings | null {
     return getCachedResource<StorageSettings>(cacheKeys.storage);
+  },
+
+  getCachedModuleSettings(): ModuleSettings | null {
+    return getCachedResource<ModuleSettings>(cacheKeys.modules);
+  },
+
+  getCachedSecuritySettings(): SecuritySettings | null {
+    return getCachedResource<SecuritySettings>(cacheKeys.security);
+  },
+
+  getCachedOperationalSettings(): OperationalSettings | null {
+    return getCachedResource<OperationalSettings>(cacheKeys.operations);
   },
 
   getCachedAuditLogs(params?: ListAuditParams): { logs: AuditLog[]; total: number } | null {
@@ -266,6 +290,68 @@ export const adminService = {
       { params }
     );
     setCachedResource(key, res.data, LIST_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  // Dashboard
+  async getDashboard(options?: CacheOptions): Promise<AdminDashboardData> {
+    if (!options?.forceRefresh) {
+      const cached = getCachedResource<AdminDashboardData>(cacheKeys.dashboard);
+      if (cached) return cached;
+    }
+    const res = await api.get<AdminDashboardData>("/admin/dashboard");
+    setCachedResource(cacheKeys.dashboard, res.data, LIST_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  // Module Settings
+  async getModuleSettings(options?: CacheOptions): Promise<ModuleSettings> {
+    if (!options?.forceRefresh) {
+      const cached = getCachedResource<ModuleSettings>(cacheKeys.modules);
+      if (cached) return cached;
+    }
+    const res = await api.get<ModuleSettings>("/admin/system/modules");
+    setCachedResource(cacheKeys.modules, res.data, SETTINGS_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  async updateModuleSettings(settings: ModuleSettings): Promise<ModuleSettings> {
+    const res = await api.put<ModuleSettings>("/admin/system/modules", settings);
+    setCachedResource(cacheKeys.modules, res.data, SETTINGS_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  // Security Settings
+  async getSecuritySettings(options?: CacheOptions): Promise<SecuritySettings> {
+    if (!options?.forceRefresh) {
+      const cached = getCachedResource<SecuritySettings>(cacheKeys.security);
+      if (cached) return cached;
+    }
+    const res = await api.get<SecuritySettings>("/admin/system/security");
+    setCachedResource(cacheKeys.security, res.data, SETTINGS_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  async updateSecuritySettings(settings: SecuritySettings): Promise<SecuritySettings> {
+    const res = await api.put<SecuritySettings>("/admin/system/security", settings);
+    setCachedResource(cacheKeys.security, res.data, SETTINGS_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  // Operational Settings
+  async getOperationalSettings(options?: CacheOptions): Promise<OperationalSettings> {
+    if (!options?.forceRefresh) {
+      const cached = getCachedResource<OperationalSettings>(cacheKeys.operations);
+      if (cached) return cached;
+    }
+    const res = await api.get<OperationalSettings>("/admin/system/operations");
+    setCachedResource(cacheKeys.operations, res.data, SETTINGS_CACHE_TTL_MS);
+    return res.data;
+  },
+
+  async updateOperationalSettings(settings: OperationalSettings): Promise<OperationalSettings> {
+    const res = await api.put<OperationalSettings>("/admin/system/operations", settings);
+    setCachedResource(cacheKeys.operations, res.data, SETTINGS_CACHE_TTL_MS);
     return res.data;
   },
 };

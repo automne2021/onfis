@@ -3,7 +3,13 @@ import Icon from "../../../components/common/Icon";
 import { Button } from "../../../components/common/Buttons/Button";
 import { useToast } from "../../../contexts/useToast";
 import { adminService } from "../services/adminService";
-import type { TenantSettings, StorageSettings } from "../types/adminTypes";
+import type {
+  TenantSettings,
+  StorageSettings,
+  ModuleSettings,
+  SecuritySettings,
+  OperationalSettings,
+} from "../types/adminTypes";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -373,51 +379,317 @@ function StorageTab({ settings, onSave }: StorageTabProps) {
   );
 }
 
+// ─── Module Settings Tab ──────────────────────────────────────────────────────
+
+interface ModulesTabProps {
+  settings: ModuleSettings;
+  onSave: (s: ModuleSettings) => Promise<void>;
+}
+
+function ModulesTab({ settings, onSave }: ModulesTabProps) {
+  const [draft, setDraft] = useState(settings);
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => { setDraft(settings); }, [settings]);
+
+  const toggle = (key: keyof ModuleSettings) =>
+    setDraft((p) => ({ ...p, [key]: !p[key] }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(draft);
+      showToast("Module settings saved.", "success");
+    } catch {
+      showToast("Unable to save settings.", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const modules: { key: keyof ModuleSettings; label: string; desc: string; icon: string }[] = [
+    { key: "chatEnabled",              label: "Real-time Chat",        desc: "Allow users to send direct messages and participate in group chats.", icon: "chat" },
+    { key: "announcementsEnabled",     label: "Announcements",         desc: "Enable company-wide and department-level announcement broadcasts.",   icon: "campaign" },
+    { key: "meetingsEnabled",          label: "Meeting Scheduler",     desc: "Let users schedule and manage internal meetings.",                    icon: "video_call" },
+    { key: "projectManagementEnabled", label: "Project Management",    desc: "Enable project boards, task tracking and sprint planning.",          icon: "dashboard" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="section-card p-5 space-y-1">
+        <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2 mb-3">
+          <Icon name="extension" size={16} color="#0014A8" /> Feature Modules
+        </p>
+        {modules.map(({ key, label, desc, icon }) => (
+          <label key={key} className="flex items-start gap-4 p-3 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors">
+            <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center shrink-0 mt-0.5">
+              <Icon name={icon} size={18} color="#0014A8" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-neutral-800">{label}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
+            </div>
+            <div
+              onClick={() => toggle(key)}
+              className={`relative shrink-0 mt-1 w-10 h-6 rounded-full transition-colors cursor-pointer ${draft[key] ? "bg-primary" : "bg-neutral-300"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${draft[key] ? "translate-x-4" : "translate-x-0"}`} />
+            </div>
+          </label>
+        ))}
+      </div>
+      <div className="flex justify-end">
+        <Button style="primary" title="Save Module Settings" loading={saving} onClick={() => void handleSave()} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Security Settings Tab ────────────────────────────────────────────────────
+
+interface SecurityTabProps {
+  settings: SecuritySettings;
+  onSave: (s: SecuritySettings) => Promise<void>;
+}
+
+function SecurityTab({ settings, onSave }: SecurityTabProps) {
+  const [draft, setDraft] = useState(settings);
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => { setDraft(settings); }, [settings]);
+
+  const setN = (key: keyof SecuritySettings, v: number) =>
+    setDraft((p) => ({ ...p, [key]: v }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(draft);
+      showToast("Security settings saved.", "success");
+    } catch {
+      showToast("Unable to save settings.", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls = "w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white";
+
+  return (
+    <div className="space-y-5">
+      <div className="section-card p-5 space-y-4">
+        <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+          <Icon name="password" size={16} color="#0014A8" /> Password Policy
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Minimum length</label>
+            <input type="number" min={4} max={128} className={inputCls}
+              value={draft.passwordMinLength}
+              onChange={(e) => setN("passwordMinLength", Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Max login attempts before lockout</label>
+            <input type="number" min={1} max={20} className={inputCls}
+              value={draft.loginMaxAttempts}
+              onChange={(e) => setN("loginMaxAttempts", Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Account lockout duration (minutes)</label>
+            <input type="number" min={1} max={1440} className={inputCls}
+              value={draft.accountLockoutMinutes}
+              onChange={(e) => setN("accountLockoutMinutes", Number(e.target.value))} />
+          </div>
+        </div>
+      </div>
+
+      <div className="section-card p-5 space-y-4">
+        <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+          <Icon name="lock_clock" size={16} color="#0014A8" /> Session Policy
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-neutral-500 mb-1">Session timeout (minutes)</label>
+            <input type="number" min={5} max={1440} className={inputCls}
+              value={draft.sessionTimeoutMinutes}
+              onChange={(e) => setN("sessionTimeoutMinutes", Number(e.target.value))} />
+            <p className="text-[11px] text-neutral-400 mt-1">480 min = 8 hours. Idle sessions will be logged out.</p>
+          </div>
+        </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div
+            onClick={() => setDraft((p) => ({ ...p, mfaRequired: !p.mfaRequired }))}
+            className={`relative w-10 h-6 rounded-full transition-colors cursor-pointer ${draft.mfaRequired ? "bg-primary" : "bg-neutral-300"}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${draft.mfaRequired ? "translate-x-4" : "translate-x-0"}`} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-neutral-800">Require MFA for all users</p>
+            <p className="text-xs text-neutral-500">Users must verify identity via email OTP on login.</p>
+          </div>
+        </label>
+      </div>
+
+      <div className="flex justify-end">
+        <Button style="primary" title="Save Security Settings" loading={saving} onClick={() => void handleSave()} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Operational Settings Tab ─────────────────────────────────────────────────
+
+interface OperationsTabProps {
+  settings: OperationalSettings;
+  onSave: (s: OperationalSettings) => Promise<void>;
+}
+
+function OperationsTab({ settings, onSave }: OperationsTabProps) {
+  const [draft, setDraft] = useState(settings);
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => { setDraft(settings); }, [settings]);
+
+  const toggleBool = (key: keyof OperationalSettings) =>
+    setDraft((p) => ({ ...p, [key]: !p[key] }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(draft);
+      showToast("Operational settings saved.", "success");
+    } catch {
+      showToast("Unable to save settings.", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggles: { key: keyof OperationalSettings; label: string; desc: string; icon: string; danger?: boolean }[] = [
+    { key: "maintenanceMode",            label: "Maintenance Mode",          desc: "Blocks all non-admin access. Use during upgrades or emergencies.", icon: "construction", danger: true },
+    { key: "newUserRegistrationEnabled", label: "New User Registration",     desc: "Allow invitations and self-service sign-up for the tenant.",       icon: "person_add" },
+    { key: "dataExportEnabled",          label: "Data Export",               desc: "Users with permission can export project data as CSV/JSON.",        icon: "download" },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="section-card p-5 space-y-1">
+        <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2 mb-3">
+          <Icon name="settings_suggest" size={16} color="#0014A8" /> Platform Controls
+        </p>
+        {toggles.map(({ key, label, desc, icon, danger }) => (
+          <label key={key} className={`flex items-start gap-4 p-3 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors ${danger && draft[key as keyof OperationalSettings] ? "bg-red-50/50" : ""}`}>
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${danger ? "bg-red-100" : "bg-primary/8"}`}>
+              <Icon name={icon} size={18} color={danger ? "#ef4444" : "#0014A8"} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-neutral-800">{label}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">{desc}</p>
+            </div>
+            <div
+              onClick={() => toggleBool(key as keyof OperationalSettings)}
+              className={`relative shrink-0 mt-1 w-10 h-6 rounded-full transition-colors cursor-pointer ${draft[key as keyof OperationalSettings] ? (danger ? "bg-red-500" : "bg-primary") : "bg-neutral-300"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${draft[key as keyof OperationalSettings] ? "translate-x-4" : "translate-x-0"}`} />
+            </div>
+          </label>
+        ))}
+      </div>
+
+      <div className="section-card p-5 space-y-3">
+        <p className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+          <Icon name="contact_support" size={16} color="#0014A8" /> Support Contact
+        </p>
+        <div>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">Support email address</label>
+          <input
+            type="email"
+            className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+            placeholder="support@yourcompany.com"
+            value={draft.supportContactEmail}
+            onChange={(e) => setDraft((p) => ({ ...p, supportContactEmail: e.target.value }))}
+          />
+          <p className="text-[11px] text-neutral-400 mt-1">Displayed to users in the help section.</p>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button style="primary" title="Save Operational Settings" loading={saving} onClick={() => void handleSave()} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type TabId = "tenant" | "storage";
+type TabId = "tenant" | "storage" | "modules" | "security" | "operations";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "tenant", label: "Tenant Settings", icon: "business" },
-  { id: "storage", label: "Storage Management", icon: "storage" },
+  { id: "tenant",     label: "Tenant Settings",    icon: "business" },
+  { id: "storage",    label: "Storage Management", icon: "storage" },
+  { id: "modules",    label: "Modules",            icon: "extension" },
+  { id: "security",   label: "Security",           icon: "security" },
+  { id: "operations", label: "Operations",         icon: "settings_suggest" },
 ];
 
 let tenantSettingsSnapshot: TenantSettings | null = null;
 let storageSettingsSnapshot: StorageSettings | null = null;
+let moduleSettingsSnapshot: ModuleSettings | null = null;
+let securitySettingsSnapshot: SecuritySettings | null = null;
+let operationalSettingsSnapshot: OperationalSettings | null = null;
+
+const DEFAULT_MODULES: ModuleSettings = { chatEnabled: true, announcementsEnabled: true, meetingsEnabled: true, projectManagementEnabled: true };
+const DEFAULT_SECURITY: SecuritySettings = { passwordMinLength: 8, sessionTimeoutMinutes: 480, mfaRequired: false, loginMaxAttempts: 5, accountLockoutMinutes: 30 };
+const DEFAULT_OPERATIONS: OperationalSettings = { maintenanceMode: false, newUserRegistrationEnabled: true, dataExportEnabled: true, supportContactEmail: "" };
 
 export default function SystemSettingsPage() {
   const [initialCache] = useState(() => ({
     tenant: adminService.getCachedTenantSettings() ?? tenantSettingsSnapshot,
     storage: adminService.getCachedStorageSettings() ?? storageSettingsSnapshot,
+    modules: adminService.getCachedModuleSettings() ?? moduleSettingsSnapshot,
+    security: adminService.getCachedSecuritySettings() ?? securitySettingsSnapshot,
+    operations: adminService.getCachedOperationalSettings() ?? operationalSettingsSnapshot,
   }));
 
   const [activeTab, setActiveTab] = useState<TabId>("tenant");
   const [tenantSettings, setTenantSettings] = useState<TenantSettings>(initialCache.tenant ?? MOCK_TENANT);
   const [storageSettings, setStorageSettings] = useState<StorageSettings>(initialCache.storage ?? MOCK_STORAGE);
+  const [moduleSettings, setModuleSettings] = useState<ModuleSettings>(initialCache.modules ?? DEFAULT_MODULES);
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(initialCache.security ?? DEFAULT_SECURITY);
+  const [operationalSettings, setOperationalSettings] = useState<OperationalSettings>(initialCache.operations ?? DEFAULT_OPERATIONS);
   const [isLoading, setIsLoading] = useState(!(initialCache.tenant && initialCache.storage));
   const { showToast } = useToast();
 
   const load = useCallback(async (showLoading = false, forceRefresh = false) => {
-    if (showLoading) {
-      setIsLoading(true);
-    }
-
+    if (showLoading) setIsLoading(true);
     try {
-      const [tenant, storage] = await Promise.all([
+      const [tenant, storage, modules, security, operations] = await Promise.all([
         adminService.getTenantSettings({ forceRefresh }),
         adminService.getStorageSettings({ forceRefresh }),
+        adminService.getModuleSettings({ forceRefresh }),
+        adminService.getSecuritySettings({ forceRefresh }),
+        adminService.getOperationalSettings({ forceRefresh }),
       ]);
       tenantSettingsSnapshot = tenant;
       storageSettingsSnapshot = storage;
+      moduleSettingsSnapshot = modules;
+      securitySettingsSnapshot = security;
+      operationalSettingsSnapshot = operations;
       setTenantSettings(tenant);
       setStorageSettings(storage);
+      setModuleSettings(modules);
+      setSecuritySettings(security);
+      setOperationalSettings(operations);
     } catch {
-      const fallbackTenant = tenantSettingsSnapshot ?? MOCK_TENANT;
-      const fallbackStorage = storageSettingsSnapshot ?? MOCK_STORAGE;
-      tenantSettingsSnapshot = fallbackTenant;
-      storageSettingsSnapshot = fallbackStorage;
-      setTenantSettings(fallbackTenant);
-      setStorageSettings(fallbackStorage);
+      setTenantSettings(tenantSettingsSnapshot ?? MOCK_TENANT);
+      setStorageSettings(storageSettingsSnapshot ?? MOCK_STORAGE);
+      setModuleSettings(moduleSettingsSnapshot ?? DEFAULT_MODULES);
+      setSecuritySettings(securitySettingsSnapshot ?? DEFAULT_SECURITY);
+      setOperationalSettings(operationalSettingsSnapshot ?? DEFAULT_OPERATIONS);
     } finally {
       setIsLoading(false);
     }
@@ -432,7 +704,7 @@ export default function SystemSettingsPage() {
       setTenantSettings(updated);
     } catch {
       tenantSettingsSnapshot = s;
-      setTenantSettings(s); // optimistic
+      setTenantSettings(s);
     }
     showToast("Tenant settings saved.", "success");
   };
@@ -447,6 +719,42 @@ export default function SystemSettingsPage() {
       setStorageSettings(s);
     }
     showToast("Storage settings saved.", "success");
+  };
+
+  const handleSaveModules = async (s: ModuleSettings) => {
+    try {
+      const updated = await adminService.updateModuleSettings(s);
+      moduleSettingsSnapshot = updated;
+      setModuleSettings(updated);
+    } catch {
+      moduleSettingsSnapshot = s;
+      setModuleSettings(s);
+    }
+    showToast("Module settings saved.", "success");
+  };
+
+  const handleSaveSecurity = async (s: SecuritySettings) => {
+    try {
+      const updated = await adminService.updateSecuritySettings(s);
+      securitySettingsSnapshot = updated;
+      setSecuritySettings(updated);
+    } catch {
+      securitySettingsSnapshot = s;
+      setSecuritySettings(s);
+    }
+    showToast("Security settings saved.", "success");
+  };
+
+  const handleSaveOperations = async (s: OperationalSettings) => {
+    try {
+      const updated = await adminService.updateOperationalSettings(s);
+      operationalSettingsSnapshot = updated;
+      setOperationalSettings(updated);
+    } catch {
+      operationalSettingsSnapshot = s;
+      setOperationalSettings(s);
+    }
+    showToast("Operational settings saved.", "success");
   };
 
   return (
@@ -496,6 +804,15 @@ export default function SystemSettingsPage() {
             )}
             {activeTab === "storage" && (
               <StorageTab settings={storageSettings} onSave={handleSaveStorage} />
+            )}
+            {activeTab === "modules" && (
+              <ModulesTab settings={moduleSettings} onSave={handleSaveModules} />
+            )}
+            {activeTab === "security" && (
+              <SecurityTab settings={securitySettings} onSave={handleSaveSecurity} />
+            )}
+            {activeTab === "operations" && (
+              <OperationsTab settings={operationalSettings} onSave={handleSaveOperations} />
             )}
           </div>
         </div>
