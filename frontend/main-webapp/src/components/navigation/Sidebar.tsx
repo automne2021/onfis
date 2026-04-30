@@ -136,11 +136,11 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems, activePathM
   const [isVisible, setIsVisible] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { isManager, isEmployee } = useRole();
+  const { isManagerLike, isEmployee } = useRole();
   const { pathname } = useLocation();
 
   const visibleItems = subItems.filter(
-    (item) => (!item.managerOnly || isManager) && (!item.employeeOnly || isEmployee)
+    (item) => (!item.managerOnly || isManagerLike) && (!item.employeeOnly || isEmployee)
   );
 
   const showPanel = useCallback(() => {
@@ -229,7 +229,7 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems, activePathM
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { withTenant } = useTenantPath();
-  const { isManager, isSuperAdmin, isAdmin } = useRole();
+  const { isManagerLike, isSuperAdmin, isAdmin } = useRole();
 
   // Scroll state for the nav area
   const navRef = useRef<HTMLDivElement>(null);
@@ -359,7 +359,7 @@ export default function Sidebar() {
       <div className={`h-px bg-neutral-100 transition-all duration-300 shrink-0 ${isCollapsed ? "w-8" : "w-full"}`} />
 
       {/* Settings Button */}
-      {(isManager || isSuperAdmin) && (
+      {(isManagerLike || isSuperAdmin) && (
         <NavItem
           to={withTenant("/settings")}
           icon="settings"

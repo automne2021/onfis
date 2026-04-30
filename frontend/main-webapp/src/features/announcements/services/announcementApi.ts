@@ -66,4 +66,15 @@ export const announcementApi = {
     const response = await api.get(`/announcements/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`);
     return response.data;
   },
+
+  updateAnnouncement: async (id: string | number, formData: FormData) => {
+    const response = await api.put(`/announcements/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteAnnouncement: async (id: string | number) => {
+    await api.delete(`/announcements/${id}`);
+  },
 }

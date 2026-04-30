@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useEffect, useState, Suspense } from "react"
+import { useParams, useNavigate } from "react-router-dom"
 import { BreadCrumb } from "../components/navigation/BreadCrumb"
 import { getTimeAgo } from "../../../utils/getTime"
 import { Tags } from "../components/Tags/Tags"
 
-import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups } from '@mui/icons-material';
+import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups, Edit, Delete } from '@mui/icons-material';
 
 import userProfileImg from "../../../assets/images/user-profile-img.png"
 import { getFileType } from "../../../config/fileConfig"
@@ -16,11 +16,17 @@ import { findUserById } from "../../../data/mockUserData"
 import { ProfileCard } from "../../../components/common/Card/ProfileCard"
 import type { AnnouncementData, CommentData } from "../types/AnnouncementTypes"
 import type { FullUserProfile } from "../../../types/userType"
-// import { StatusBubble } from "../../../components/common/StatusBubble"
 
 import { announcementApi } from "../services/announcementApi"
 import { formatAnnouncementData } from "../utils/announcementFormatter"
-// import { usePresence } from "../../chat/context/PresenceContext"
+import { useRole } from "../../../hooks/useRole"
+import { useAuth } from "../../../hooks/useAuth"
+import { AnnouncementFormLoading } from "../components/Loadings/AnnouncementFormLoading"
+import React from "react"
+import { createPortal } from "react-dom"
+import { useTenantPath } from "../../../hooks/useTenantPath"
+
+const AnnouncementForm = React.lazy(() => import('../components/AnnouncementForm').then(m => ({ default: m.AnnouncementForm })));
 
 const flattenAllReplies = (replies: CommentData[], parentName?: string): CommentData[] => {
   let flat: CommentData[] = [];
@@ -38,7 +44,10 @@ const flattenAllReplies = (replies: CommentData[], parentName?: string): Comment
 
 export function AnnouncementDetail() {
   const { id } = useParams<{ id: string }>()
-  // const { statuses } = usePresence()
+  const navigate = useNavigate();
+  const { withTenant } = useTenantPath();
+  const { isSuperAdmin, isAdmin, isManagerLike } = useRole();
+  const { user } = useAuth();
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -49,6 +58,8 @@ export function AnnouncementDetail() {
   
   const [replyingTo, setReplyingTo] = useState<{ id: string | number, name: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -103,6 +114,18 @@ export function AnnouncementDetail() {
     setReplyingTo({ id: commentId, name: authorName });
   };
 
+  const handleDelete = async () => {
+    if (!id || !window.confirm("Are you sure you want to delete this announcement? This action cannot be undone.")) return;
+    try {
+      setIsDeleting(true);
+      await announcementApi.deleteAnnouncement(id);
+      navigate(withTenant('/announcements'));
+    } catch (err) {
+      console.error("Failed to delete announcement:", err);
+      setIsDeleting(false);
+    }
+  };
+
   const handleDownloadAll = async () => {
     if (!detail?.attachments || detail.attachments.length === 0) return;
 
@@ -151,6 +174,9 @@ export function AnnouncementDetail() {
   const safeUtcDate = detail.date ? (detail.date.endsWith('Z') ? detail.date : `${detail.date}Z`) : "";
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
   
+  // Can edit: SUPER_ADMIN / ADMIN = any; MANAGER = own only
+  const canEdit = isSuperAdmin || isAdmin || (isManagerLike && String(detail.authId) === String(user?.id));
+  
   const authorProfile = findUserById(detail.authId);
   const profileCardData: FullUserProfile = authorProfile ? {
     id: authorProfile.id,
@@ -169,6 +195,7 @@ export function AnnouncementDetail() {
   const displayDeptName = detail.targetDepartmentName || "My department";
 
   return (
+    <>
     <div className="flex flex-col min-h-[calc(100vh-70px)]">
       <section className="onfis-section">
         {/* Toolbar */}
@@ -212,6 +239,27 @@ export function AnnouncementDetail() {
                 <Tags label="Global" icon={<Public sx={{ fontSize: 16 }} />} />
               ) : (
                 <Tags label={displayDeptName} icon={<Groups sx={{ fontSize: 16 }} />} bgColor="bg-cyan-100" textColor="text-cyan-500" />
+              )}
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditOpen(true)}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-primary hover:bg-primary/10 transition"
+                    title="Edit announcement"
+                  >
+                    <Edit sx={{ fontSize: 16 }} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition"
+                    title="Delete announcement"
+                  >
+                    <Delete sx={{ fontSize: 16 }} />
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -407,5 +455,30 @@ export function AnnouncementDetail() {
         </div>
       </section>
     </div>
+
+    {isEditOpen && detail && createPortal(
+      <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
+        <div className='absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn' onClick={() => setIsEditOpen(false)} />
+        <div className='relative z-10 animate-slideUp w-full max-w-3xl'>
+          <Suspense fallback={<AnnouncementFormLoading />}>
+            <AnnouncementForm
+              onClose={() => setIsEditOpen(false)}
+              announcementId={id}
+              initialData={detail}
+              onSuccess={async () => {
+                // Refresh detail after edit
+                if (id) {
+                  const rawData = await announcementApi.getById(id);
+                  const formatted = formatAnnouncementData([rawData])[0];
+                  if (formatted) setDetail(formatted);
+                }
+              }}
+            />
+          </Suspense>
+        </div>
+      </div>,
+      document.body
+    )}
+  </>
   )
 }

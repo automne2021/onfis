@@ -271,7 +271,7 @@ export default function TaskDetailModal({
   const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
   const { currentUser } = useAuth();
   const { showToast } = useToast();
-  const { isManager, isEmployee } = useRole();
+  const { isManagerLike: isManager, isEmployee } = useRole();
 
   // Determine role-based permissions
   const isAssignee = task.assignees.some((a) => a.id === currentUser.id);

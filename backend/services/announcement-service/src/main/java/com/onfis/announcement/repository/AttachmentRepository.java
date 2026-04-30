@@ -10,4 +10,6 @@ import java.util.UUID;
 @Repository
 public interface AttachmentRepository extends JpaRepository<Attachment, UUID> {
     List<Attachment> findByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
+
+    void deleteByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
 }

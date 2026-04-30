@@ -9,12 +9,14 @@ import java.util.UUID;
 
 @Repository
 public interface AnnouncementLikeRepository extends JpaRepository<AnnouncementLike, UUID> {
-    
+
     long countByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
-    
+
     boolean existsByTenantIdAndAnnouncementIdAndUserId(UUID tenantId, UUID announcementId, UUID userId);
 
     void deleteByTenantIdAndAnnouncementIdAndUserId(UUID tenantId, UUID announcementId, UUID userId);
-    
+
     List<AnnouncementLike> findByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
+
+    void deleteByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
 }

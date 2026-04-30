@@ -63,20 +63,25 @@ public class PositionController {
     // ── CRUD ──────────────────────────────────────────────────────────
 
     @PostMapping
-    public ResponseEntity<PositionResponse> createPosition(@RequestBody PositionUpsertRequest request) {
-        return ResponseEntity.ok(positionService.createPosition(request));
+    public ResponseEntity<PositionResponse> createPosition(
+            @RequestHeader("X-User-ID") String userId,
+            @RequestBody PositionUpsertRequest request) {
+        return ResponseEntity.ok(positionService.createPosition(request, userId));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<PositionResponse> updatePosition(
+            @RequestHeader("X-User-ID") String userId,
             @PathVariable UUID id,
             @RequestBody PositionUpsertRequest request) {
-        return ResponseEntity.ok(positionService.updatePosition(id, request));
+        return ResponseEntity.ok(positionService.updatePosition(id, request, userId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePosition(@PathVariable UUID id) {
-        positionService.deletePosition(id);
+    public ResponseEntity<Void> deletePosition(
+            @RequestHeader("X-User-ID") String userId,
+            @PathVariable UUID id) {
+        positionService.deletePosition(id, userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -84,26 +89,30 @@ public class PositionController {
 
     @PatchMapping("/{id}/move")
     public ResponseEntity<PositionResponse> movePosition(
+            @RequestHeader("X-User-ID") String userId,
             @PathVariable UUID id,
             @RequestBody MovePositionRequest request) {
-        return ResponseEntity.ok(positionService.movePosition(id, request));
+        return ResponseEntity.ok(positionService.movePosition(id, request, userId));
     }
 
     // ── Assign user ───────────────────────────────────────────────────
 
     @PostMapping("/{id}/assign")
     public ResponseEntity<Void> assignUserToPosition(
+            @RequestHeader("X-User-ID") String userId,
             @PathVariable UUID id,
             @RequestBody AssignUserRequest request) {
-        positionService.assignUserToPosition(id, request);
+        positionService.assignUserToPosition(id, request, userId);
         return ResponseEntity.ok().build();
     }
 
     // ── Remove user from unassigned list ──────────────────────────────
 
     @DeleteMapping("/unassigned-users/{userId}")
-    public ResponseEntity<Void> removeUnassignedUser(@PathVariable UUID userId) {
-        positionService.removeUnassignedUser(userId);
+    public ResponseEntity<Void> removeUnassignedUser(
+            @RequestHeader("X-User-ID") String requesterId,
+            @PathVariable UUID userId) {
+        positionService.removeUnassignedUser(userId, requesterId);
         return ResponseEntity.noContent().build();
     }
 
@@ -111,9 +120,10 @@ public class PositionController {
 
     @DeleteMapping("/{id}/users/{userId}")
     public ResponseEntity<Void> unassignUserFromPosition(
+            @RequestHeader("X-User-ID") String requesterId,
             @PathVariable UUID id,
             @PathVariable UUID userId) {
-        positionService.unassignUserFromPosition(id, userId);
+        positionService.unassignUserFromPosition(id, userId, requesterId);
         return ResponseEntity.noContent().build();
     }
 

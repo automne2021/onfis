@@ -226,7 +226,7 @@ export default function PositionTreePage() {
   const [toolbarFilters, setToolbarFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUserLevel, setCurrentUserLevel] = useState<string | null>(null);
-  const { isManager } = useRole();
+  const { isManagerLike } = useRole();
   const { showToast } = useToast();
 
   // ΓöÇΓöÇ Position detail modal state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -704,7 +704,7 @@ export default function PositionTreePage() {
             </div>
 
             {/* Add Position Button */}
-            {isManager && (
+            {isManagerLike && (
               <Button
                 title="Add Position"
                 iconLeft={<Add fontSize="small" />}
@@ -720,9 +720,9 @@ export default function PositionTreePage() {
             positions={filteredPositionTree}
             onPositionClick={handlePositionClick}
             onPositionMove={handlePositionMove}
-            unassignedEmployees={isManager ? unassignedEmployees : []}
+            unassignedEmployees={isManagerLike ? unassignedEmployees : []}
             onEmployeeAssign={handleEmployeeAssign}
-            onEmployeeRemove={isManager ? handleRemoveUnassignedUser : undefined}
+            onEmployeeRemove={isManagerLike ? handleRemoveUnassignedUser : undefined}
             searchActive={treeSearchActive}
           />
         </div>
@@ -740,7 +740,7 @@ export default function PositionTreePage() {
                 <span className="text-status-off_track">{vacantPositions}</span>
               </span>
             </div>
-            {isManager && (
+            {isManagerLike && (
               <Button
                 title="Add Position"
                 iconLeft={<Add fontSize="small" />}
@@ -767,7 +767,7 @@ export default function PositionTreePage() {
         onRefresh={handleRefreshAll}
         data={detailModal.data}
         currentUserLevel={currentUserLevel}
-        isManager={isManager}
+        isManager={isManagerLike}
       />
 
       {/* Add Position Modal */}

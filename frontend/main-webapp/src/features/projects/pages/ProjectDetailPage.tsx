@@ -261,14 +261,12 @@ function ProjectDetailLoadingSkeleton() {
   );
 }
 
-
-
 export default function ProjectDetailPage() {
   const { projectId: projectIdentifier } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { withTenant } = useTenantPath();
   const location = useLocation();
-  const { isManager } = useRole();
+  const { isManagerLike: isManager } = useRole();
   const { showToast } = useToast();
   const [project, setProject] = useState<ApiProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);

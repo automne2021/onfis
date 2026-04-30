@@ -54,7 +54,7 @@ function SettingsSkeleton() {
 }
 
 export default function SettingsPage() {
-  const { isManager, isAuthLoading } = useRole();
+  const { isManagerLike, isAuthLoading } = useRole();
   const { showToast } = useToast();
   const { language, setLanguage, t } = useLanguage();
 
@@ -156,7 +156,7 @@ export default function SettingsPage() {
     return <SettingsSkeleton />;
   }
 
-  if (!isManager) {
+  if (!isManagerLike) {
     return (
       <div className="onfis-section">
         <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-8 text-center mt-3">

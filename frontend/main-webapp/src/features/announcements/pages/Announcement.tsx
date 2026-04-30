@@ -38,7 +38,7 @@ export function Announcement() {
 
   const [currentFilter, setCurrentFilter] = useState<AnnouncementFilterOption>('newest');
 
-  const { isManager, isAdmin } = useRole();
+  const { isManager, isAdmin, isSuperAdmin } = useRole();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const currentView = searchParams.get('view') || 'all';
@@ -149,7 +149,7 @@ export function Announcement() {
 
           <div className="flex items-center justify-between border-b border-neutral-300 px-3 py-1.5 mt-3">
             <TabGroup tabItems={tabItems} defaultTab='all' />
-            {(isManager || isAdmin) && (
+            {(isManager || isAdmin || isSuperAdmin) && (
               <Button
                 title='Post Announcement'
                 iconLeft={<Add sx={{ fontSize: 18 }} />}
