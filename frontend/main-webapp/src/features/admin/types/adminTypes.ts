@@ -110,7 +110,7 @@ export interface AuditLog {
   id: string;
   userId: string;
   userName: string;
-  action: AuditAction;
+  action: string;
   targetId?: string;
   targetType?: string;
   detail?: string;

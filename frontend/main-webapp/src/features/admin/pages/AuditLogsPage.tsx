@@ -21,7 +21,8 @@ const MOCK_LOGS: AuditLog[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ACTION_META: Record<AuditAction, { label: string; icon: string; color: string }> = {
+const ACTION_META: Record<string, { label: string; icon: string; color: string }> = {
+  // Explicit admin-service actions
   UPDATE_USER_ROLE:     { label: "Update Role",          icon: "manage_accounts",     color: "#3B82F6" },
   DELETE_USER:          { label: "Delete Account",       icon: "person_remove",       color: "#EF4444" },
   CREATE_USER:          { label: "Create Account",       icon: "person_add",          color: "#10B981" },
@@ -34,7 +35,25 @@ const ACTION_META: Record<AuditAction, { label: string; icon: string; color: str
   TICKET_REJECTED:      { label: "Reject Ticket",        icon: "cancel",              color: "#EF4444" },
   DELETE_DEPARTMENT:    { label: "Delete Department",    icon: "domain_disabled",     color: "#EF4444" },
   UPDATE_SYSTEM_CONFIG: { label: "Update System Config", icon: "settings_suggest",    color: "#0014A8" },
+  // DB trigger-generated actions (from fn_audit_trigger)
+  CREATE_USERS:         { label: "Create User",          icon: "person_add",          color: "#10B981" },
+  UPDATE_USERS:         { label: "Update User",          icon: "manage_accounts",     color: "#3B82F6" },
+  DELETE_USERS:         { label: "Delete User",          icon: "person_remove",       color: "#EF4444" },
+  CREATE_DEPARTMENTS:   { label: "Create Department",    icon: "domain_add",          color: "#10B981" },
+  UPDATE_DEPARTMENTS:   { label: "Update Department",    icon: "business",            color: "#6366F1" },
+  DELETE_DEPARTMENTS:   { label: "Delete Department",    icon: "domain_disabled",     color: "#EF4444" },
+  CREATE_TASKS:         { label: "Create Task",          icon: "add_task",            color: "#10B981" },
+  UPDATE_TASKS:         { label: "Update Task",          icon: "edit_note",           color: "#3B82F6" },
+  DELETE_TASKS:         { label: "Delete Task",          icon: "delete",              color: "#EF4444" },
+  CREATE_PROJECTS:      { label: "Create Project",       icon: "create_new_folder",   color: "#10B981" },
+  UPDATE_PROJECTS:      { label: "Update Project",       icon: "folder_managed",      color: "#6366F1" },
+  DELETE_PROJECTS:      { label: "Delete Project",       icon: "folder_delete",       color: "#EF4444" },
+  CREATE_EXECUTIVE_REQUESTS: { label: "Create Request",  icon: "assignment",          color: "#10B981" },
+  UPDATE_EXECUTIVE_REQUESTS: { label: "Update Request",  icon: "assignment_turned_in", color: "#3B82F6" },
+  DELETE_EXECUTIVE_REQUESTS: { label: "Delete Request",  icon: "assignment_late",     color: "#EF4444" },
 };
+
+const ACTION_FALLBACK = { label: "System Action", icon: "history", color: "#62748E" };
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-GB", {
@@ -51,8 +70,8 @@ const RESULT_META: Record<AuditResult, { bg: string; text: string; dot: string }
 
 function LogDetailPanel({ log, onClose }: { log: AuditLog | null; onClose: () => void }) {
   if (!log) return null;
-  const m = ACTION_META[log.action];
-  const r = RESULT_META[log.result];
+  const m = ACTION_META[log.action] ?? ACTION_FALLBACK;
+  const r = RESULT_META[log.result] ?? RESULT_META.SUCCESS;
   return (
     <div className="w-80 shrink-0 section-card p-5 space-y-4 self-start sticky top-4 animate-fadeIn">
       <div className="flex items-center justify-between">
@@ -72,7 +91,7 @@ function LogDetailPanel({ log, onClose }: { log: AuditLog | null; onClose: () =>
       </div>
       <div className="space-y-2 text-sm">
         {[
-          { label: "Actor", value: log.userName },
+          { label: "Actor", value: log.userName || "System" },
           { label: "User ID", value: <code className="text-xs">{log.userId}</code> },
           { label: "Timestamp", value: formatDateTime(log.timestamp) },
           { label: "IP Address", value: <code className="text-xs">{log.ipAddress}</code> },
@@ -246,8 +265,8 @@ export default function AuditLogsPage() {
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
                     {paged.map((log) => {
-                      const m = ACTION_META[log.action];
-                      const r = RESULT_META[log.result];
+                      const m = ACTION_META[log.action] ?? ACTION_FALLBACK;
+                      const r = RESULT_META[log.result] ?? RESULT_META.SUCCESS;
                       return (
                         <tr
                           key={log.id}
@@ -256,15 +275,15 @@ export default function AuditLogsPage() {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <Icon name={m?.icon || "info"} size={14} color={m?.color || "#62748E"} />
-                              <span className="font-medium text-neutral-800">{m?.label || log.action}</span>
+                              <Icon name={m.icon} size={14} color={m.color} />
+                              <span className="font-medium text-neutral-800">{m.label}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-neutral-600 hidden md:table-cell">{log.userName}</td>
+                          <td className="px-4 py-3 text-neutral-600 hidden md:table-cell">{log.userName || "System"}</td>
                           <td className="px-4 py-3 text-neutral-500 text-xs hidden lg:table-cell max-w-[180px]">
                             <span className="line-clamp-1">{log.detail || "—"}</span>
                           </td>
-                          <td className="px-4 py-3 font-mono text-xs text-neutral-400 hidden lg:table-cell">{log.ipAddress}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-neutral-400 hidden lg:table-cell">{log.ipAddress || "—"}</td>
                           <td className="px-4 py-3 text-neutral-500 text-xs hidden xl:table-cell">{formatDateTime(log.timestamp)}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold ${r.bg} ${r.text}`}>

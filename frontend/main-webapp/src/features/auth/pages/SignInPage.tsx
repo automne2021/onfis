@@ -58,11 +58,22 @@ export default function SignInPage() {
 
         const normalizedRole = normalizeRole(userRow.role);
         if (normalizedRole === "SUPER_ADMIN") {
-          navigate(`/${tenant}/leader-dashboard`);
+          // Check if tenant setup is completed
+          const { data: tenantInfo } = await supabase
+            .from("tenants")
+            .select("setup_completed")
+            .eq("id", tenantRow.id)
+            .single();
+
+          if (tenantInfo && tenantInfo.setup_completed === false) {
+            navigate(`/${tenant}/setup`, { replace: true });
+          } else {
+            navigate(`/${tenant}/leader-dashboard`, { replace: true });
+          }
         } else if (normalizedRole === "ADMIN") {
-          navigate(`/${tenant}/admin/dashboard`);
+          navigate(`/${tenant}/admin/dashboard`, { replace: true });
         } else {
-          navigate(`/${tenant}/dashboard`);
+          navigate(`/${tenant}/dashboard`, { replace: true });
         }
       } else {
         navigate(`/${tenant}/dashboard`);

@@ -13,6 +13,7 @@ import {
   getUnassignedUsers,
   getDepartmentList,
   createPosition,
+  createDepartment,
   movePosition,
   assignUserToPosition,
   removeUnassignedUser,
@@ -22,6 +23,7 @@ import {
   type UnassignedUser,
   type DepartmentItem,
 } from "../services/positionApi";
+import Icon from "../../../components/common/Icon";
 
 function mapTreeNode(node: PositionTreeNode, insertDeptHeaders: boolean = false): Position {
   const mappedChildren = node.children?.map((c) => mapTreeNode(c, false));
@@ -226,8 +228,9 @@ export default function PositionTreePage() {
   const [toolbarFilters, setToolbarFilters] = useState<ActiveFilters>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [currentUserLevel, setCurrentUserLevel] = useState<string | null>(null);
-  const { isManagerLike, isAdmin } = useRole();
+  const { isManagerLike, isAdmin, isSuperAdmin } = useRole();
   const canManagePositions = isManagerLike || isAdmin;
+  const canManageDepartments = isAdmin || isSuperAdmin;
   const { showToast } = useToast();
 
   // Position detail modal state
@@ -256,6 +259,12 @@ export default function PositionTreePage() {
   const closeConfirm = useCallback(() => {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
   }, []);
+
+  // Department creation modal state
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
+  const [deptFormName, setDeptFormName] = useState("");
+  const [deptFormDesc, setDeptFormDesc] = useState("");
+  const [isDeptCreating, setIsDeptCreating] = useState(false);
 
   // Displaced user dialog state (assign to occupied position)
   const [displacedDialog, setDisplacedDialog] = useState<{
@@ -704,16 +713,27 @@ export default function PositionTreePage() {
               </span>
             </div>
 
-            {/* Add Position Button */}
-            {canManagePositions && (
-              <Button
-                title="Add Position"
-                iconLeft={<Add fontSize="small" />}
-                onClick={handleAddPosition}
-                style="primary"
-                textStyle='body-4-medium'
-              />
-            )}
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              {canManageDepartments && (
+                <Button
+                  title="Add Department"
+                  iconLeft={<Icon name="domain_add" size={18} color="currentColor" />}
+                  onClick={() => setIsDeptModalOpen(true)}
+                  style="sub"
+                  textStyle='body-4-medium'
+                />
+              )}
+              {canManagePositions && (
+                <Button
+                  title="Add Position"
+                  iconLeft={<Add fontSize="small" />}
+                  onClick={handleAddPosition}
+                  style="primary"
+                  textStyle='body-4-medium'
+                />
+              )}
+            </div>
           </div>
 
           {/* Tree View */}
@@ -741,15 +761,26 @@ export default function PositionTreePage() {
                 <span className="text-status-off_track">{vacantPositions}</span>
               </span>
             </div>
-            {canManagePositions && (
-              <Button
-                title="Add Position"
-                iconLeft={<Add fontSize="small" />}
-                onClick={handleAddPosition}
-                style="primary"
-                textStyle='body-4-medium'
-              />
-            )}
+            <div className="flex items-center gap-2">
+              {canManageDepartments && (
+                <Button
+                  title="Add Department"
+                  iconLeft={<Icon name="domain_add" size={18} color="currentColor" />}
+                  onClick={() => setIsDeptModalOpen(true)}
+                  style="sub"
+                  textStyle='body-4-medium'
+                />
+              )}
+              {canManagePositions && (
+                <Button
+                  title="Add Position"
+                  iconLeft={<Add fontSize="small" />}
+                  onClick={handleAddPosition}
+                  style="primary"
+                  textStyle='body-4-medium'
+                />
+              )}
+            </div>
           </div>
 
           <PositionListView
@@ -780,6 +811,82 @@ export default function PositionTreePage() {
         positions={positionOptions}
         unassignedUsers={unassignedUserOptions}
       />
+
+      {/* Add Department Modal */}
+      {isDeptModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsDeptModalOpen(false)} />
+          <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-[440px] border border-neutral-200 overflow-hidden animate-page-enter">
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Icon name="domain_add" size={22} className="text-indigo-600" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-900">Create Department</h3>
+              </div>
+              <p className="text-sm text-neutral-500 mt-2">Add a new department to your organization.</p>
+            </div>
+            <div className="px-6 pb-4 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Department Name *</label>
+                <input
+                  type="text"
+                  value={deptFormName}
+                  onChange={(e) => setDeptFormName(e.target.value)}
+                  placeholder="e.g. Engineering, Marketing..."
+                  className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm"
+                  maxLength={100}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Description <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <textarea
+                  value={deptFormDesc}
+                  onChange={(e) => setDeptFormDesc(e.target.value)}
+                  placeholder="Brief description of this department..."
+                  className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm resize-none"
+                  rows={3}
+                  maxLength={500}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-neutral-100 bg-neutral-50/50">
+              <Button
+                title="Cancel"
+                onClick={() => { setIsDeptModalOpen(false); setDeptFormName(""); setDeptFormDesc(""); }}
+                style="sub"
+                textStyle="body-4-medium"
+              />
+              <Button
+                title={isDeptCreating ? "Creating..." : "Create Department"}
+                onClick={async () => {
+                  if (!deptFormName.trim()) {
+                    showToast("Department name is required", "error");
+                    return;
+                  }
+                  setIsDeptCreating(true);
+                  try {
+                    await createDepartment({ name: deptFormName.trim(), description: deptFormDesc.trim() || undefined });
+                    showToast("Department created successfully", "success");
+                    setIsDeptModalOpen(false);
+                    setDeptFormName("");
+                    setDeptFormDesc("");
+                    handleRefreshAll();
+                  } catch {
+                    showToast("Failed to create department", "error");
+                  } finally {
+                    setIsDeptCreating(false);
+                  }
+                }}
+                style="primary"
+                textStyle="body-4-medium"
+                disabled={isDeptCreating || !deptFormName.trim()}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Dialog */}
       <ConfirmDialog

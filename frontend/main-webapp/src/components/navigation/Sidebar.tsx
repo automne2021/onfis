@@ -229,7 +229,7 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems, activePathM
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { withTenant } = useTenantPath();
-  const { isManagerLike, isSuperAdmin, isAdmin } = useRole();
+  const { isSuperAdmin, isAdmin } = useRole();
 
   // Scroll state for the nav area
   const navRef = useRef<HTMLDivElement>(null);
@@ -358,15 +358,13 @@ export default function Sidebar() {
       {/* Bottom divider */}
       <div className={`h-px bg-neutral-100 transition-all duration-300 shrink-0 ${isCollapsed ? "w-8" : "w-full"}`} />
 
-      {/* Settings Button */}
-      {(isManagerLike || isSuperAdmin) && (
-        <NavItem
-          to={withTenant("/settings")}
-          icon="settings"
-          label="Settings"
-          isCollapsed={isCollapsed}
-        />
-      )}
+      {/* Settings Button — available to all roles */}
+      <NavItem
+        to={withTenant("/settings")}
+        icon="settings"
+        label="Settings"
+        isCollapsed={isCollapsed}
+      />
     </aside>
   );
 }

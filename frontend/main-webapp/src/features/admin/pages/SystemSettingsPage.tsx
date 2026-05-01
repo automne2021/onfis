@@ -35,7 +35,7 @@ const MOCK_STORAGE: StorageSettings = {
   usedMb: 3120,
   maxFileSizeMb: 10,
   allowedExtensions: ["jpg", "jpeg", "png", "gif", "pdf", "docx", "xlsx", "pptx", "zip"],
-  bucketName: "onfis-uploads",
+  bucketName: "onfis",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

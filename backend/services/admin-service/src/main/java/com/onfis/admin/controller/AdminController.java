@@ -2,8 +2,10 @@ package com.onfis.admin.controller;
 
 import com.onfis.admin.dto.AdminDashboardResponse;
 import com.onfis.admin.dto.LeaderDashboardResponse;
+import com.onfis.admin.dto.TenantUpdateRequest;
 import com.onfis.admin.service.AdminDashboardService;
 import com.onfis.admin.service.LeaderDashboardService;
+import com.onfis.admin.service.TenantService;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class AdminController {
 
   private final LeaderDashboardService leaderDashboardService;
   private final AdminDashboardService adminDashboardService;
+  private final TenantService tenantService;
 
   @GetMapping("/health")
   public ResponseEntity<Map<String, String>> health(
@@ -42,5 +45,17 @@ public class AdminController {
       @RequestHeader("X-Company-ID") String tenantId,
       @RequestHeader("X-User-ID") String userId) {
     return ResponseEntity.ok(adminDashboardService.getDashboard(tenantId, userId));
+  }
+
+  /**
+   * Update tenant info — used by the leader setup wizard.
+   * Only SUPER_ADMIN (leader) can call this endpoint.
+   */
+  @PutMapping("/tenants/me")
+  public ResponseEntity<Map<String, Object>> updateTenant(
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") String userId,
+      @RequestBody TenantUpdateRequest request) {
+    return ResponseEntity.ok(tenantService.updateTenant(tenantId, userId, request));
   }
 }

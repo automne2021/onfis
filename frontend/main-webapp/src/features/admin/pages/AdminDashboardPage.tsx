@@ -18,25 +18,51 @@ const ROLE_COLORS: Record<string, string> = {
 
 const PRIORITY_META: Record<string, { label: string; bg: string; text: string }> = {
   CRITICAL: { label: "Critical", bg: "bg-red-50", text: "text-red-700" },
+  URGENT: { label: "Urgent", bg: "bg-red-50", text: "text-red-700" },
   HIGH: { label: "High", bg: "bg-orange-50", text: "text-orange-700" },
   MEDIUM: { label: "Medium", bg: "bg-yellow-50", text: "text-yellow-700" },
   LOW: { label: "Low", bg: "bg-neutral-100", text: "text-neutral-500" },
 };
 
+const PRIORITY_FALLBACK = { label: "Unknown", bg: "bg-neutral-100", text: "text-neutral-500" };
+
 const STATUS_META: Record<string, { label: string; dot: string; text: string }> = {
   PENDING: { label: "Pending", dot: "bg-yellow-400", text: "text-yellow-700" },
   IN_PROGRESS: { label: "In Progress", dot: "bg-blue-500", text: "text-blue-700" },
   RESOLVED: { label: "Resolved", dot: "bg-green-500", text: "text-green-700" },
+  COMPLETED: { label: "Completed", dot: "bg-green-500", text: "text-green-700" },
   REJECTED: { label: "Rejected", dot: "bg-red-400", text: "text-red-600" },
+  CANCELLED: { label: "Cancelled", dot: "bg-neutral-400", text: "text-neutral-600" },
 };
 
+const STATUS_FALLBACK = { label: "Unknown", dot: "bg-neutral-300", text: "text-neutral-500" };
+
 const AUDIT_ACTION_META: Record<string, { icon: string; label: string; color: string }> = {
+  // Explicit admin-service actions
   CREATE_USER: { icon: "person_add", label: "Create User", color: "#0014A8" },
   UPDATE_USER_ROLE: { icon: "manage_accounts", label: "Update User Role", color: "#7C3AED" },
   DISABLE_USER: { icon: "block", label: "Disable User", color: "#EF4444" },
   UPDATE_SETTINGS: { icon: "settings", label: "Update Settings", color: "#F59E0B" },
   RESET_PASSWORD: { icon: "lock_reset", label: "Reset Password", color: "#0EA5E9" },
   DELETE_USER: { icon: "person_remove", label: "Delete User", color: "#EF4444" },
+  UPDATE_TENANT: { icon: "business", label: "Update Tenant", color: "#0014A8" },
+  TICKET_APPROVED: { icon: "check_circle", label: "Approve Ticket", color: "#10B981" },
+  TICKET_REJECTED: { icon: "cancel", label: "Reject Ticket", color: "#EF4444" },
+  // DB trigger-generated actions
+  CREATE_USERS: { icon: "person_add", label: "Create User", color: "#10B981" },
+  UPDATE_USERS: { icon: "manage_accounts", label: "Update User", color: "#3B82F6" },
+  DELETE_USERS: { icon: "person_remove", label: "Delete User", color: "#EF4444" },
+  CREATE_DEPARTMENTS: { icon: "domain_add", label: "Create Department", color: "#10B981" },
+  UPDATE_DEPARTMENTS: { icon: "business", label: "Update Department", color: "#6366F1" },
+  DELETE_DEPARTMENTS: { icon: "domain_disabled", label: "Delete Department", color: "#EF4444" },
+  CREATE_TASKS: { icon: "add_task", label: "Create Task", color: "#10B981" },
+  UPDATE_TASKS: { icon: "edit_note", label: "Update Task", color: "#3B82F6" },
+  DELETE_TASKS: { icon: "delete", label: "Delete Task", color: "#EF4444" },
+  CREATE_PROJECTS: { icon: "create_new_folder", label: "Create Project", color: "#10B981" },
+  UPDATE_PROJECTS: { icon: "folder_managed", label: "Update Project", color: "#6366F1" },
+  DELETE_PROJECTS: { icon: "folder_delete", label: "Delete Project", color: "#EF4444" },
+  CREATE_EXECUTIVE_REQUESTS: { icon: "assignment", label: "Create Request", color: "#10B981" },
+  UPDATE_EXECUTIVE_REQUESTS: { icon: "assignment_turned_in", label: "Update Request", color: "#3B82F6" },
 };
 
 function timeAgo(iso: string) {
@@ -201,26 +227,30 @@ export default function AdminDashboardPage() {
               </button>
             </div>
             <div className="divide-y divide-neutral-50">
-              {stats.recentTickets.map((ticket) => (
-                <div key={ticket.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 transition-colors">
-                  <div className="flex flex-col items-start gap-1.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[11px] font-mono text-neutral-400">{ticket.code}</span>
-                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${PRIORITY_META[ticket.priority].bg} ${PRIORITY_META[ticket.priority].text}`}>
-                        {PRIORITY_META[ticket.priority].label}
+              {stats.recentTickets.map((ticket) => {
+                const pMeta = PRIORITY_META[ticket.priority] ?? PRIORITY_FALLBACK;
+                const sMeta = STATUS_META[ticket.status] ?? STATUS_FALLBACK;
+                return (
+                  <div key={ticket.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 transition-colors">
+                    <div className="flex flex-col items-start gap-1.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-mono text-neutral-400">{ticket.code}</span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${pMeta.bg} ${pMeta.text}`}>
+                          {pMeta.label}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-neutral-800 truncate max-w-sm">{ticket.title}</p>
+                      <p className="text-[11px] text-neutral-400">From {ticket.requester} - {timeAgo(ticket.createdAt)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`w-1.5 h-1.5 rounded-full ${sMeta.dot}`} />
+                      <span className={`text-[11px] font-medium ${sMeta.text}`}>
+                        {sMeta.label}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-neutral-800 truncate max-w-sm">{ticket.title}</p>
-                    <p className="text-[11px] text-neutral-400">From {ticket.requester} - {timeAgo(ticket.createdAt)}</p>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[ticket.status].dot}`} />
-                    <span className={`text-[11px] font-medium ${STATUS_META[ticket.status].text}`}>
-                      {STATUS_META[ticket.status].label}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -307,7 +337,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-[11px] text-neutral-400">{timeAgo(log.ts)}</p>
-                    <p className="text-[11px] text-neutral-500 font-medium">{log.actor}</p>
+                    <p className="text-[11px] text-neutral-500 font-medium">{log.actor || "System"}</p>
                   </div>
                 </div>
               );

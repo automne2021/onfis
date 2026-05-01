@@ -152,7 +152,7 @@ public class SystemSettingsService {
         kvs.put("totalQuotaMb", String.valueOf(dto.totalQuotaMb()));
         kvs.put("maxFileSizeMb", String.valueOf(dto.maxFileSizeMb()));
         kvs.put("allowedExtensions", toJson(dto.allowedExtensions()));
-        kvs.put("bucketName", dto.bucketName() != null ? dto.bucketName() : "onfis-uploads");
+        kvs.put("bucketName", dto.bucketName() != null ? dto.bucketName() : "onfis");
 
         upsertSettings(tenantId, "STORAGE", kvs, userId);
 
@@ -171,7 +171,7 @@ public class SystemSettingsService {
         int maxFileSizeMb = parseInt(settings.get("maxFileSizeMb"), 10);
         List<String> allowedExtensions = fromJson(settings.get("allowedExtensions"), STRING_LIST,
                 List.of("jpg", "jpeg", "png", "gif", "pdf", "docx", "xlsx", "pptx", "zip"));
-        String bucketName = settings.getOrDefault("bucketName", "onfis-uploads");
+        String bucketName = settings.getOrDefault("bucketName", "onfis");
 
         return new StorageSettingsDto(totalQuotaMb, usedMb, maxFileSizeMb, allowedExtensions, bucketName);
     }

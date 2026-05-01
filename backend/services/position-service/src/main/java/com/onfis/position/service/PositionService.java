@@ -2,6 +2,7 @@ package com.onfis.position.service;
 
 import com.onfis.position.dto.AssignUserRequest;
 import com.onfis.position.dto.DepartmentResponse;
+import com.onfis.position.dto.DepartmentUpsertRequest;
 import com.onfis.position.dto.DepartmentWithEmployeesResponse;
 import com.onfis.position.dto.EmployeeResponse;
 import com.onfis.position.dto.MovePositionRequest;
@@ -358,6 +359,65 @@ public class PositionService {
         return departmentRepository.findByTenantId(tenantId).stream()
                 .map(d -> new DepartmentResponse(d.getId(), d.getName()))
                 .toList();
+    }
+
+    // ── Department CRUD ───────────────────────────────────────────────────────
+
+    @Transactional
+    public DepartmentResponse createDepartment(DepartmentUpsertRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
+
+        if (request.name() == null || request.name().isBlank()) {
+            throw new BadRequestException("Department name is required");
+        }
+
+        UUID tenantId = tenantId();
+        DepartmentEntity entity = new DepartmentEntity();
+        entity.setTenantId(tenantId);
+        entity.setName(request.name().trim());
+        entity.setDescription(request.description());
+
+        DepartmentEntity saved = departmentRepository.save(entity);
+        return new DepartmentResponse(saved.getId(), saved.getName());
+    }
+
+    @Transactional
+    public DepartmentResponse updateDepartment(UUID id, DepartmentUpsertRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
+
+        UUID tenantId = tenantId();
+        DepartmentEntity entity = departmentRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Department not found"));
+
+        if (request.name() != null && !request.name().isBlank()) {
+            entity.setName(request.name().trim());
+        }
+        if (request.description() != null) {
+            entity.setDescription(request.description());
+        }
+
+        DepartmentEntity saved = departmentRepository.save(entity);
+        return new DepartmentResponse(saved.getId(), saved.getName());
+    }
+
+    @Transactional
+    public void deleteDepartment(UUID id, String requesterId) {
+        requireWriteAccess(requesterId);
+
+        UUID tenantId = tenantId();
+        DepartmentEntity entity = departmentRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Department not found"));
+
+        // Check if department has positions
+        List<PositionEntity> positions = positionRepository.findByTenantId(tenantId).stream()
+                .filter(p -> id.equals(p.getDepartmentId()))
+                .toList();
+        if (!positions.isEmpty()) {
+            throw new BadRequestException(
+                    "Cannot delete department with existing positions. Remove or reassign positions first.");
+        }
+
+        departmentRepository.delete(entity);
     }
 
     // ── Unassigned users ──────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import {
   type ApiCompanyTag,
 } from "../../../services/projectService";
 import { Button } from "../../../components/common/Buttons/Button";
+import { supabase } from "../../../services/supabaseClient";
 
 const DEFAULT_TAG_COLOR = "#64748B";
 
@@ -23,13 +24,6 @@ const normalizeTagColor = (rawColor: string): string => {
 };
 
 type TabId = "general" | "workspace" | "security" | "notifications";
-
-const tabs = [
-  { id: "general", label: "General", icon: "settings" },
-  { id: "workspace", label: "Workspace", icon: "workspaces" },
-  { id: "security", label: "Security", icon: "security" },
-  { id: "notifications", label: "Notifications", icon: "notifications_active" },
-];
 
 function SettingsSkeleton() {
   return (
@@ -54,11 +48,33 @@ function SettingsSkeleton() {
 }
 
 export default function SettingsPage() {
-  const { isManagerLike, isAuthLoading } = useRole();
+  const { isManagerLike, isAdmin, isAuthLoading } = useRole();
   const { showToast } = useToast();
   const { language, setLanguage, t } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<TabId>("workspace");
+  // ── Role-based tab configuration ──────────────────────────────────
+  // All roles: General (Language only) + Security (Change Password)
+  // Admin: + Workspace (Tag Management)
+  // ManagerLike (Manager + Super Admin): Full General settings (Company, Timezone, Language)
+  const availableTabs = (() => {
+    const tabs: { id: TabId; label: string; icon: string }[] = [
+      { id: "general", label: "General", icon: "settings" },
+    ];
+
+    // Only Admin sees the Workspace (Tag Management) tab
+    if (isAdmin) {
+      tabs.push({ id: "workspace", label: "Workspace", icon: "workspaces" });
+    }
+
+    // Security tab available to all
+    tabs.push({ id: "security", label: "Security", icon: "security" });
+
+    return tabs;
+  })();
+
+  const [activeTab, setActiveTab] = useState<TabId>("general");
+
+  // ── Tag management state (admin-only) ─────────────────────────────
   const [tags, setTags] = useState<ApiCompanyTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [draftName, setDraftName] = useState("");
@@ -67,8 +83,21 @@ export default function SettingsPage() {
   const [editingName, setEditingName] = useState("");
   const [editingColor, setEditingColor] = useState(DEFAULT_TAG_COLOR);
 
+  // ── Password change state ─────────────────────────────────────────
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
   useEffect(() => {
     if (isAuthLoading) {
+      return;
+    }
+
+    // Only load tags if user is admin
+    if (!isAdmin) {
+      setLoading(false);
       return;
     }
 
@@ -85,7 +114,9 @@ export default function SettingsPage() {
     };
 
     void load();
-  }, [isAuthLoading, showToast]);
+  }, [isAuthLoading, isAdmin, showToast]);
+
+  // ── Tag handlers ──────────────────────────────────────────────────
 
   const handleCreate = async () => {
     const name = draftName.trim();
@@ -152,27 +183,74 @@ export default function SettingsPage() {
     }
   };
 
+  // ── Password change handler ───────────────────────────────────────
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showToast(t("Please fill in all fields"), "error");
+      return;
+    }
+    if (newPassword.length < 6) {
+      showToast(t("New password must be at least 6 characters"), "error");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast(t("New passwords do not match"), "error");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      // 1. Verify current password by trying to sign in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        showToast(t("Unable to verify your identity"), "error");
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        showToast(t("Current password is incorrect"), "error");
+        return;
+      }
+
+      // 2. Update the password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) {
+        showToast(updateError.message || t("Failed to update password"), "error");
+        return;
+      }
+
+      showToast(t("Password updated successfully"), "success");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setShowPasswordForm(false);
+    } catch (err) {
+      console.error("Password change error:", err);
+      showToast(t("An unexpected error occurred"), "error");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (isAuthLoading || loading) {
     return <SettingsSkeleton />;
-  }
-
-  if (!isManagerLike) {
-    return (
-      <div className="onfis-section">
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-8 text-center mt-3">
-          <h1 className="text-xl font-bold text-neutral-900">Settings</h1>
-          <p className="text-sm text-neutral-500 mt-2">Only manager accounts can manage company settings.</p>
-        </div>
-      </div>
-    );
   }
 
   return (
     <div className="onfis-section h-full flex flex-col">
       <div className="navbar-style flex-shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">{t("System Settings")}</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">{t("Manage your system configurations and workspace preferences")}</p>
+          <h1 className="text-xl font-bold text-neutral-900">{t("Settings")}</h1>
+          <p className="text-sm text-neutral-400 mt-0.5">{t("Manage your preferences and account security")}</p>
         </div>
       </div>
 
@@ -180,7 +258,7 @@ export default function SettingsPage() {
         {/* Sidebar Navigation */}
         <div className="w-64 flex-shrink-0">
           <nav className="flex flex-col gap-1.5">
-            {tabs.map((tab) => (
+            {availableTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabId)}
@@ -198,23 +276,31 @@ export default function SettingsPage() {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-y-auto pb-10 pr-2">
+          {/* ── General Settings ──────────────────────────────────────── */}
           {activeTab === "general" && (
             <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
               <h2 className="text-lg font-bold text-neutral-900 mb-6">{t("General Settings")}</h2>
               <div className="space-y-6 max-w-2xl">
                 <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Company Name")}</label>
-                    <input type="text" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none" defaultValue="Onfis Enterprise" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Timezone")}</label>
-                    <select className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none">
-                      <option>Asia/Ho_Chi_Minh (GMT+7)</option>
-                      <option>America/New_York (GMT-5)</option>
-                      <option>Europe/London (GMT+0)</option>
-                    </select>
-                  </div>
+                  {/* Full settings for managers and leaders */}
+                  {isManagerLike && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Company Name")}</label>
+                        <input type="text" className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none" defaultValue="Onfis Enterprise" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Timezone")}</label>
+                        <select className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none">
+                          <option>Asia/Ho_Chi_Minh (GMT+7)</option>
+                          <option>America/New_York (GMT-5)</option>
+                          <option>Europe/London (GMT+0)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Language selector — available to all roles */}
                   <div>
                     <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Language")}</label>
                     <select
@@ -227,14 +313,18 @@ export default function SettingsPage() {
                     </select>
                   </div>
                 </div>
-                <div className="pt-6 border-t border-neutral-100 flex justify-end">
-                  <Button title={t("Save Changes")} style="primary" textStyle="body-4-medium" />
-                </div>
+
+                {isManagerLike && (
+                  <div className="pt-6 border-t border-neutral-100 flex justify-end">
+                    <Button title={t("Save Changes")} style="primary" textStyle="body-4-medium" />
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === "workspace" && (
+          {/* ── Workspace / Tag Management (Admin only) ───────────────── */}
+          {activeTab === "workspace" && isAdmin && (
             <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
@@ -349,48 +439,96 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {/* ── Security Settings ─────────────────────────────────────── */}
           {activeTab === "security" && (
             <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
-              <h2 className="text-lg font-bold text-neutral-900 mb-6">Security Settings</h2>
+              <h2 className="text-lg font-bold text-neutral-900 mb-6">{t("Security Settings")}</h2>
               <div className="space-y-6 max-w-2xl">
-                <div className="p-4 border border-neutral-200 rounded-xl bg-neutral-50 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-neutral-900">Two-Factor Authentication (2FA)</h3>
-                    <p className="text-xs text-neutral-500 mt-1">Add an extra layer of security to your account.</p>
-                  </div>
-                  <Button title="Enable" style="sub" textStyle="body-4-medium" />
-                </div>
-                <div className="p-4 border border-neutral-200 rounded-xl bg-neutral-50 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-neutral-900">Change Password</h3>
-                    <p className="text-xs text-neutral-500 mt-1">Update your password to keep your account secure.</p>
-                  </div>
-                  <Button title="Update" style="sub" textStyle="body-4-medium" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "notifications" && (
-            <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
-              <h2 className="text-lg font-bold text-neutral-900 mb-6">Notification Preferences</h2>
-              <div className="space-y-4 max-w-2xl">
-                {[
-                  { title: "Email Notifications", desc: "Receive emails for important updates and mentions." },
-                  { title: "Push Notifications", desc: "Get real-time alerts in your browser." },
-                  { title: "Weekly Digest", desc: "A weekly summary of your team's activity." }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-3 border-b border-neutral-100 last:border-0">
+                {/* Change Password */}
+                <div className="p-5 border border-neutral-200 rounded-xl bg-neutral-50/50">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-neutral-900">{item.title}</h3>
-                      <p className="text-xs text-neutral-500 mt-0.5">{item.desc}</p>
+                      <h3 className="text-sm font-semibold text-neutral-900">{t("Change Password")}</h3>
+                      <p className="text-xs text-neutral-500 mt-1">{t("Update your password to keep your account secure.")}</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" value="" className="sr-only peer" defaultChecked={idx < 2} />
-                      <div className="w-11 h-6 bg-neutral-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </label>
+                    {!showPasswordForm && (
+                      <Button
+                        title={t("Update")}
+                        onClick={() => setShowPasswordForm(true)}
+                        style="sub"
+                        textStyle="body-4-medium"
+                      />
+                    )}
                   </div>
-                ))}
+
+                  {showPasswordForm && (
+                    <div className="mt-5 space-y-4 border-t border-neutral-200 pt-5">
+                      <div>
+                        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Current Password")}</label>
+                        <input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm"
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("New Password")}</label>
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm"
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                        />
+                        <p className="text-xs text-neutral-400 mt-1">{t("Minimum 6 characters")}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Confirm New Password")}</label>
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm"
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-2">
+                        <Button
+                          title={t("Cancel")}
+                          onClick={() => {
+                            setShowPasswordForm(false);
+                            setCurrentPassword("");
+                            setNewPassword("");
+                            setConfirmPassword("");
+                          }}
+                          style="sub"
+                          textStyle="body-4-medium"
+                        />
+                        <Button
+                          title={isChangingPassword ? t("Updating...") : t("Change Password")}
+                          onClick={() => void handleChangePassword()}
+                          style="primary"
+                          textStyle="body-4-medium"
+                          disabled={isChangingPassword}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Two-Factor Authentication */}
+                <div className="p-5 border border-neutral-200 rounded-xl bg-neutral-50/50 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-neutral-900">{t("Two-Factor Authentication (2FA)")}</h3>
+                    <p className="text-xs text-neutral-500 mt-1">{t("Add an extra layer of security to your account.")}</p>
+                  </div>
+                  <Button title={t("Enable")} style="sub" textStyle="body-4-medium" />
+                </div>
               </div>
             </div>
           )}

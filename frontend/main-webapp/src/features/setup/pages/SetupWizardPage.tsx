@@ -13,6 +13,9 @@ type WizardStep = "welcome" | 1 | 2 | 3 | 4;
 
 const STEP_LABELS = ["Thông tin", "Phòng ban", "Vị trí", "Mời team"];
 
+/** Map of department name → department UUID returned from backend */
+type DepartmentIdMap = Record<string, string>;
+
 export default function SetupWizardPage() {
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
@@ -28,13 +31,14 @@ export default function SetupWizardPage() {
     size: "",
   });
   const [departments, setDepartments] = useState<string[]>([]);
+  const [departmentIdMap, setDepartmentIdMap] = useState<DepartmentIdMap>({});
   const [positions, setPositions] = useState<Record<string, string[]>>({});
   const [emails, setEmails] = useState<string[]>([]);
 
   const handleCompanySubmit = async () => {
     try {
-      // Update tenant info via backend API
-      await api.put("/tenants/me", {
+      // Update tenant info via admin-service
+      await api.put("/admin/tenants/me", {
         name: companyInfo.name,
         companySize: companyInfo.size,
       });
@@ -45,16 +49,16 @@ export default function SetupWizardPage() {
         const filePath = `logos/${tenant}-logo.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("assets")
+          .from("onfis")
           .upload(filePath, companyInfo.logoFile, { upsert: true });
 
         if (!uploadError) {
           const { data: urlData } = supabase.storage
-            .from("assets")
+            .from("onfis")
             .getPublicUrl(filePath);
 
           if (urlData?.publicUrl) {
-            await api.put("/tenants/me", { logoUrl: urlData.publicUrl });
+            await api.put("/admin/tenants/me", { logoUrl: urlData.publicUrl });
           }
         }
       }
@@ -68,25 +72,34 @@ export default function SetupWizardPage() {
   };
 
   const handleDepartmentsSubmit = async () => {
+    const idMap: DepartmentIdMap = {};
+
     try {
-      // Save departments to backend
+      // Save departments to backend via position-service
       for (const name of departments) {
-        await api.post("/departments", { name });
+        const res = await api.post("/positions/departments", { name });
+        if (res.data?.id) {
+          idMap[name] = res.data.id;
+        }
       }
     } catch (err) {
       console.error("Failed to save departments:", err);
     }
+
+    setDepartmentIdMap(idMap);
     setCurrentStep(3);
   };
 
   const handlePositionsSubmit = async () => {
     try {
-      // Save positions per department to backend
+      // Save positions per department to backend using department IDs
       for (const [deptName, posNames] of Object.entries(positions)) {
+        const departmentId = departmentIdMap[deptName];
+
         for (const posName of posNames) {
           await api.post("/positions", {
-            name: posName,
-            departmentName: deptName,
+            title: posName,
+            departmentId: departmentId || null,
           });
         }
       }
@@ -119,7 +132,7 @@ export default function SetupWizardPage() {
       }
 
       // Mark setup as completed
-      await api.put("/tenants/me", { setupCompleted: true });
+      await api.put("/admin/tenants/me", { setupCompleted: true });
 
       // Navigate to dashboard
       navigate(`/${tenant}/dashboard`, { replace: true });
@@ -135,7 +148,7 @@ export default function SetupWizardPage() {
   const handleSkipInvite = async () => {
     setIsSubmitting(true);
     try {
-      await api.put("/tenants/me", { setupCompleted: true });
+      await api.put("/admin/tenants/me", { setupCompleted: true });
     } catch (err) {
       console.error("Failed to mark setup as completed:", err);
     }

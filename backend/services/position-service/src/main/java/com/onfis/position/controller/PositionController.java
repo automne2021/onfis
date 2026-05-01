@@ -2,6 +2,7 @@ package com.onfis.position.controller;
 
 import com.onfis.position.dto.AssignUserRequest;
 import com.onfis.position.dto.DepartmentResponse;
+import com.onfis.position.dto.DepartmentUpsertRequest;
 import com.onfis.position.dto.DepartmentWithEmployeesResponse;
 import com.onfis.position.dto.MovePositionRequest;
 import com.onfis.position.dto.PositionMeResponse;
@@ -51,6 +52,31 @@ public class PositionController {
     @GetMapping("/department-list")
     public ResponseEntity<List<DepartmentResponse>> getDepartmentList() {
         return ResponseEntity.ok(positionService.getDepartmentList());
+    }
+
+    // ── Department CRUD ───────────────────────────────────────────────
+
+    @PostMapping("/departments")
+    public ResponseEntity<DepartmentResponse> createDepartment(
+            @RequestHeader("X-User-ID") String userId,
+            @RequestBody DepartmentUpsertRequest request) {
+        return ResponseEntity.ok(positionService.createDepartment(request, userId));
+    }
+
+    @PutMapping("/departments/{id}")
+    public ResponseEntity<DepartmentResponse> updateDepartment(
+            @RequestHeader("X-User-ID") String userId,
+            @PathVariable UUID id,
+            @RequestBody DepartmentUpsertRequest request) {
+        return ResponseEntity.ok(positionService.updateDepartment(id, request, userId));
+    }
+
+    @DeleteMapping("/departments/{id}")
+    public ResponseEntity<Void> deleteDepartment(
+            @RequestHeader("X-User-ID") String userId,
+            @PathVariable UUID id) {
+        positionService.deleteDepartment(id, userId);
+        return ResponseEntity.noContent().build();
     }
 
     // ── Unassigned users ──────────────────────────────────────────────
@@ -133,3 +159,4 @@ public class PositionController {
         return ResponseEntity.ok(positionService.getPositionById(id));
     }
 }
+
