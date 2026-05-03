@@ -19,3 +19,7 @@ spring:
 logging:
   level:
     com.onfis: DEBUG
+
+supabase:
+  url: ${SUPABASE_URL}
+  service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}

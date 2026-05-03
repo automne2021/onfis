@@ -6,16 +6,6 @@ import { useToast } from "../../../contexts/useToast";
 import { adminService } from "../services/adminService";
 import type { AdminUser, AccountStatus, OnboardingForm } from "../types/adminTypes";
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-const MOCK_USERS: AdminUser[] = [
-  { id: "u1", name: "Nguyen Van An", email: "an.nguyen@company.vn", role: "SUPER_ADMIN", department: "Executive Board", status: "ACTIVE", createdAt: "2024-01-10T07:00:00Z", lastLogin: "2026-04-27T08:00:00Z" },
-  { id: "u2", name: "Trần Thị Bình", email: "binh.tran@company.vn", role: "ADMIN", department: "IT", status: "ACTIVE", createdAt: "2024-02-15T07:00:00Z", lastLogin: "2026-04-26T17:30:00Z" },
-  { id: "u3", name: "Le Minh Cuong", email: "cuong.le@company.vn", role: "MANAGER", department: "Engineering", status: "ACTIVE", createdAt: "2024-03-01T07:00:00Z", lastLogin: "2026-04-25T09:00:00Z" },
-  { id: "u4", name: "Pham Thi Dung", email: "dung.pham@company.vn", role: "EMPLOYEE", department: "Engineering", status: "ACTIVE", createdAt: "2024-04-20T07:00:00Z", lastLogin: "2026-04-27T07:45:00Z" },
-  { id: "u5", name: "Hoàng Văn Em", email: "em.hoang@company.vn", role: "EMPLOYEE", department: "Sales", status: "INACTIVE", createdAt: "2024-05-10T07:00:00Z" },
-  { id: "u6", name: "Vũ Thị Phương", email: "phuong.vu@company.vn", role: "MANAGER", department: "Marketing", status: "ACTIVE", createdAt: "2024-06-01T07:00:00Z", lastLogin: "2026-04-24T14:00:00Z" },
-  { id: "u7", name: "Đặng Quốc Tuấn", email: "tuan.dang@company.vn", role: "EMPLOYEE", department: "Sales", status: "SUSPENDED", createdAt: "2024-07-15T07:00:00Z" },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -327,7 +317,7 @@ export default function UserManagementPage() {
       userManagementSnapshot = res.users;
       setUsers(res.users);
     } catch {
-      const fallbackUsers = userManagementSnapshot ?? MOCK_USERS;
+      const fallbackUsers = userManagementSnapshot ?? [];
       userManagementSnapshot = fallbackUsers;
       setUsers(fallbackUsers);
     } finally {

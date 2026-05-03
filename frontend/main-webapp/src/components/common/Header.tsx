@@ -7,7 +7,7 @@ import userProfileImg from '../../assets/images/user-profile-img.png';
 import { IconButton } from './IconButton';
 import Dropdown from './Dropdown/Dropdown';
 import { ContentList, type ContentItem } from './Dropdown/ContentList';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { signOut } from '../../services/auth';
 
 interface HeaderProps {
@@ -17,7 +17,7 @@ interface HeaderProps {
 }
 
 export function Header({ companyName, messageContents, notificationContents }: HeaderProps) {
-  const { currentUser: authUser } = useAuth();
+  const { dbUser: authUser } = useAuth();
   const { tenant } = useParams<{ tenant: string }>();
   const navigate = useNavigate();
 

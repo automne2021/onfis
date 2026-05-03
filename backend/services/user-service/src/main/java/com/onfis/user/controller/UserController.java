@@ -63,10 +63,27 @@ public class UserController {
       return ResponseEntity.ok(userService.searchUsers(tenantId, keyword));
   }
 
-  @GetMapping("/me") // Hoặc khớp với /projects/me tùy cấu hình của bạn
+  @GetMapping("/me")
   public ResponseEntity<UserResponseDTO> getCurrentUser(
-      @RequestHeader("X-User-ID") UUID userId // Lấy ID trực tiếp từ header mà Frontend gửi lên
+      @RequestHeader("X-User-ID") UUID userId
   ) {
       return ResponseEntity.ok(userService.getBasicUserProfile(userId));
+  }
+
+  // ─── Onboarding endpoints ──────────────────────────────────────────────────
+
+  @PutMapping("/me/profile")
+  public ResponseEntity<Map<String, String>> updateOwnProfile(
+      @RequestHeader("X-User-ID") UUID userId,
+      @RequestBody Map<String, Object> profileData) {
+    userService.updateOwnProfile(userId, profileData);
+    return ResponseEntity.ok(Map.of("status", "ok"));
+  }
+
+  @PutMapping("/me/complete-onboarding")
+  public ResponseEntity<Map<String, String>> completeOnboarding(
+      @RequestHeader("X-User-ID") UUID userId) {
+    userService.completeOnboarding(userId);
+    return ResponseEntity.ok(Map.of("status", "ok"));
   }
 }

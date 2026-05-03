@@ -800,6 +800,7 @@ export default function PositionTreePage() {
         data={detailModal.data}
         currentUserLevel={currentUserLevel}
         isManager={canManagePositions}
+        isAdmin={isAdmin || isSuperAdmin}
       />
 
       {/* Add Position Modal */}

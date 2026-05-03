@@ -70,3 +70,6 @@ coverage/
 /.augment/skills/supabase
 /package.json
 /skills-lock.json
+/.claude/skills/supabase
+/.claude/skills/supabase-postgres-best-practices
+/.agent/skills/refactor-ui

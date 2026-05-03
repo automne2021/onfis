@@ -8,6 +8,7 @@ import { ToastContainer } from 'react-toastify';
 import { supabase } from "../services/supabaseClient";
 import 'react-toastify/dist/ReactToastify.css';
 import { PresenceProvider } from "../features/chat/context/PresenceContext";
+import { getCurrentUser } from "../services/authService";
 
 const mockCompanyName = "Your company";
 
@@ -17,6 +18,7 @@ export default function AppLayout() {
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tenantMismatch, setTenantMismatch] = useState(false);
+  const [isFirstLogin, setIsFirstLogin] = useState<boolean | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   // Scroll main content to top on route change
@@ -64,6 +66,20 @@ export default function AppLayout() {
       }
 
       if (mounted) setCheckedAuth(true);
+
+      // Check is_first_login after auth is confirmed
+      if (hasSession) {
+        try {
+          const me = await getCurrentUser();
+          if (mounted && me?.isFirstLogin === true) {
+            setIsFirstLogin(true);
+          } else if (mounted) {
+            setIsFirstLogin(false);
+          }
+        } catch {
+          if (mounted) setIsFirstLogin(false);
+        }
+      }
     };
 
     void checkSession();
@@ -85,6 +101,10 @@ export default function AppLayout() {
 
   if (!isAuthenticated || tenantMismatch) {
     return <Navigate to={`/${tenant ?? ""}/auth/login`} replace />;
+  }
+
+  if (isFirstLogin) {
+    return <Navigate to={`/${tenant}/employee-setup`} replace />;
   }
 
   return (

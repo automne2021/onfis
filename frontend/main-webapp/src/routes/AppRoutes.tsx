@@ -11,6 +11,7 @@ import SignInPage from '../features/auth/pages/SignInPage';
 
 // Setup Wizard
 import SetupWizardPage from '../features/setup/pages/SetupWizardPage';
+import EmployeeSetupWizardPage from '../features/setup/pages/EmployeeSetupWizardPage';
 
 // Dashboard
 import { DashboardPage } from '../features/dashboard';
@@ -65,6 +66,9 @@ export const router = createBrowserRouter(
         <Route path="setup" element={<SetupLayout />}>
           <Route index element={<SetupWizardPage />} />
         </Route>
+
+        {/* Employee Onboarding Wizard (white bg, no sidebar) */}
+        <Route path="employee-setup" element={<EmployeeSetupWizardPage />} />
 
         {/* App Routes (with sidebar/header) */}
         <Route path="" element={<AppLayout />}>
