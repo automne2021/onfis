@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, Suspense } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { BreadCrumb } from "../components/navigation/BreadCrumb"
 import { getTimeAgo } from "../../../utils/getTime"
 import { Tags } from "../components/Tags/Tags"
 
-import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups, PushPin, MoreVert, EditOutlined, DeleteOutline } from '@mui/icons-material';
+import { Public, PushPinOutlined, AttachFileOutlined, FileDownloadOutlined, ModeCommentOutlined, CommentOutlined, ThumbUp, ThumbUpOutlined, Groups, PushPin, MoreVert, EditOutlined, DeleteOutline, Edit, Delete } from '@mui/icons-material';
 
 import userProfileImg from "../../../assets/images/user-profile-img.png"
 import { getFileType } from "../../../config/fileConfig"
@@ -15,20 +15,24 @@ import { AnnouncementDetailLoading } from "../components/Loadings/AnnouncementDe
 import { ProfileCard } from "../../../components/common/Card/ProfileCard"
 import type { AnnouncementData, CommentData } from "../types/AnnouncementTypes"
 import type { FullUserProfile } from "../../../types/userType"
-// import { StatusBubble } from "../../../components/common/StatusBubble"
 
 import { announcementApi } from "../services/announcementApi"
 import { formatAnnouncementData } from "../utils/announcementFormatter"
 import { userApi } from "../../profile/services/userApi"
 import { useAuth } from "../../../hooks/useAuth"
+import { useRole } from "../../../hooks/useRole"
 import { toast } from "react-toastify"
 import { ConfirmDeleteModal } from "../components/ConfirmDeleteModal"
-import { AnnouncementForm } from "../components/AnnouncementForm"
+import { AnnouncementFormLoading } from "../components/Loadings/AnnouncementFormLoading"
+import React from "react"
+import { createPortal } from "react-dom"
+import { useTenantPath } from "../../../hooks/useTenantPath"
 import MenuItem from "@mui/material/MenuItem"
 import ListItemIcon from "@mui/material/ListItemIcon"
 import ListItemText from "@mui/material/ListItemText"
 import Menu from '@mui/material/Menu';
-// import { usePresence } from "../../chat/context/PresenceContext"
+
+const AnnouncementForm = React.lazy(() => import('../components/AnnouncementForm').then(m => ({ default: m.AnnouncementForm })));
 
 const flattenAllReplies = (replies: CommentData[], parentName?: string): CommentData[] => {
   let flat: CommentData[] = [];
@@ -45,10 +49,11 @@ const flattenAllReplies = (replies: CommentData[], parentName?: string): Comment
 };
 
 export function AnnouncementDetail() {
-  const { tenant, id } = useParams<{ tenant: string; id: string }>();
-  const { dbUser: currentUser } = useAuth();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // const { statuses } = usePresence()
+  const { withTenant } = useTenantPath();
+  const { isSuperAdmin, isAdmin, isManagerLike } = useRole();
+  const { dbUser: currentUser } = useAuth();
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
   const [authorProfile, setAuthorProfile] = useState<FullUserProfile | null>(null);
@@ -60,11 +65,12 @@ export function AnnouncementDetail() {
   
   const [replyingTo, setReplyingTo] = useState<{ id: string | number, name: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -139,6 +145,18 @@ export function AnnouncementDetail() {
     setReplyingTo({ id: commentId, name: authorName });
   };
 
+  const handleDelete = async () => {
+    if (!id || !window.confirm("Are you sure you want to delete this announcement? This action cannot be undone.")) return;
+    try {
+      setIsDeleting(true);
+      await announcementApi.deleteAnnouncement(id);
+      navigate(withTenant('/announcements'));
+    } catch (err) {
+      console.error("Failed to delete announcement:", err);
+      setIsDeleting(false);
+    }
+  };
+
   const handleDownloadAll = async () => {
     if (!detail?.attachments || detail.attachments.length === 0) return;
 
@@ -210,7 +228,7 @@ export function AnnouncementDetail() {
       await announcementApi.deleteAnnouncement(id);
       toast.success("Announcement deleted successfully!");
       setIsDeleteModalOpen(false);
-      navigate(`/${tenant}/announcements`);
+      navigate(withTenant('/announcements'));
     } catch (error) {
       console.error(error);
       toast.error("Failed to delete announcement.");
@@ -227,11 +245,12 @@ export function AnnouncementDetail() {
     return <div className="p-4 text-center text-neutral-500">No announcement available!</div>;
   }
 
-  console.log("details: ", detail)
-
   const avatarImg = detail.avatarUrl ? detail.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(detail.authName)}&background=random`;
   const safeUtcDate = detail.date ? (detail.date.endsWith('Z') ? detail.date : `${detail.date}Z`) : "";
   const timeAgoString = safeUtcDate ? getTimeAgo(safeUtcDate) : "";
+
+  // Can edit: SUPER_ADMIN / ADMIN = any; MANAGER = own only
+  const canEdit = isSuperAdmin || isAdmin || (isManagerLike && String(detail.authId) === String(currentUser?.id));
 
   const profileCardData: FullUserProfile = authorProfile ? {
     id: authorProfile.id,
@@ -250,6 +269,7 @@ export function AnnouncementDetail() {
   const displayDeptName = authorProfile?.departmentName || "My department";
 
   return (
+    <>
     <div className="flex flex-col min-h-[calc(100vh-70px)]">
 
       <ConfirmDeleteModal 
@@ -259,18 +279,21 @@ export function AnnouncementDetail() {
         isDeleting={isDeleting}
       />
 
-      {isEditModalOpen && detail && (
+      {isEditModalOpen && detail && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-           <AnnouncementForm 
+          <Suspense fallback={<AnnouncementFormLoading />}>
+            <AnnouncementForm 
               onClose={() => setIsEditModalOpen(false)} 
               onSuccess={() => {
                 setIsEditModalOpen(false);
-                // Tải lại trang hoặc gọi lại fetchDetail()
                 window.location.reload(); 
               }}
-              editData={detail}
-           />
-        </div>
+              announcementId={detail.id}
+              initialData={detail}
+            />
+          </Suspense>
+        </div>,
+        document.body
       )}
 
       <section className="onfis-section">
@@ -377,6 +400,27 @@ export function AnnouncementDetail() {
                 <Tags label="Global" icon={<Public sx={{ fontSize: 16 }} />} />
               ) : (
                 <Tags label={displayDeptName} icon={<Groups sx={{ fontSize: 16 }} />} bgColor="bg-cyan-100" textColor="text-cyan-500" />
+              )}
+              {canEdit && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditOpen(true)}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-primary hover:bg-primary/10 transition"
+                    title="Edit announcement"
+                  >
+                    <Edit sx={{ fontSize: 16 }} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="p-1.5 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 transition"
+                    title="Delete announcement"
+                  >
+                    <Delete sx={{ fontSize: 16 }} />
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -572,5 +616,30 @@ export function AnnouncementDetail() {
         </div>
       </section>
     </div>
+
+    {isEditOpen && detail && createPortal(
+      <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
+        <div className='absolute inset-0 bg-black/50 backdrop-blur-sm animate-fadeIn' onClick={() => setIsEditOpen(false)} />
+        <div className='relative z-10 animate-slideUp w-full max-w-3xl'>
+          <Suspense fallback={<AnnouncementFormLoading />}>
+            <AnnouncementForm
+              onClose={() => setIsEditOpen(false)}
+              announcementId={id}
+              initialData={detail}
+              onSuccess={async () => {
+                // Refresh detail after edit
+                if (id) {
+                  const rawData = await announcementApi.getById(id);
+                  const formatted = formatAnnouncementData([rawData])[0];
+                  if (formatted) setDetail(formatted);
+                }
+              }}
+            />
+          </Suspense>
+        </div>
+      </div>,
+      document.body
+    )}
+  </>
   )
 }

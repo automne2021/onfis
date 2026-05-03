@@ -112,6 +112,8 @@ interface PositionDetailModalProps {
   /** Level of the currently logged-in user */
   currentUserLevel: string | null;
   isManager: boolean;
+  /** Admin/SuperAdmin bypasses level-based permission checks */
+  isAdmin?: boolean;
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -123,6 +125,7 @@ export default function PositionDetailModal({
   data,
   currentUserLevel,
   isManager,
+  isAdmin = false,
 }: PositionDetailModalProps) {
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
@@ -136,8 +139,9 @@ export default function PositionDetailModal({
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const canManage =
-    isManager &&
-    (data?.isVacant || levelToNum(currentUserLevel) >= levelToNum(data?.level));
+    isAdmin ||
+    (isManager &&
+      (data?.isVacant || levelToNum(currentUserLevel) >= levelToNum(data?.level)));
 
   const handleViewProfile = () => {
     if (data?.userId && tenant) {

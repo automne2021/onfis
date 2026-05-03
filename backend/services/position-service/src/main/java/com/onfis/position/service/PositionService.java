@@ -2,6 +2,7 @@ package com.onfis.position.service;
 
 import com.onfis.position.dto.AssignUserRequest;
 import com.onfis.position.dto.DepartmentResponse;
+import com.onfis.position.dto.DepartmentUpsertRequest;
 import com.onfis.position.dto.DepartmentWithEmployeesResponse;
 import com.onfis.position.dto.EmployeeResponse;
 import com.onfis.position.dto.MovePositionRequest;
@@ -14,6 +15,7 @@ import com.onfis.position.entity.AppUserEntity;
 import com.onfis.position.entity.DepartmentEntity;
 import com.onfis.position.entity.PositionEntity;
 import com.onfis.position.exception.BadRequestException;
+import com.onfis.position.exception.ForbiddenException;
 import com.onfis.position.exception.NotFoundException;
 import com.onfis.position.repository.AppUserRepository;
 import com.onfis.position.repository.DepartmentRepository;
@@ -359,6 +361,65 @@ public class PositionService {
                 .toList();
     }
 
+    // ── Department CRUD ───────────────────────────────────────────────────────
+
+    @Transactional
+    public DepartmentResponse createDepartment(DepartmentUpsertRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
+
+        if (request.name() == null || request.name().isBlank()) {
+            throw new BadRequestException("Department name is required");
+        }
+
+        UUID tenantId = tenantId();
+        DepartmentEntity entity = new DepartmentEntity();
+        entity.setTenantId(tenantId);
+        entity.setName(request.name().trim());
+        entity.setDescription(request.description());
+
+        DepartmentEntity saved = departmentRepository.save(entity);
+        return new DepartmentResponse(saved.getId(), saved.getName());
+    }
+
+    @Transactional
+    public DepartmentResponse updateDepartment(UUID id, DepartmentUpsertRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
+
+        UUID tenantId = tenantId();
+        DepartmentEntity entity = departmentRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Department not found"));
+
+        if (request.name() != null && !request.name().isBlank()) {
+            entity.setName(request.name().trim());
+        }
+        if (request.description() != null) {
+            entity.setDescription(request.description());
+        }
+
+        DepartmentEntity saved = departmentRepository.save(entity);
+        return new DepartmentResponse(saved.getId(), saved.getName());
+    }
+
+    @Transactional
+    public void deleteDepartment(UUID id, String requesterId) {
+        requireWriteAccess(requesterId);
+
+        UUID tenantId = tenantId();
+        DepartmentEntity entity = departmentRepository.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Department not found"));
+
+        // Check if department has positions
+        List<PositionEntity> positions = positionRepository.findByTenantId(tenantId).stream()
+                .filter(p -> id.equals(p.getDepartmentId()))
+                .toList();
+        if (!positions.isEmpty()) {
+            throw new BadRequestException(
+                    "Cannot delete department with existing positions. Remove or reassign positions first.");
+        }
+
+        departmentRepository.delete(entity);
+    }
+
     // ── Unassigned users ──────────────────────────────────────────────────────
 
     public List<UnassignedUserResponse> getUnassignedUsers() {
@@ -376,7 +437,8 @@ public class PositionService {
     // ── CRUD ──────────────────────────────────────────────────────────────────
 
     @Transactional
-    public PositionResponse createPosition(PositionUpsertRequest request) {
+    public PositionResponse createPosition(PositionUpsertRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
 
         if (request.title() == null || request.title().isBlank()) {
@@ -395,7 +457,8 @@ public class PositionService {
     }
 
     @Transactional
-    public PositionResponse updatePosition(UUID positionId, PositionUpsertRequest request) {
+    public PositionResponse updatePosition(UUID positionId, PositionUpsertRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
         PositionEntity entity = positionRepository.findByIdAndTenantId(positionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Position not found"));
@@ -418,7 +481,8 @@ public class PositionService {
     }
 
     @Transactional
-    public void deletePosition(UUID positionId) {
+    public void deletePosition(UUID positionId, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
         PositionEntity entity = positionRepository.findByIdAndTenantId(positionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Position not found"));
@@ -440,7 +504,8 @@ public class PositionService {
     }
 
     @Transactional
-    public PositionResponse movePosition(UUID positionId, MovePositionRequest request) {
+    public PositionResponse movePosition(UUID positionId, MovePositionRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
         PositionEntity entity = positionRepository.findByIdAndTenantId(positionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Position not found"));
@@ -462,7 +527,8 @@ public class PositionService {
     }
 
     @Transactional
-    public void unassignUserFromPosition(UUID positionId, UUID userId) {
+    public void unassignUserFromPosition(UUID positionId, UUID userId, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
         positionRepository.findByIdAndTenantId(positionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Position not found"));
@@ -483,7 +549,8 @@ public class PositionService {
     }
 
     @Transactional
-    public void assignUserToPosition(UUID positionId, AssignUserRequest request) {
+    public void assignUserToPosition(UUID positionId, AssignUserRequest request, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
         positionRepository.findByIdAndTenantId(positionId, tenantId)
                 .orElseThrow(() -> new NotFoundException("Position not found"));
@@ -516,7 +583,8 @@ public class PositionService {
     }
 
     @Transactional
-    public void removeUnassignedUser(UUID userId) {
+    public void removeUnassignedUser(UUID userId, String requesterId) {
+        requireWriteAccess(requesterId);
         UUID tenantId = tenantId();
         AppUserEntity user = appUserRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
@@ -589,11 +657,36 @@ public class PositionService {
         return full.isEmpty() ? (user.getEmail() != null ? user.getEmail() : "Unknown") : full;
     }
 
+    // ── Write access guard ────────────────────────────────────────────────────
+
+    /**
+     * Only ADMIN, MANAGER, and SUPER_ADMIN (leader) may perform write operations
+     * on positions.
+     * Throws ForbiddenException for any other role.
+     */
+    private void requireWriteAccess(String requesterIdStr) {
+        if (requesterIdStr == null || requesterIdStr.isBlank()) {
+            throw new BadRequestException("X-User-ID header is required for this operation");
+        }
+        UUID requesterId;
+        try {
+            requesterId = UUID.fromString(requesterIdStr);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid X-User-ID header");
+        }
+        AppUserEntity requester = appUserRepository.findById(requesterId)
+                .orElseThrow(() -> new NotFoundException("Requesting user not found"));
+        String role = requester.getRole() != null ? requester.getRole().toUpperCase().replace(" ", "_") : "";
+        if (!"MANAGER".equals(role) && !"SUPER_ADMIN".equals(role) && !"ADMIN".equals(role)) {
+            throw new ForbiddenException("Admin, manager, or leader role required for position management");
+        }
+    }
+
     // ── Get single position ───────────────────────────────────────────
     public PositionResponse getPositionById(UUID id) {
         PositionEntity position = positionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Position not found with ID: " + id));
-        
-        return toPositionResponse(position); 
+
+        return toPositionResponse(position);
     }
 }

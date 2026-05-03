@@ -375,7 +375,7 @@ function EmptyState({ icon, message }: { icon: string; message: string }) {
 
 export default function MyTasksPage() {
   const { dbUser: currentUser } = useAuth();
-  const { isManager, isAuthLoading } = useRole();
+  const { isManagerLike: isManager, isAuthLoading } = useRole();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("assigned");
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
