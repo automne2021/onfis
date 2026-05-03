@@ -55,4 +55,7 @@ public class Announcement {
 
   @Column(name = "target_department_id")
   private UUID targetDepartmentId; // NULL = Toàn công ty, UUID = Phòng ban cụ thể
+
+  @Column(name = "status")
+  private String status;
 }

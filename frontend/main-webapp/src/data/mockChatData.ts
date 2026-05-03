@@ -2,25 +2,25 @@ import type { ChatUser, ChatChannel, ChatMessage } from '../features/chat/types/
 
 // --- 1. MOCK USERS ---
 export const CURRENT_USER: ChatUser = {
-  id: 105, 
+  id: "105", 
   name: "You", 
   avatarUrl: "https://i.pravatar.cc/150?img=11", 
-  status: "online", // Đã sửa
+  status: "online",
 };
 
 export const MOCK_USERS: Record<string, ChatUser> = {
   bob: { id: "bob", name: "Bob Smith", avatarUrl: "https://i.pravatar.cc/150?img=12", status: "online" },
-  sarah: { id: 101, name: "Sarah Jenkins", avatarUrl: "https://i.pravatar.cc/150?u=sarah", status: "offline" },
-  david: { id: "david", name: "David Kim", avatarUrl: "https://i.pravatar.cc/150?img=14", status: "busy" }, // Cố tình set busy để test màu đỏ
+  sarah: { id: "101", name: "Sarah Jenkins", avatarUrl: "https://i.pravatar.cc/150?u=sarah", status: "offline" },
+  david: { id: "david", name: "David Kim", avatarUrl: "https://i.pravatar.cc/150?img=14", status: "busy" },
   alice: { id: "alice", name: "Alice", avatarUrl: "https://i.pravatar.cc/150?img=5", status: "online" },
 };
 
 // --- 2. MOCK CHANNELS (SIDEBAR) ---
 export const MOCK_CHANNELS: ChatChannel[] = [
   // Project Groups
-  { id: "proj-alpha", name: "Project-Alpha", type: "group", membersCount: 32, isPinned: true },
-  { id: "mkt-q4", name: "Marketing-Q4", type: "group", membersCount: 10, isPinned: false },
-  { id: "ds-system", name: "Design-System", type: "group", membersCount: 15, isPinned: true },
+  { id: "proj-alpha", name: "Project-Alpha", type: "public_group", membersCount: 32, isPinned: true },
+  { id: "mkt-q4", name: "Marketing-Q4", type: "public_group", membersCount: 10, isPinned: false },
+  { id: "ds-system", name: "Design-System", type: "public_group", membersCount: 15, isPinned: true },
   // Direct Messages (Lấy tên User làm tên Channel luôn cho tiện)
   { id: "dm-bob", name: "Bob Smith", type: "direct" },
   { id: "dm-sarah", name: "Sarah Jenkins", type: "direct" },
@@ -60,10 +60,12 @@ export const MOCK_MESSAGES: ChatMessage[] = [
     type: "meeting",
     content: "", 
     meeting: {
-      hostName: "Alice",
-      status: "ongoing",
-      participantsCount: 4,
-      url: "#",
+      id: "meeting-mock-1",
+      hostId: "alice",
+      type: "VIDEO",
+      status: "ONGOING",
+      startTime: "2024-10-24T10:50:00Z",
+      meetingLink: "mock-room-alpha",
     }
   },
   {

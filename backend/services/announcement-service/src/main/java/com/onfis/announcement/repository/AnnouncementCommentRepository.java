@@ -14,4 +14,6 @@ public interface AnnouncementCommentRepository extends JpaRepository<Announcemen
     List<AnnouncementComment> findByTenantIdAndAnnouncementIdAndParentIdIsNullOrderByCreatedAtAsc(UUID tenantId, UUID announcementId);
 
     long countByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
+
+    void deleteByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
 }

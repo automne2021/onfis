@@ -1,3 +1,62 @@
+export interface UserProfile {
+  id: string | number;
+  name: string;
+  position: string;
+  department: string;
+  email: string;
+  phone: string;
+  location: string;
+  avatarUrl?: string;
+  team?: string;
+  reportsTo?: string | number;
+  reportsToName?: string;
+  reportsToAvatar?: string;
+  bio?: string;
+  skills?: string[];
+  officeLocation?: string;
+  nationality?: string;
+  gender?: string;
+  nationalId?: string;
+  personalEmail?: string;
+  personalPhone?: string;
+  homeAddress?: HomeAddress;
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+  } | null;
+  education?: {
+    degree?: string;
+    major?: string;
+    institution?: string;
+    graduationYear?: string | number;
+  } | null;
+  banking?: {
+    bankName?: string;
+    accountNumber?: string;
+    taxId?: string;
+  } | null;
+  compensation?: {
+    baseSalary?: string;
+    payFrequency?: string;
+    bonusTarget?: string;
+    nextReview?: string;
+  } | null;
+  contract?: {
+    type?: string;
+    schedule?: string;
+    startDate?: string;
+    endDate?: string | null;
+    noticePeriod?: string;
+    probationPeriod?: string;
+    fileName?: string;
+    fileUrl?: string;
+    fileSize?: string;
+    uploadDate?: string;
+  } | null;
+  documents?: UserDocument[];
+}
+
 export interface UserDocument {
   id: string;
   fileName: string;
@@ -23,6 +82,7 @@ export interface FullUserProfile {
   role?: string;
   positionId?: string;
   positionName?: string; 
+  departmentId?: string;
   departmentName?: string; 
 
   managerId?: string;

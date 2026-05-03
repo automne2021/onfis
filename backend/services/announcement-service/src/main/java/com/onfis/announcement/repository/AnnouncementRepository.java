@@ -6,18 +6,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.Optional;
 
 @Repository
 public interface AnnouncementRepository extends JpaRepository<Announcement, UUID> {
 
   // Lấy tất cả thông báo của một công ty 
-  Page<Announcement> findByTenantId(UUID tenantId, Pageable pageable);
+  Page<Announcement> findByTenantIdAndStatus(UUID tenantId, String status, Pageable pageable);
+    Page<Announcement> findByTenantIdAndIsPinnedTrueAndStatus(UUID tenantId, String status, Pageable pageable);
+    Page<Announcement> findByTenantIdAndTargetDepartmentIdIsNullAndStatus(UUID tenantId, String status, Pageable pageable);
+    Page<Announcement> findByTenantIdAndTargetDepartmentIdAndStatus(UUID tenantId, UUID departmentId, String status, Pageable pageable);
+    Page<Announcement> findByTenantIdAndTitleContainingIgnoreCaseAndStatus(UUID tenantId, String keyword, String status, Pageable pageable);
 
-  Page<Announcement> findByTenantIdAndIsPinnedTrue(UUID tenantId, Pageable pageable);
-
-  Page<Announcement> findByTenantIdAndTargetDepartmentIdIsNull(UUID tenantId, Pageable pageable);
-
-  Page<Announcement> findByTenantIdAndTargetDepartmentId(UUID tenantId, UUID targetDepartmentId, Pageable pageable);
-
-  Page<Announcement> findByTenantIdAndTitleContainingIgnoreCase(UUID tenantId, String title, Pageable pageable);
+  Optional<Announcement> findFirstByTenantIdAndAuthorIdAndStatusOrderByCreatedAtDesc(UUID tenantId, UUID authorId, String status);
 }

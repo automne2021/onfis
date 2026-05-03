@@ -16,6 +16,7 @@ public record UserProfileResponseDTO(
   String role,
   UUID positionId,
   String positionName,
+  UUID departmentId,
   String departmentName,
   
   UUID managerId,

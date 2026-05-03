@@ -1,17 +1,9 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
-import {
-  EmailOutlined,
-  PhoneOutlined,
-  BusinessOutlined,
-} from '@mui/icons-material';
+import { EmailOutlined, PhoneOutlined, BusinessOutlined } from '@mui/icons-material';
 import { TitleHeader } from "../TitleHeader";
 import { CopyArea } from "../Copy/CopyArea";
 
-interface ContactProps extends OverviewProps {
-  role?: string;
-}
-
-export function ContactInformation({ icon, userInfo, role }: ContactProps) {
+export function ContactInformation({ icon, userInfo }: OverviewProps) {
   const displayAddress = userInfo.address || "N/A";
 
   const officeContactInfo = [
@@ -26,7 +18,8 @@ export function ContactInformation({ icon, userInfo, role }: ContactProps) {
     { label: "Home Address", icon: <BusinessOutlined />, content: displayAddress },
   ]
 
-  const canViewPersonal = role === 'manager' || role === 'admin';
+  // Kiểm tra xem Backend có trả về một trong các thông tin cá nhân không
+  const hasPersonalContact = !!userInfo.personalEmail || !!userInfo.phoneNumber || !!userInfo.address;
 
   return (
     <div className="profile-section">
@@ -43,7 +36,7 @@ export function ContactInformation({ icon, userInfo, role }: ContactProps) {
         </div>
 
         {/* Personal Contact info */}
-        {canViewPersonal && (
+        {hasPersonalContact && (
           <>
             <div className="w-full h-px bg-gray-100" />
             <div className="flex flex-wrap items-start gap-4">

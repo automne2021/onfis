@@ -5,6 +5,8 @@ services:
       context: ./backend
       dockerfile: api-gateway/Dockerfile
     container_name: onfis-api-gateway
+    ports:
+      - "8080:8080"
     env_file:
       - .env
     environment:
@@ -87,7 +89,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
-      - JAVA_TOOL_OPTIONS: "-Xmx256m -Xms128m"
+      - JAVA_TOOL_OPTIONS=-Xmx256m -Xms128m
     networks:
       - onfis-network
     depends_on:

@@ -7,7 +7,7 @@ const stripHtml = (html: string): string => {
   return doc.body.textContent?.trim() || "";
 };
 import { useRole } from "../../../hooks/useRole";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../hooks/useAuth";
 import { useToast } from "../../../contexts/useToast";
 import { TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
@@ -694,9 +694,9 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
 export default function ReviewQueuePage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { isManager } = useRole();
-  const { currentUser } = useAuth();
+  const { dbUser: currentUser } = useAuth();
 
-  if (!currentUser.id) {
+  if (!currentUser?.id) {
     return (
       <div className="onfis-section">
         <div className="mt-4 h-24 rounded-xl bg-neutral-100 animate-pulse" />

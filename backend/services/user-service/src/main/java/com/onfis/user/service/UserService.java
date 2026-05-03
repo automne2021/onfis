@@ -74,69 +74,100 @@ public class UserService {
     );
   }
 
-  public UserProfileResponseDTO getFullUserProfile(String token, UUID userId, String tenantId) {
-    User user = userRepository.findById(userId)
-      .orElseThrow(() -> new RuntimeException("Cannot find user with ID: " + userId));
+    public UserProfileResponseDTO getFullUserProfile(String token, UUID targetUserId, String tenantId, UUID requesterId) {
+        // 1. Tìm Target User (Người được xem hồ sơ)
+        User targetUser = userRepository.findById(targetUserId)
+        .orElseThrow(() -> new RuntimeException("Cannot find user with ID: " + targetUserId));
 
-    if (!user.getTenantId().toString().equals(tenantId)) {
-        throw new RuntimeException("Access Denied: This user does not belong to your company.");
-    }
-
-    UserProfileEntity profile = profileRepository.findById(userId).orElse(null);
-
-    String positionName = null;
-    String departmentName = null;
-
-    // 3. Gọi sang position-service nếu user có positionId
-    if (user.getPositionId() != null) {
-        try {
-            // Truyền token vào Feign Client
-            PositionResponseDTO positionData = positionServiceClient.getPositionById(token, user.getPositionId(), tenantId);
-            if (positionData != null) {
-                log.info("Position Data: ", positionData);
-                // Record PositionResponseDTO dùng positionData.name() và positionData.departmentName()
-                positionName = positionData.title();
-                departmentName = positionData.departmentName();
-            }
-        } catch (Exception e) {
-            log.error("❌ Lỗi khi lấy thông tin chức vụ cho positionId {}: {}", user.getPositionId(), e.getMessage());
+        // Kiểm tra tính đa thuê (Multi-tenancy)
+        if (!targetUser.getTenantId().toString().equals(tenantId)) {
+            throw new RuntimeException("Access Denied: This user does not belong to your company.");
         }
-    }
 
-    return new UserProfileResponseDTO(
-      user.getId(),
-      user.getTenantId(),
-      user.getFirstName(),
-      user.getLastName(),
-      user.getAvatarUrl(),
-      user.getEmail(),
-      user.getRole(),
-      user.getPositionId(),
-      
-      positionName,    
-      departmentName,  
-      
-      profile != null ? profile.getManagerId() : null,
-      profile != null ? profile.getWorkLocation() : null,
-      profile != null ? profile.getBio() : null,
-      profile != null ? profile.getSkills() : null,
-      profile != null ? profile.getWorkPhone() : null,
-      profile != null ? profile.getPersonalEmail() : null,
-      profile != null ? profile.getPhoneNumber() : null,
-      profile != null ? profile.getAddress() : null,
-      profile != null ? profile.getDob() : null,
-      profile != null ? profile.getNationId() : null,
-      profile != null ? profile.getNationality() : null,
-      profile != null ? profile.getGender() : null,
-      
-      profile != null ? profile.getBankingInfo() : null,
-      profile != null ? profile.getTaxInfo() : null,
-      profile != null ? profile.getEmergencyContact() : null,
-      profile != null ? profile.getContractInfo() : null,
-      profile != null ? profile.getEducationInfo() : null,
-      profile != null ? profile.getCompensationInfo() : null
-    );
-  }
+        UserProfileEntity profile = profileRepository.findById(targetUserId).orElse(null);
+
+        // 2. Lấy thông tin người yêu cầu (Requester) để kiểm tra Role
+        User requester = userRepository.findById(requesterId)
+                .orElseThrow(() -> new RuntimeException("Requester not found"));
+        String requesterRole = requester.getRole();
+
+        // =========================================================================
+        // LOGIC PHÂN QUYỀN TRUY CẬP DỮ LIỆU
+        // =========================================================================
+        
+        // Cấp 1: Thông tin nhạy cảm mức trung bình (Manager/HR/Chính chủ)
+        // Bao gồm: Số điện thoại cá nhân, Email cá nhân, Địa chỉ, Ngày sinh
+        boolean isManager = "MANAGER".equals(requesterRole) && profile != null && requesterId.equals(profile.getManagerId());
+        boolean isHighAdmin = "SUPER_ADMIN".equals(requesterRole) || "ADMIN".equals(requesterRole);
+        boolean isOwner = requesterId.equals(targetUserId);
+
+        boolean canViewPersonalContact = isOwner || isHighAdmin || isManager;
+
+        // Cấp 2: Thông tin nhạy cảm mức cao (Chỉ HR/Kế toán/Chính chủ - Manager KHÔNG xem được)
+        // Bao gồm: Lương (Compensation), Thuế (Tax), Ngân hàng (Banking), Số định danh (NationId)
+        // Thêm Role C_AND_B hoặc ACCOUNTANT nếu hệ thống của bạn có các role này
+        boolean isFinanceOrHR = isHighAdmin || "ACCOUNTANT".equals(requesterRole) || "C_AND_B".equals(requesterRole);
+        boolean canViewStrictPrivateInfo = isOwner || isFinanceOrHR;
+
+        // =========================================================================
+
+        // 3. Gọi sang position-service lấy thông tin chức vụ (Giữ nguyên logic Feign)
+        String positionName = null;
+        String departmentName = null;
+        UUID departmentId = null;
+
+        if (targetUser.getPositionId() != null) {
+            try {
+                PositionResponseDTO positionData = positionServiceClient.getPositionById(token, targetUser.getPositionId(), tenantId);
+                if (positionData != null) {
+                    positionName = positionData.title();
+                    departmentName = positionData.departmentName();
+                    departmentId = positionData.departmentId();
+                }
+            } catch (Exception e) {
+                log.error("❌ Lỗi khi lấy thông tin chức vụ: {}", e.getMessage());
+            }
+        }
+
+        // 4. Lọc dữ liệu theo quyền truy cập
+        return new UserProfileResponseDTO(
+        targetUser.getId(),
+        targetUser.getTenantId(),
+        targetUser.getFirstName(),
+        targetUser.getLastName(),
+        targetUser.getAvatarUrl(),
+        targetUser.getEmail(), 
+        targetUser.getRole(),
+        targetUser.getPositionId(),
+        positionName,    
+        departmentId,
+        departmentName,  
+        
+        profile != null ? profile.getManagerId() : null,
+        profile != null ? profile.getWorkLocation() : null,
+        profile != null ? profile.getBio() : null,
+        profile != null ? profile.getSkills() : null,
+        profile != null ? profile.getWorkPhone() : null, // Work phone (Public)
+
+        // Thông tin liên lạc cá nhân (Cấp 1)
+        (canViewPersonalContact && profile != null) ? profile.getPersonalEmail() : null,
+        (canViewPersonalContact && profile != null) ? profile.getPhoneNumber() : null,
+        (canViewPersonalContact && profile != null) ? profile.getAddress() : null,
+        (canViewPersonalContact && profile != null) ? profile.getDob() : null,
+
+        // Thông tin định danh và tài chính (Cấp 2)
+        (canViewStrictPrivateInfo && profile != null) ? profile.getNationId() : null,
+        profile != null ? profile.getNationality() : null, // Quốc tịch có thể để public/manager thấy
+        profile != null ? profile.getGender() : null,
+        
+        (canViewStrictPrivateInfo && profile != null) ? profile.getBankingInfo() : null,
+        (canViewStrictPrivateInfo && profile != null) ? profile.getTaxInfo() : null,
+        profile != null ? profile.getEmergencyContact() : null, // Liên hệ khẩn cấp nên để Manager thấy
+        (canViewStrictPrivateInfo && profile != null) ? profile.getContractInfo() : null,
+        profile != null ? profile.getEducationInfo() : null,
+        (canViewStrictPrivateInfo && profile != null) ? profile.getCompensationInfo() : null // LƯƠNG
+        );
+    }
 
   public List<UserResponseDTO> getUsersByTenant(String tenantIdStr) {
     if (tenantIdStr == null || tenantIdStr.isEmpty()) {

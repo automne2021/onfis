@@ -5,6 +5,7 @@ import com.onfis.announcement.dto.AnnouncementCommentResponseDTO;
 import com.onfis.announcement.dto.AnnouncementCreateRequestDTO;
 import com.onfis.announcement.dto.AnnouncementDTO;
 import com.onfis.announcement.dto.AnnouncementDetailDTO;
+import com.onfis.announcement.dto.AttachmentResponseDTO;
 import com.onfis.announcement.dto.DepartmentDTO;
 import com.onfis.announcement.service.AnnouncementService;
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -130,6 +132,22 @@ public ResponseEntity<List<DepartmentDTO>> getMyDepartments(
       return ResponseEntity.ok(announcementService.searchAnnouncements(token, companyId, keyword, userId, pageable));
   }
 
+  @GetMapping("/draft")
+  public ResponseEntity<AnnouncementDetailDTO> getMyDraft(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyId,
+          @RequestHeader("X-User-ID") UUID userId) {
+      
+      AnnouncementDetailDTO draft = announcementService.getMyLatestDraft(token, companyId, userId);
+      return draft != null ? ResponseEntity.ok(draft) : ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/attachments/{id}")
+  public ResponseEntity<AttachmentResponseDTO> getAttachmentById(@PathVariable("id") UUID id) {
+      // Gọi qua service để lấy
+      return ResponseEntity.ok(announcementService.getAttachmentById(id));
+  }
+
   /* ================== POST ================== */
 
   @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -173,5 +191,60 @@ public ResponseEntity<List<DepartmentDTO>> getMyDepartments(
           @PathVariable("commentId") UUID commentId) {
       boolean isLiked = announcementService.toggleCommentLike(companyId, commentId, userId);
       return ResponseEntity.ok(isLiked);
+  }
+
+  @PostMapping(value = "/attachments/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AttachmentResponseDTO> uploadStandaloneFile(
+            @RequestHeader("X-Company-ID") String companyIdStr,
+            @RequestHeader(value = "X-User-ID", required = false) UUID userId,
+            @RequestParam("file") MultipartFile file) {
+
+        return ResponseEntity.ok(announcementService.uploadStandaloneFile(companyIdStr, userId, file));
+    }
+
+  @PostMapping("/{id}/toggle-pin")
+  public ResponseEntity<Boolean> toggleAnnouncementPin(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyId,
+          @RequestHeader("X-User-ID") UUID userId,
+          @PathVariable("id") UUID announcementId) {
+      
+      log.info("📥 [CONTROLLER] User {} đang thực hiện ghim/bỏ ghim bài viết ID: {}", userId, announcementId);
+      // Gọi qua service để xử lý logic và trả về trạng thái is_pinned mới nhất (true/false)
+      boolean isPinned = announcementService.toggleAnnouncementPin(token, companyId, announcementId, userId);
+      return ResponseEntity.ok(isPinned);
+  }
+
+  @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<AnnouncementDTO> updateAnnouncement(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyIdStr,
+          @RequestHeader(value = "X-User-ID") UUID userId,
+          @PathVariable("id") UUID id,
+          @ModelAttribute AnnouncementCreateRequestDTO request) {
+      
+      return ResponseEntity.ok(announcementService.updateAnnouncement(token, companyIdStr, id, userId, request));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteAnnouncement(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyIdStr,
+          @RequestHeader(value = "X-User-ID") UUID userId,
+          @PathVariable("id") UUID id) {
+      
+      announcementService.deleteAnnouncement(token, companyIdStr, id, userId);
+      return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/attachments/{id}")
+  public ResponseEntity<Void> deleteAttachment(
+          @RequestHeader("Authorization") String token,
+          @RequestHeader("X-Company-ID") String companyIdStr,
+          @RequestHeader("X-User-ID") UUID userId,
+          @PathVariable("id") UUID attachmentId) {
+      
+      announcementService.deleteAttachment(token, companyIdStr, attachmentId, userId);
+      return ResponseEntity.noContent().build();
   }
 }

@@ -13,6 +13,8 @@ import com.onfis.chat.repository.ConversationMemberRepository;
 import com.onfis.chat.repository.ConversationRepository;
 import com.onfis.chat.service.PresenceService;
 import com.onfis.chat.dto.CreateConversationRequestDTO;
+import com.onfis.chat.client.AttachmentClient;
+import com.onfis.chat.dto.AttachmentResponseDTO;
 
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -37,8 +39,8 @@ public class ChatController {
     private final ConversationRepository conversationRepository;
     private final UserClient userClient;
     private final PresenceService presenceService;
-
     private final SimpMessagingTemplate messagingTemplate;
+    private final AttachmentClient attachmentClient;
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health(
@@ -299,7 +301,7 @@ public class ChatController {
                 status = sender.status() != null ? sender.status() : "offline"; 
             }
 
-            return ChatMessageResponseDTO.builder()
+            ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder()
                 .id(msg.getId())
                 .conversationId(msg.getConversationId())
                 .userId(senderId)
@@ -314,6 +316,22 @@ public class ChatController {
                 .createdAt(msg.getCreatedAt())
                 .updatedAt(msg.getUpdatedAt())
                 .build();
+
+            if (msg.getAttachmentId() != null) {
+                try {
+                    String bearerToken = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                    AttachmentResponseDTO fileData = attachmentClient.getAttachmentById(bearerToken, companyIdStr, msg.getAttachmentId());
+                    if (fileData != null) {
+                        dto.setFileUrl(fileData.getUrl());
+                        dto.setFileName(fileData.getFileName());
+                        dto.setFileSize(fileData.getSize());
+                    }
+                } catch (Exception e) {
+                    log.warn("Lỗi Feign lấy thông tin file khi load lịch sử, ID {}: {}", msg.getAttachmentId(), e.getMessage());
+                }
+            }
+
+            return dto;
         }).collect(Collectors.toList());
         
         return ResponseEntity.ok(responseList);
@@ -634,6 +652,19 @@ public class ChatController {
         
         conv.setPinned(!conv.isPinned()); // Đảo ngược trạng thái
         conversationRepository.save(conv);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/internal/notify/announcement")
+    public ResponseEntity<?> broadcastAnnouncement(
+            @RequestBody Map<String, Object> payload, 
+            @RequestHeader("X-Company-ID") String tenantId) {
+        
+        if (payload.get("targetDepartmentId") == null) {
+            messagingTemplate.convertAndSend("/topic/tenant." + tenantId + ".announcements", payload);
+        } else {
+            messagingTemplate.convertAndSend("/topic/department." + payload.get("targetDepartmentId") + ".announcements", payload);
+        }
         return ResponseEntity.ok().build();
     }
 

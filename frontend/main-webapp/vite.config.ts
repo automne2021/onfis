@@ -21,12 +21,25 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 3000,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8080', 
+      // Tenant-prefixed API routes: /{tenant}/api/...
+      '^/[^/]+/api': {
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
       },
-      // Configuration for WebSocket
+      // Tenant-prefixed WebSocket routes: /{tenant}/ws/...
+      '^/[^/]+/ws': {
+        target: 'ws://localhost:8080',
+        ws: true,
+        changeOrigin: true,
+      },
+      // Fallback for plain /api routes
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      // Fallback for plain /ws routes
       '/ws': {
         target: 'ws://localhost:8080',
         ws: true,

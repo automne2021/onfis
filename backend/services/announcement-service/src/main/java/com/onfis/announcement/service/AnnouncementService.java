@@ -2,6 +2,7 @@ package com.onfis.announcement.service;
 
 import com.onfis.announcement.client.UserClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onfis.announcement.client.ChatNotificationClient;
 import com.onfis.announcement.client.PositionClient;
 import com.onfis.announcement.dto.*;
 import com.onfis.announcement.entity.*;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class AnnouncementService {
     
     private final UserClient userClient;
     private final PositionClient positionClient;
+    private final ChatNotificationClient chatNotificationClient;
     private final ObjectMapper objectMapper;
     private final SupabaseStorageService supabaseStorageService;
 
@@ -74,7 +77,6 @@ public class AnnouncementService {
         try {
             UUID authorId = ann.getAuthorId();
             
-            // 🌟 SỬA LỖI 1: Dùng containsKey thay cho computeIfAbsent để ép Java lưu cả giá trị NULL (Tránh thủng Cache)
             if (!userCache.containsKey(authorId)) {
                 try {
                     userCache.put(authorId, userClient.getUserProfile(token, companyIdStr, authorId));
@@ -123,7 +125,6 @@ public class AnnouncementService {
         return dto;
     }
 
-    // 🌟 SỬA LỖI 3: Đồng nhất UUID tenantId = UUID.fromString(companyIdStr);
     public Page<AnnouncementDTO> getAllAnnouncements(String token, String companyIdStr, UUID currentUserId, Pageable pageable) {
         if (companyIdStr == null || companyIdStr.isBlank()) return Page.empty();
         UUID tenantId = UUID.fromString(companyIdStr);
@@ -131,7 +132,7 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantId(tenantId, pageable)
+        return announcementRepository.findByTenantIdAndStatus(tenantId, "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 
@@ -140,7 +141,7 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantIdAndIsPinnedTrue(tenantId, pageable)
+        return announcementRepository.findByTenantIdAndIsPinnedTrueAndStatus(tenantId, "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 
@@ -149,7 +150,7 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantIdAndTargetDepartmentIdIsNull(tenantId, pageable)
+        return announcementRepository.findByTenantIdAndTargetDepartmentIdIsNullAndStatus(tenantId, "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
     }
 
@@ -172,7 +173,7 @@ public class AnnouncementService {
             Map<UUID, UserResponseDTO> userCache = new HashMap<>();
             Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
             
-            return announcementRepository.findByTenantIdAndTargetDepartmentId(tenantId, myDepartmentId, pageable)
+            return announcementRepository.findByTenantIdAndTargetDepartmentIdAndStatus(tenantId, myDepartmentId, "PUBLISHED", pageable)
                     .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
                     
         } catch (Exception e) {
@@ -358,31 +359,29 @@ public class AnnouncementService {
         UUID tenantId = UUID.fromString(companyIdStr);
         UUID targetDeptId = null;
 
-        if ("department".equalsIgnoreCase(request.getScope())) {
+        if ("department".equalsIgnoreCase(request.getScope()) && request.getDepartments() != null) {
             try {
-                String deptsJson = request.getDepartments();
-                if (deptsJson != null && !deptsJson.isBlank() && !deptsJson.equals("[]")) {
-                    
-                    // 🌟 KHÔNG new ObjectMapper() nữa, dùng biến được Inject ở trên
-                    List<String> deptIds = objectMapper.readValue(deptsJson, new TypeReference<List<String>>() {});
-                    if (!deptIds.isEmpty()) {
-                        targetDeptId = UUID.fromString(deptIds.get(0));
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Lỗi parse chuỗi JSON departments: {}", e.getMessage());
-            }
+                List<String> deptIds = objectMapper.readValue(request.getDepartments(), new TypeReference<List<String>>() {});
+                if (!deptIds.isEmpty()) targetDeptId = UUID.fromString(deptIds.get(0));
+            } catch (Exception e) { log.error("Lỗi parse JSON"); }
         }
 
-        Announcement announcement = Announcement.builder()
-                .tenantId(tenantId)
-                .authorId(authorId)
-                .title(request.getTitle())
-                .content(request.getContent())
-                .isPinned(request.getIsPinned() != null ? request.getIsPinned() : false)
-                .targetDepartmentId(targetDeptId)
-                .build();
-        
+        Announcement announcement;
+        if (request.getId() != null) {
+            announcement = announcementRepository.findById(request.getId())
+                    .orElse(new Announcement());
+        } else {
+            announcement = new Announcement();
+            announcement.setTenantId(tenantId);
+            announcement.setAuthorId(authorId);
+        }
+
+        announcement.setTitle(request.getTitle());
+        announcement.setContent(request.getContent());
+        announcement.setPinned(request.getIsPinned() != null ? request.getIsPinned() : false);
+        announcement.setTargetDepartmentId(targetDeptId);
+        announcement.setStatus(request.getStatus().toUpperCase());
+
         announcement = announcementRepository.save(announcement);
 
         if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
@@ -402,7 +401,25 @@ public class AnnouncementService {
             }
         }
 
-        return convertToDTO(token, companyIdStr, announcement, authorId);
+        // return convertToDTO(token, companyIdStr, announcement, authorId);
+
+        AnnouncementDTO finalDto = convertToDTO(token, companyIdStr, announcement, authorId);
+        try {
+            chatNotificationClient.sendAnnouncementNotification(token, companyIdStr, finalDto);
+        } catch (Exception e) {
+            log.warn("Không thể bắn notification cho announcement mới: {}", e.getMessage());
+        }
+        return finalDto;
+    }
+
+    public AnnouncementDetailDTO getMyLatestDraft(String token, String companyIdStr, UUID userId) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+        Optional<Announcement> draftOpt = announcementRepository.findFirstByTenantIdAndAuthorIdAndStatusOrderByCreatedAtDesc(tenantId, userId, "DRAFT");
+        
+        if (draftOpt.isPresent()) {
+            return getAnnouncementById(token, companyIdStr, draftOpt.get().getId(), userId);
+        }
+        return null; // Không có nháp
     }
 
     public Page<AnnouncementDTO> searchAnnouncements(String token, String companyIdStr, String keyword, UUID currentUserId, Pageable pageable) {
@@ -414,7 +431,216 @@ public class AnnouncementService {
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
         Map<UUID, PositionResponseDTO> posCache = new HashMap<>();
         
-        return announcementRepository.findByTenantIdAndTitleContainingIgnoreCase(tenantId, keyword.trim(), pageable)
+        return announcementRepository.findByTenantIdAndTitleContainingIgnoreCaseAndStatus(tenantId, keyword.trim(), "PUBLISHED", pageable)
                 .map(ann -> convertToDTOWithCache(token, companyIdStr, ann, currentUserId, userCache, posCache));
+    }
+
+    public AttachmentResponseDTO uploadStandaloneFile(String companyIdStr, UUID uploaderId, MultipartFile file) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+        String actualFileUrl = supabaseStorageService.uploadFile(file);
+
+        Attachment attachment = Attachment.builder()
+                .tenantId(tenantId)
+                // Không set announcementId vì file này dùng cho chat
+                .name(file.getOriginalFilename())
+                .fileType(file.getContentType())
+                .size((int) file.getSize())
+                .fileUrl(actualFileUrl)
+                .uploadedBy(uploaderId)
+                .build();
+
+        attachment = attachmentRepository.save(attachment);
+
+        return AttachmentResponseDTO.builder()
+                .id(attachment.getId())
+                .fileName(attachment.getName())
+                .url(attachment.getFileUrl())
+                .size(attachment.getSize())
+                .build();
+    }
+
+    public AttachmentResponseDTO getAttachmentById(UUID id) {
+        Attachment a = attachmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy file"));
+        return AttachmentResponseDTO.builder()
+                .id(a.getId())
+                .fileName(a.getName())
+                .url(a.getFileUrl())
+                .size(a.getSize())
+                .build();
+    }
+
+    @Transactional
+    public boolean toggleAnnouncementPin(String token, String companyIdStr, UUID announcementId, UUID userId) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+
+        // 1. Tìm bài thông báo trong database
+        Announcement announcement = announcementRepository.findById(announcementId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy bài thông báo với ID: " + announcementId));
+
+        // Thêm bước kiểm tra tenantId
+        if (!announcement.getTenantId().equals(tenantId)) {
+            throw new RuntimeException("Bài viết không thuộc quyền quản lý của công ty bạn!");
+        }
+
+        // 2. Lấy thông tin Profile và Vị trí của người dùng hiện tại để check quyền
+        UserResponseDTO myProfile = userClient.getUserProfile(token, companyIdStr, userId);
+        if (myProfile == null) {
+            throw new RuntimeException("Không tìm thấy thông tin người dùng.");
+        }
+
+        // LƯU Ý: Bạn hãy kiểm tra tên trường Role trong UserResponseDTO của bạn (ví dụ: getRole(), getRoleName()...)
+        String role = myProfile.getRole(); 
+
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            // Admin có quyền ghim/bỏ ghim mọi bài viết trong hệ thống
+        } else if ("MANAGER".equalsIgnoreCase(role)) {
+            // Manager chỉ được phép ghim bài nếu bài đó thuộc về phòng ban của họ
+            if (myProfile.getPositionId() == null) {
+                throw new RuntimeException("Manager chưa được gán vị trí công việc.");
+            }
+
+            // Gọi PositionClient để lấy DepartmentId của Manager
+            PositionResponseDTO position = positionClient.getPositionById(token, companyIdStr, myProfile.getPositionId());
+            UUID managerDeptId = position.getDepartmentId();
+
+            // Kiểm tra: Nếu bài viết là Global (targetDepartmentId == null) hoặc thuộc phòng ban khác
+            if (announcement.getTargetDepartmentId() == null || !announcement.getTargetDepartmentId().equals(managerDeptId)) {
+                throw new RuntimeException("Manager chỉ có quyền ghim các thông báo thuộc về phòng ban của mình.");
+            }
+        } else {
+            // Các vai trò khác (như Employee) không có quyền ghim
+            throw new RuntimeException("Bạn không có quyền thực hiện chức năng này.");
+        }
+
+        // 3. Đảo ngược trạng thái Pin hiện tại
+        boolean newPinStatus = !announcement.isPinned();
+        announcement.setPinned(newPinStatus);
+
+        // 4. Lưu lại cập nhật vào Database
+        announcementRepository.save(announcement);
+
+        return newPinStatus;
+    }
+
+    private void checkEditDeletePermission(String token, String companyIdStr, Announcement ann, UUID userId) {
+        if (ann.getAuthorId().equals(userId)) return; // Tác giả luôn có quyền
+
+        try {
+            UserResponseDTO user = userClient.getUserProfile(token, companyIdStr, userId);
+            if (user == null) throw new RuntimeException("User not found");
+
+            String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+            if (role.equals("ADMIN") || role.equals("SUPER_ADMIN")) return; // Admin luôn có quyền
+
+            if (role.equals("MANAGER")) {
+                PositionResponseDTO position = positionClient.getPositionById(token, companyIdStr, user.getPositionId());
+                if (position != null && position.getDepartmentId() != null 
+                    && position.getDepartmentId().equals(ann.getTargetDepartmentId())) {
+                    return; // Manager của phòng ban đó có quyền
+                }
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi check permission: {}", e.getMessage());
+        }
+
+        throw new RuntimeException("You do not have permission to modify this announcement");
+    }
+
+    @Transactional
+    public AnnouncementDTO updateAnnouncement(String token, String companyIdStr, UUID id, UUID userId, AnnouncementCreateRequestDTO request) {
+        UUID tenantId = UUID.fromString(companyIdStr);
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Announcement not found"));
+
+        // Kiểm tra quyền
+        checkEditDeletePermission(token, companyIdStr, announcement, userId);
+
+        UUID targetDeptId = null;
+        if ("department".equalsIgnoreCase(request.getScope()) && request.getDepartments() != null) {
+            try {
+                List<String> deptIds = objectMapper.readValue(request.getDepartments(), new TypeReference<List<String>>() {});
+                if (!deptIds.isEmpty()) targetDeptId = UUID.fromString(deptIds.get(0));
+            } catch (Exception e) { log.error("Lỗi parse JSON"); }
+        }
+
+        announcement.setTitle(request.getTitle());
+        announcement.setContent(request.getContent());
+        announcement.setPinned(request.getIsPinned() != null ? request.getIsPinned() : false);
+        announcement.setTargetDepartmentId(targetDeptId);
+        if (request.getStatus() != null) {
+            announcement.setStatus(request.getStatus().toUpperCase());
+        }
+
+        announcement = announcementRepository.save(announcement);
+
+        // Upload thêm file mới nếu có
+        if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
+            for (MultipartFile file : request.getAttachments()) {
+                String actualFileUrl = supabaseStorageService.uploadFile(file);
+                Attachment attachment = Attachment.builder()
+                        .tenantId(tenantId)
+                        .announcementId(announcement.getId())
+                        .name(file.getOriginalFilename())
+                        .fileType(file.getContentType())
+                        .size((int) file.getSize())
+                        .fileUrl(actualFileUrl)
+                        .uploadedBy(userId)
+                        .build();
+                attachmentRepository.save(attachment);
+            }
+        }
+
+        return convertToDTO(token, companyIdStr, announcement, announcement.getAuthorId());
+    }
+
+    @Transactional
+    public void deleteAnnouncement(String token, String companyIdStr, UUID id, UUID userId) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Announcement not found"));
+
+        checkEditDeletePermission(token, companyIdStr, announcement, userId);
+
+        UUID tenantId = UUID.fromString(companyIdStr);
+        attachmentRepository.deleteByTenantIdAndAnnouncementId(tenantId, id);
+        likeRepository.deleteByTenantIdAndAnnouncementId(tenantId, id);
+
+        List<UUID> commentIds = commentRepository.findByTenantIdAndAnnouncementIdOrderByCreatedAtAsc(tenantId, id)
+                .stream()
+                .map(AnnouncementComment::getId)
+                .toList();
+
+        if (!commentIds.isEmpty()) {
+            commentLikeRepository.deleteByTenantIdAndCommentIdIn(tenantId, commentIds);
+        }
+
+        commentRepository.deleteByTenantIdAndAnnouncementId(tenantId, id);
+        announcementRepository.delete(announcement);
+    }
+
+    @Transactional
+    public void deleteAttachment(String token, String companyIdStr, UUID attachmentId, UUID userId) {
+        Attachment attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        // 1. Nếu file gắn với bài viết, kiểm tra quyền sửa bài viết đó
+        if (attachment.getAnnouncementId() != null) {
+            Announcement announcement = announcementRepository.findById(attachment.getAnnouncementId())
+                    .orElseThrow(() -> new RuntimeException("Announcement not found"));
+            
+            // Tái sử dụng hàm check permission đã viết
+            checkEditDeletePermission(token, companyIdStr, announcement, userId);
+        } else {
+            // 2. Nếu là file standalone (ví dụ từ chat), chỉ người upload mới được xóa
+            if (!attachment.getUploadedBy().equals(userId)) {
+                throw new RuntimeException("You do not have permission to delete this file");
+            }
+        }
+
+        // 3. (Tùy chọn) Xóa file vật lý trên Supabase Storage nếu cần
+        // supabaseStorageService.deleteFile(attachment.getFileUrl());
+
+        // 4. Xóa record trong Database
+        attachmentRepository.delete(attachment);
     }
 }

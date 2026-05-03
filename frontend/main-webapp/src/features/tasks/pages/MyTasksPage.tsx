@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../hooks/useAuth";
 import { useRole } from "../../../hooks/useRole";
 import { STATUS_CONFIG } from "../workflowUtils";
 import { TaskDetailModal } from "../components";
@@ -374,7 +374,7 @@ function EmptyState({ icon, message }: { icon: string; message: string }) {
 // ── Main Page ─────────────────────────────────────────────────────────────
 
 export default function MyTasksPage() {
-  const { currentUser } = useAuth();
+  const { dbUser: currentUser } = useAuth();
   const { isManager, isAuthLoading } = useRole();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("assigned");
@@ -413,7 +413,7 @@ export default function MyTasksPage() {
   const priorityFilter = activeFilters.priority?.[0] ?? "";
 
   const loadTasks = useCallback(async () => {
-    if (isAuthLoading || !currentUser.id) return;
+    if (isAuthLoading || !currentUser?.id) return;
 
     const loadId = ++loadCounterRef.current;
 
@@ -450,7 +450,7 @@ export default function MyTasksPage() {
       if (loadId !== loadCounterRef.current) return;
       setLoading(false);
     }
-  }, [activeTab, currentUser.id, isAuthLoading, isKanbanView, page, priorityFilter, searchQuery, sortBy, sortDir, statusFilter]);
+  }, [activeTab, currentUser?.id, isAuthLoading, isKanbanView, page, priorityFilter, searchQuery, sortBy, sortDir, statusFilter]);
 
   useEffect(() => {
     void loadTasks();

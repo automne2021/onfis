@@ -25,4 +25,8 @@ public class ChatMessageResponseDTO {
   private ZonedDateTime updatedAt;
 
   private MeetingDTO meeting;
+
+  private String fileUrl;
+  private String fileName;
+  private Integer fileSize;
 }

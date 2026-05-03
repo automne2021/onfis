@@ -43,10 +43,11 @@ public class UserController {
   @GetMapping("/{id}/profile/detail")
   public ResponseEntity<UserProfileResponseDTO> getFullUserProfile(
       @RequestHeader("Authorization") String token,
-      @PathVariable("id") UUID id,
-      @RequestHeader("X-Company-ID") String tenantId 
+      @PathVariable("id") UUID targetUserId, 
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") UUID requesterId
   ) {
-    return ResponseEntity.ok(userService.getFullUserProfile(token, id, tenantId));
+    return ResponseEntity.ok(userService.getFullUserProfile(token, targetUserId, tenantId, requesterId));
   }
 
   @GetMapping
@@ -63,10 +64,13 @@ public class UserController {
       return ResponseEntity.ok(userService.searchUsers(tenantId, keyword));
   }
 
-  @GetMapping("/me") // Hoặc khớp với /projects/me tùy cấu hình của bạn
-  public ResponseEntity<UserResponseDTO> getCurrentUser(
-      @RequestHeader("X-User-ID") UUID userId // Lấy ID trực tiếp từ header mà Frontend gửi lên
+  @GetMapping("/me") 
+  public ResponseEntity<UserProfileResponseDTO> getCurrentUser(
+      @RequestHeader("Authorization") String token,
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") UUID userId 
   ) {
-      return ResponseEntity.ok(userService.getBasicUserProfile(userId));
+      // Gọi getFullUserProfile: người yêu cầu (requesterId) và người bị xem (targetUserId) đều là chính user đó (userId)
+      return ResponseEntity.ok(userService.getFullUserProfile(token, userId, tenantId, userId));
   }
 }

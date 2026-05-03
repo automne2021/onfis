@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PlusCircle, Smile, SendHorizontal } from 'lucide-react';
 import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { AttachedFilesPreview } from './AttachedFilesPreview';
+import { announcementApi } from '../../../services/announcementApi';
 
 interface ChatInputProps {
   label?: string;
@@ -15,6 +16,7 @@ export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // useRef
   const emojiPickerRef = useRef<HTMLDivElement>(null)
@@ -56,21 +58,38 @@ export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
     setAttachedFiles((prev) => prev.filter((_, index) => index !== indexToRemove))
   }
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!message.trim() && attachedFiles.length === 0) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault();
+  if (!message.trim() && attachedFiles.length === 0) return;
 
-    if (attachedFiles.length > 0) {
-      console.log("Attached files: ", attachedFiles.map(file => file.name));
-    } else {
-      // Gửi text bình thường
-      onSendMessage?.(message, 'TEXT'); 
+  if (attachedFiles.length > 0) {
+    setIsUploading(true);
+    try {
+      // Chạy vòng lặp upload từng file
+      for (const file of attachedFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadResult = await announcementApi.uploadStandaloneFile(formData);
+        
+        // Gửi tin nhắn chứa ID file qua STOMP
+        onSendMessage?.('', 'FILE', uploadResult.id); 
+      }
+    } catch (error) {
+      console.error("Lỗi khi upload file", error);
+      // Có thể thêm Toast báo lỗi ở đây
+    } finally {
+      setIsUploading(false);
     }
+  } else {
+    // Gửi text bình thường
+    onSendMessage?.(message, 'TEXT'); 
+  }
 
-    setMessage('');
-    setAttachedFiles([]);
-    setShowEmojiPicker(false)
-  };
+  setMessage('');
+  setAttachedFiles([]);
+  setShowEmojiPicker(false);
+};
 
   return (
     <form
@@ -121,28 +140,34 @@ export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={`Type a message to ${label ? `# ${label}` : '...'}`}
+          placeholder={isUploading ? "Uploading file..." : `Type a message to ${label ? `# ${label}` : '...'}`}
           className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-2 py-2 body-3-regular"
-          disabled={disabled}
+          disabled={disabled || isUploading} 
         />
 
         <button
           type="button"
           onClick={() => setShowEmojiPicker(prev => !prev)}
           className="text-neutral-400 hover:text-amber-500 transition-colors p-1 flex-shrink-0 outline-none"
+          disabled={disabled || isUploading}
         >
           <Smile size={20} strokeWidth={2} />
         </button>
 
         <button
           type="submit"
-          disabled={!message.trim()}
-          className={`p-1 ml-1 flex-shrink-0 transition-colors outline-none ${message.trim()
-            ? 'text-primary hover:text-blue-700 cursor-pointer'
-            : 'text-neutral-300 cursor-not-allowed'
-            }`}
+          disabled={(!message.trim() && attachedFiles.length === 0) || isUploading}
+          className={`p-1 ml-1 flex-shrink-0 transition-colors outline-none ${
+            message.trim() || attachedFiles.length > 0
+              ? 'text-primary hover:text-blue-700 cursor-pointer'
+              : 'text-neutral-300 cursor-not-allowed'
+          }`}
         >
-          <SendHorizontal size={20} strokeWidth={2} />
+          {isUploading ? (
+             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+             <SendHorizontal size={20} strokeWidth={2} />
+          )}
         </button>
 
       </div>

@@ -17,4 +17,6 @@ public interface AnnouncementLikeRepository extends JpaRepository<AnnouncementLi
     void deleteByTenantIdAndAnnouncementIdAndUserId(UUID tenantId, UUID announcementId, UUID userId);
     
     List<AnnouncementLike> findByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
+
+    void deleteByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
 }

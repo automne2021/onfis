@@ -5,7 +5,7 @@ import { OptionCard } from './Card/OptionCard';
 import { RichTextEditor } from '../../../components/common/RichTextEditor/RichTextEditor';
 import { AttachmentSection } from '../../../components/common/Attachment/AttachmentSection';
 import { announcementApi } from '../services/announcementApi';
-import type { DepartmentType } from '../types/AnnouncementTypes';
+import type { AnnouncementData, AttachmentResponseDTO, DepartmentType } from '../types/AnnouncementTypes';
 
 import { toast } from 'react-toastify'; 
 import { useAuth } from '../../../hooks/useAuth';
@@ -14,12 +14,13 @@ import type { FullUserProfile } from '../../../types/userType';
 
 interface AnnouncementFormProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (status: 'DRAFT' | 'PUBLISHED') => void;
+  editData?: AnnouncementData | null;
 }
 
-export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) {
+export function AnnouncementForm({ onClose, onSuccess, editData }: AnnouncementFormProps) {
 
-  const { user } = useAuth();
+  const { dbUser: user } = useAuth();
   
   // State Managements
   const [isAdmin, setIsAdmin] = useState(false);
@@ -31,10 +32,69 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
   const [messageContent, setMessageContent] = useState<string | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [existingAttachments, setExistingAttachments] = useState<AttachmentResponseDTO[]>([]);
 
   const [errors, setErrors] = useState<{ title?: string; content?: string }>({});
-  
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      const userRole = user.role?.toUpperCase() || "";
+      if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+        setIsAdmin(true);
+        setSelectedOption('company');
+      } else {
+        setIsAdmin(false);
+        setSelectedOption('department');
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const fetchMyDepartment = async () => {
+      try {
+        const res = await announcementApi.getMyDepartments();
+        if (res && res.length > 0) {
+          setMyDepartment(res[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching department:", error);
+      }
+    };
+    fetchMyDepartment();
+  }, []);
+
+  useEffect(() => {
+    if (editData) {
+      setTitle(editData.title || '');
+      setMessageContent(editData.content || '');
+      setIsPinned(editData.isPinned || false);
+      setSelectedOption(editData.targetDepartmentId ? 'department' : (editData.scope || 'company'));
+      
+      if (editData.attachments) {
+        setExistingAttachments(editData.attachments as unknown as AttachmentResponseDTO[]);
+      }
+      return; 
+    }
+
+    // Nếu không Edit thì fetch Draft
+    const fetchDraft = async () => {
+      try {
+        const draft = await announcementApi.getMyDraft();
+        if (draft && draft.id) {
+          setDraftId(draft.id);
+          setTitle(draft.title || '');
+          setMessageContent(draft.content || '');
+          setIsPinned(draft.isPinned || false);
+          setSelectedOption(draft.scope || 'company');
+        }
+      } catch (error: unknown) {
+        console.error("No draft found or error fetching draft: ", error);
+      }
+    };
+    fetchDraft();
+  }, [editData]);
 
   useEffect(() => {
     if (user?.id) {
@@ -45,52 +105,50 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
             setIsAdmin(true);
           }
         })
-        .catch((err: unknown) => { // Thay any bằng unknown
+        .catch((err: unknown) => { 
         console.error("Failed to fetch user role:", err);
       });
     }
   }, [user?.id]);
 
+
   useEffect(() => {
-    const fetchDepartments = async () => {
+    if (editData && editData.attachments) {
+      setExistingAttachments(editData.attachments);
+    }
+  }, [editData]);
+
+  const handleContentChange = useCallback((content: string) => {
+    setMessageContent(content);
+    if (errors.content) setErrors(prev => ({ ...prev, content: undefined }));
+  }, [errors.content]);
+
+  const handleDeleteExistingAttachment = async (fileId: string | number) => {
+    if (window.confirm("Are you sure you want to remove this attachment?")) {
       try {
-        const data = await announcementApi.getMyDepartments();
-        if (data && data.length > 0) {
-          setMyDepartment(data[0]); 
-        }
-      } catch (error) {
-        console.error("No department available", error);
+        await announcementApi.deleteAttachment(fileId);
+        setExistingAttachments(prev => prev.filter(file => file.id !== fileId));
+        toast.success("Attachment removed successfully!");
+      } catch (error: unknown) {
+        console.error("Failed: ", error);
+        toast.error("Failed to remove attachment.");
       }
-    };
-    fetchDepartments();
-  }, []);
+    }
+  };
 
   const handleSelectOption = (id: string) => {
     setSelectedOption(id);
   }
 
-  const handleContentChange = useCallback((html: string) => {
-    setErrors(prev => (prev.content ? { ...prev, content: undefined } : prev));
-    setMessageContent(html);
-    if (formError) setFormError(null); 
-  }, [formError]);
-
-  const submitAnnouncement = async (status: 'draft' | 'published') => {
+  const submitAnnouncement = async (status: 'DRAFT' | 'PUBLISHED') => {
     setFormError(null); 
     
     const cleanContent = messageContent ? messageContent.replace(/<\/?p[^>]*>/g, "") : '';
 
-    if (status === 'published') {
+    if (status === 'PUBLISHED') {
       const newErrors: { title?: string; content?: string } = {};
-
-      if (!title.trim()) {
-        newErrors.title = "Subject is required when publishing.";
-      }
-
-      if (!cleanContent || cleanContent.trim().length === 0) {
-        newErrors.content = "Message content is required when publishing.";
-      }
-
+      if (!title.trim()) newErrors.title = "Subject is required when publishing.";
+      if (!cleanContent || cleanContent.trim().length === 0) newErrors.content = "Message content is required when publishing.";
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
         return;
@@ -98,10 +156,16 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
     }
 
     setIsSubmitting(true);
-
     const formData = new FormData();
+
+    if (editData) {
+      formData.append('id', editData.id.toString());
+    } else if (draftId) {
+      formData.append('id', draftId); 
+    }
+
     formData.append('title', title);
-    formData.append('content', cleanContent.trim());
+    formData.append('content', messageContent?.trim() || ""); // Gửi HTML đi thay vì cleanContent (tuỳ logic DB của bạn)
     formData.append('scope', selectedOption);
     formData.append('status', status);
     
@@ -111,26 +175,24 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
       formData.append('departments', JSON.stringify([]));
     }
 
-    attachmentFile.forEach((file) => {
-      formData.append('attachments', file);
-    });
+    attachmentFile.forEach((file) => formData.append('attachments', file));
     formData.append('isPinned', isPinned.toString());
 
     try {
-      await announcementApi.createAnnouncement(formData);
-
-      toast.success(status === 'published' ? "Announcement published successfully!" : "Draft saved successfully!", {
-        position: "top-right",
-        autoClose: 1500,
-      });
-      
-      if (onSuccess) {
-        onSuccess();
+      if (editData) {
+        await announcementApi.updateAnnouncement(editData.id, formData);
+        toast.success("Announcement updated successfully!");
+      } else {
+        await announcementApi.createAnnouncement(formData);
+        toast.success(status === 'PUBLISHED' ? "Published successfully!" : "Draft saved!");
       }
+      
+      if (status === 'PUBLISHED') setDraftId(null);
+      if (onSuccess) onSuccess(status);
       onClose();
-    } catch (error) {
-      console.error("Failed to process announcement", error);
-      setFormError("An error occurred while saving the announcement. Please check your connection or try again later.");
+    } catch (error: unknown) {
+      console.error(error);
+      setFormError("An error occurred while saving. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -264,6 +326,23 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
           <p className="body-3-medium text-neutral-900">
             Attachments
           </p>
+          {existingAttachments.length > 0 && (
+            <div className="flex flex-col gap-2 mb-2">
+              <p className="text-xs text-neutral-500 italic">Existing files:</p>
+              {existingAttachments.map((file) => (
+                <div key={file.id} className="flex items-center justify-between p-2 bg-neutral-50 border rounded-lg">
+                  <span className="text-sm text-neutral-700 truncate max-w-[80%]">{file.fileName}</span>
+                  <button 
+                    type="button"
+                    onClick={() => handleDeleteExistingAttachment(file.id!)}
+                    className="text-red-500 hover:text-red-700 p-1 bg-white rounded-full shadow-sm border"
+                  >
+                    <Close fontSize="small" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <AttachmentSection
             files={attachmentFile}
             setFiles={setAttachmentFile}
@@ -276,12 +355,12 @@ export function AnnouncementForm({ onClose, onSuccess }: AnnouncementFormProps) 
       <div className='py-2 border-t border-neutral-200 flex items-center justify-end gap-2 px-4'>
         <Button
           title='Save as Draft'
-          onClick={() => submitAnnouncement('draft')}
+          onClick={() => submitAnnouncement('DRAFT')}
           style='sub'
         />
         <Button
           title='Publish Now'
-          onClick={() => submitAnnouncement('published')}
+          onClick={() => submitAnnouncement('PUBLISHED')}
           style='primary'
           loading={isSubmitting}
         />
