@@ -13,11 +13,12 @@ import { useNotifications } from '../../hooks/useNotifications';
 
 interface HeaderProps {
   companyName: string;
+  logoUrl?: string;
   messageContents?: ContentItem[] | null;
   notificationContents?: ContentItem[] | null;
 }
 
-export function Header({ companyName }: HeaderProps) {
+export function Header({ companyName, logoUrl }: HeaderProps) {
   const { dbUser: authUser } = useAuth();
   const { tenant } = useParams<{ tenant: string }>();
   const navigate = useNavigate();
@@ -121,7 +122,7 @@ export function Header({ companyName }: HeaderProps) {
     <header className="flex items-center justify-between w-full px-3 py-1.5 transition-all duration-300 ease-in-out bg-white shadow-md border-b border-neutral-200">
       {/* Left side - Logo */}
       <div className="flex items-center gap-3">
-        <img src={logo} alt="Logo" className="text-primary h-7" />
+        <img src={logoUrl || logo} alt="Logo" className="text-primary h-7" />
         <p className="text-primary text-sm font-bold leading-tight">{companyName}</p>
       </div>
 

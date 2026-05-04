@@ -4,15 +4,17 @@ import Sidebar from "../components/navigation/Sidebar";
 import { Header } from "../components/common/Header";
 import { SidebarProvider } from "../contexts/SidebarContext";
 import { ToastProvider } from "../contexts/ToastContext";
+import { TenantSettingsProvider, useTenantSettings } from "../contexts/TenantSettingsContext";
 import { ToastContainer } from 'react-toastify';
 import { supabase } from "../services/supabaseClient";
 import 'react-toastify/dist/ReactToastify.css';
 import { PresenceProvider } from "../features/chat/context/PresenceContext";
 import { getCurrentUser } from "../services/authService";
+import { useRole } from "../hooks/useRole";
 
 const mockCompanyName = "Your company";
 
-export default function AppLayout() {
+function AppLayoutInner() {
   const location = useLocation();
   const { tenant } = useParams<{ tenant: string }>();
   const [checkedAuth, setCheckedAuth] = useState(false);
@@ -95,6 +97,10 @@ export default function AppLayout() {
     };
   }, [tenant]);
 
+  const { companyName, logoUrl, features } = useTenantSettings();
+  const displayName = companyName || mockCompanyName;
+  const { isAdmin, isSuperAdmin } = useRole();
+
   if (!checkedAuth) {
     return <div className="h-screen bg-neutral-50" />;
   }
@@ -107,13 +113,18 @@ export default function AppLayout() {
     return <Navigate to={`/${tenant}/employee-setup`} replace />;
   }
 
+  // Maintenance mode: redirect non-admins to a maintenance page
+  if (features.maintenanceMode && !isAdmin && !isSuperAdmin) {
+    return <Navigate to={`/${tenant ?? ""}/maintenance`} replace />;
+  }
+
   return (
     <ToastProvider>
       <PresenceProvider>
         <SidebarProvider>
           <div className="flex flex-col h-screen overflow-hidden bg-neutral-50">
             {/* Header - Full Width */}
-            <Header companyName={mockCompanyName} />
+            <Header companyName={displayName} logoUrl={logoUrl ?? undefined} />
 
             {/* Main Area: Sidebar + Content */}
             <div className="flex flex-1 p-3 gap-3 min-h-0">
@@ -134,5 +145,13 @@ export default function AppLayout() {
         </SidebarProvider>
       </PresenceProvider>
     </ToastProvider>
+  );
+}
+
+export default function AppLayout() {
+  return (
+    <TenantSettingsProvider>
+      <AppLayoutInner />
+    </TenantSettingsProvider>
   );
 }

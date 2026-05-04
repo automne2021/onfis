@@ -6,6 +6,7 @@ import com.onfis.admin.dto.ModuleSettingsDto;
 import com.onfis.admin.dto.OperationalSettingsDto;
 import com.onfis.admin.dto.SecuritySettingsDto;
 import com.onfis.admin.dto.StorageSettingsDto;
+import com.onfis.admin.dto.TenantFeaturesDto;
 import com.onfis.admin.dto.TenantSettingsDto;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -324,6 +325,24 @@ public class SystemSettingsService {
                 parseBoolean(s.get("newUserRegistrationEnabled"), true),
                 parseBoolean(s.get("dataExportEnabled"), true),
                 s.getOrDefault("supportContactEmail", ""));
+    }
+
+    // ─── Public features (any authenticated user) ─────────────────────────
+
+    public TenantFeaturesDto getTenantFeatures(String tenantIdHeader, String userIdHeader) {
+        UUID tenantId = accessService.parseUuidHeader(tenantIdHeader, "X-Company-ID");
+        UUID userId = accessService.parseUuidHeader(userIdHeader, "X-User-ID");
+        accessService.requireUserInTenant(tenantId, userId);
+
+        Map<String, String> modules = loadSection(tenantId, "MODULES");
+        Map<String, String> ops = loadSection(tenantId, "OPERATIONS");
+
+        return new TenantFeaturesDto(
+                parseBoolean(modules.get("chatEnabled"), true),
+                parseBoolean(modules.get("announcementsEnabled"), true),
+                parseBoolean(modules.get("meetingsEnabled"), true),
+                parseBoolean(modules.get("projectManagementEnabled"), true),
+                parseBoolean(ops.get("maintenanceMode"), false));
     }
 
     // ─── Common helpers ───────────────────────────────────────────────────────

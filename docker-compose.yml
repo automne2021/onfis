@@ -5,8 +5,6 @@ services:
       context: ./backend
       dockerfile: api-gateway/Dockerfile
     container_name: onfis-api-gateway
-    ports:
-      - "8080:8080"
     env_file:
       - .env
     environment:
@@ -118,6 +116,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - onfis-network
     depends_on:
@@ -132,8 +133,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: onfis-redis
-    ports:
-      - "6379:6379"
     networks:
       - onfis-network
     command: redis-server --appendonly yes
