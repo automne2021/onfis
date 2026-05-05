@@ -37,12 +37,11 @@ export function CallRoomModal({ token, roomName, isVideo, avatarUrl, callerName,
         serverUrl={liveKitUrl}
         data-lk-theme="default"
         onDisconnected={onDisconnect}
-        className="flex-1 w-full h-full pt-16 flex"
+        className="flex-1 w-full h-full pt-16 flex justify-center"
       >
         {isVideo ? (
           <VideoConference />
         ) : (
-          // BỌC TRUNG TÂM GIAO TIẾP VÀO ĐÂY
           <LayoutContextProvider>
             <AudioCallLayout avatarUrl={avatarUrl} callerName={callerName} />
           </LayoutContextProvider>
@@ -81,7 +80,6 @@ function AudioCallLayout({ avatarUrl, callerName }: { avatarUrl?: string, caller
         </div>
       </div>
 
-      {/* CỘT PHẢI: Khung Chat (Chỉ hiện ra khi showChat = true) */}
       {showChat && (
         <div className="w-80 bg-[#191919] border-l border-neutral-800 flex flex-col animate-in slide-in-from-right-10 duration-200">
           <Chat />

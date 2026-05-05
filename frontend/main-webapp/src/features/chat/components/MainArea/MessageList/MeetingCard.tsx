@@ -3,15 +3,18 @@ import { useState, useEffect } from 'react';
 import type { ChatMessage } from "../../../types/chatTypes";
 import { Button } from '../../../../../components/common/Buttons/Button';
 import { chatApi } from '../../../services/chatApi';
+import { useCall } from '../../../context/CallContext';
 
 interface MeetingCardProps {
   msg: ChatMessage;
-  onJoin: (token: string, roomName: string) => void;
 }
 
 type MeetingInfo = NonNullable<ChatMessage['meeting']>;
 
-export function MeetingCard({ msg, onJoin } : MeetingCardProps) {
+export function MeetingCard({ msg } : MeetingCardProps) {
+
+  const { startLiveKit } = useCall();
+
   const [meeting, setMeeting] = useState<MeetingInfo | null>(msg.meeting || null);
   const [isLoading, setIsLoading] = useState(!msg.meeting); 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -28,10 +31,8 @@ export function MeetingCard({ msg, onJoin } : MeetingCardProps) {
           if (isMounted) setMeeting(data);
         })
         .catch((_err) => {
-          // XỬ LÝ LỖI: Khi cuộc gọi bị XÓA khỏi Database (404)
           console.warn("Meeting not found in DB. Marking as ENDED.");
           if (isMounted) {
-            // Loại bỏ 'any', ép kiểu an toàn về MeetingInfo
             setMeeting({
               id: msg.content,
               hostId: msg.sender?.id || '',
@@ -78,12 +79,26 @@ export function MeetingCard({ msg, onJoin } : MeetingCardProps) {
   
   const handleJoinClick = async () => {
     if (isEnded) return;
+    
     setIsLoading(true);
     setToastMessage(null);
     try {
+      // Gọi API lấy token
       const data = await chatApi.joinMeeting(meeting.id);
-      onJoin(data.token, data.roomName);
-    } catch (_error) { 
+      
+      // 4. Áp dụng logic Y HỆT như acceptCall trong CallContext
+      startLiveKit(
+        data.token, 
+        data.roomName, 
+        meeting.id, 
+        false, // isHost = false vì mình là người bấm join
+        meeting.type === 'VIDEO', 
+        msg.sender?.avatarUrl, 
+        msg.sender?.name
+      );
+      
+    } catch (error) { 
+      console.error("Lỗi Join Meeting:", error);
       setToastMessage("Cannot join. The meeting might have ended or you lack permission.");
     } finally {
       setIsLoading(false);
