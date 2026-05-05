@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useTenantSettings } from "../../../contexts/TenantSettingsContext";
 
 interface WelcomeStepProps {
   onNext: () => void;
 }
 
 export default function WelcomeStep({ onNext }: WelcomeStepProps) {
+  const { logoUrl, companyName } = useTenantSettings();
   const [line1, setLine1] = useState("");
   const [line2, setLine2] = useState("");
   const [showButton, setShowButton] = useState(false);
@@ -127,14 +129,22 @@ export default function WelcomeStep({ onNext }: WelcomeStepProps) {
         {/* Logo */}
         <div className="relative z-10 flex flex-col items-center gap-6">
           <div className="w-32 h-32 rounded-3xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-2xl">
-            <img
-              src="/src/assets/logo-without-text.svg"
-              alt="ONFIS"
-              className="w-20 h-20 drop-shadow-lg"
-            />
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={companyName || 'Company Logo'}
+                className="w-24 h-24 rounded-2xl object-contain drop-shadow-lg"
+              />
+            ) : (
+              <img
+                src="/src/assets/logowhite.svg"
+                alt="ONFIS"
+                className="w-20 h-20 drop-shadow-lg"
+              />
+            )}
           </div>
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white tracking-wide">ONFIS</h2>
+            <h2 className="text-3xl font-bold text-white tracking-wide">{companyName || 'ONFIS'}</h2>
             <p className="text-sm text-blue-300/60 tracking-widest uppercase mt-1">Enterprise Platform</p>
           </div>
         </div>

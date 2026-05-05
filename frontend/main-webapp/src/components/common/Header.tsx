@@ -122,7 +122,7 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
     <header className="flex items-center justify-between w-full px-3 py-1.5 transition-all duration-300 ease-in-out bg-white shadow-md border-b border-neutral-200">
       {/* Left side - Logo */}
       <div className="flex items-center gap-3">
-        <img src={logoUrl || logo} alt="Logo" className="text-primary h-7" />
+        <img src={logoUrl || logo} alt="Logo" className="text-primary h-10" />
         <p className="text-primary text-sm font-bold leading-tight">{companyName}</p>
       </div>
 

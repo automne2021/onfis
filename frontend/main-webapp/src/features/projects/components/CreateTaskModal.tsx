@@ -3,6 +3,7 @@ import Modal from "../../../components/common/Modal";
 import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { ErrorIcon, ExpandMoreIcon, DescriptionIcon, ChecklistIcon, PersonAddIcon, DeleteIcon, AddIcon } from "../../../components/common/Icons";
+import FileAttachmentSection, { type AttachmentFile } from "../../../components/common/FileAttachmentSection";
 
 interface SubTask {
   id: string;
@@ -38,6 +39,7 @@ export interface TaskFormData {
   tags: string[];
   description: string;
   subtasks: SubTask[];
+  pendingFiles: File[];
 }
 
 const PRIORITIES = [
@@ -68,6 +70,7 @@ export default function CreateTaskModal({
     tags: [],
     description: "",
     subtasks: [{ id: "1", name: "", completed: false }],
+    pendingFiles: [],
   });
   const [showReporterDropdown, setShowReporterDropdown] = useState(false);
   const selectedReporter = users.find((a) => a.id === formData.reporterId);
@@ -75,6 +78,7 @@ export default function CreateTaskModal({
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [openSubtaskAssigneeId, setOpenSubtaskAssigneeId] = useState<string | null>(null);
+  const [pendingAttachments, setPendingAttachments] = useState<AttachmentFile[]>([]);
 
   const selectedAssignee = users.find((a) => a.id === formData.assigneeId);
   const selectedPriority = PRIORITIES.find((p) => p.value === formData.priority);
@@ -96,8 +100,10 @@ export default function CreateTaskModal({
     if (!isOpen) {
       return;
     }
+    setPendingAttachments([]);
     setFormData((prev) => ({
       ...prev,
+      pendingFiles: [],
       projectId: defaultProjectId || projects[0]?.id || "",
     }));
   }, [defaultProjectId, isOpen, projects]);
@@ -205,12 +211,32 @@ export default function CreateTaskModal({
       tags: [],
       description: "",
       subtasks: [{ id: "1", name: "", completed: false }],
+    pendingFiles: [],
     });
     setErrors({});
     onClose();
   };
 
   const activeSubtasks = formData.subtasks.filter((s) => s.name.trim());
+
+  const handleAddPendingFiles = (files: File[]) => {
+    setFormData((prev) => ({ ...prev, pendingFiles: [...prev.pendingFiles, ...files] }));
+    setPendingAttachments((prev) => [
+      ...prev,
+      ...files.map((f) => ({ id: `local-${Date.now()}-${f.name}`, fileName: f.name, fileUrl: "", size: f.size, fileType: f.type })),
+    ]);
+  };
+
+  const handleRemovePendingFile = (id: string) => {
+    const idx = pendingAttachments.findIndex((a) => a.id === id);
+    if (idx === -1) return;
+    setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
+    setFormData((prev) => {
+      const files = [...prev.pendingFiles];
+      files.splice(idx, 1);
+      return { ...prev, pendingFiles: files };
+    });
+  };
 
   return (
     <Modal
@@ -672,6 +698,16 @@ export default function CreateTaskModal({
             Add Sub-task
           </button>
         </div>
+
+        {/* Attachments */}
+        <FileAttachmentSection
+          title="Attachments"
+          attachments={pendingAttachments}
+          onUpload={handleAddPendingFiles}
+          onDelete={handleRemovePendingFile}
+          canUpload
+          canDelete
+        />
       </div>
     </Modal>
   );

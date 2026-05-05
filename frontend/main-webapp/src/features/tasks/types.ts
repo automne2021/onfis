@@ -19,6 +19,7 @@ export interface Assignee {
 export interface Task {
   id: string;
   key?: string;
+  projectId?: string;
   projectTitle?: string;
   projectSlug?: string;
   stageId?: string | null;

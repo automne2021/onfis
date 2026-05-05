@@ -4,7 +4,6 @@ import KPICards from "../components/KPICards";
 import Icon from "../../../components/common/Icon";
 import DepartmentWorkload from "../components/DepartmentWorkload";
 import CriticalAlerts from "../components/CriticalAlerts";
-import QuickActions from "../components/QuickActions";
 import { Button } from "../../../components/common/Buttons/Button";
 import {
   getCachedLeaderDashboardData,
@@ -135,8 +134,6 @@ export default function LeaderDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <QuickActions tenant={tenant || ""} />
     </div>
   );
 }

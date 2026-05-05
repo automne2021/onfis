@@ -126,7 +126,7 @@ export default function SignInPage() {
       >
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5 p-8 pb-5">
           {/* Logo */}
-          <img src={tenantLogoUrl || logo} alt="Logo" className="h-9" />
+          <img src={tenantLogoUrl || logo} alt="Logo" className="h-10" />
 
           {/* Welcome Text */}
           <div className="text-center">

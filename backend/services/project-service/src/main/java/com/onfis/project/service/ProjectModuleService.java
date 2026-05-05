@@ -77,6 +77,9 @@ import com.onfis.project.repository.ProjectCustomRoleRepository;
 import com.onfis.project.repository.ProjectMemberRoleRepository;
 import com.onfis.project.repository.TaskActivityRepository;
 import com.onfis.project.repository.TaskAssigneeRepository;
+import com.onfis.project.dto.AttachmentResponse;
+import com.onfis.project.entity.AttachmentEntity;
+import com.onfis.project.repository.AttachmentRepository;
 import com.onfis.project.repository.TaskCommentRepository;
 import com.onfis.project.repository.TaskRepository;
 import com.onfis.project.repository.TaskReviewRepository;
@@ -145,6 +148,7 @@ public class ProjectModuleService {
     private final TaskTagLinkRepository taskTagLinkRepository;
     private final ProjectCustomRoleRepository projectCustomRoleRepository;
     private final ProjectMemberRoleRepository projectMemberRoleRepository;
+    private final AttachmentRepository attachmentRepository;
 
     public ProjectModuleService(
             TenantContext tenantContext,
@@ -165,7 +169,8 @@ public class ProjectModuleService {
             ProjectTagLinkRepository projectTagLinkRepository,
             TaskTagLinkRepository taskTagLinkRepository,
             ProjectCustomRoleRepository projectCustomRoleRepository,
-            ProjectMemberRoleRepository projectMemberRoleRepository) {
+            ProjectMemberRoleRepository projectMemberRoleRepository,
+            AttachmentRepository attachmentRepository) {
         this.tenantContext = tenantContext;
         this.appUserRepository = appUserRepository;
         this.companyTagRepository = companyTagRepository;
@@ -185,6 +190,7 @@ public class ProjectModuleService {
         this.taskTagLinkRepository = taskTagLinkRepository;
         this.projectCustomRoleRepository = projectCustomRoleRepository;
         this.projectMemberRoleRepository = projectMemberRoleRepository;
+        this.attachmentRepository = attachmentRepository;
     }
 
     // ── Current user ──────────────────────────────────────────────────────────
@@ -1812,6 +1818,35 @@ public class ProjectModuleService {
                 .map(dep -> dep.getId().getBlockedByTaskId())
                 .toList();
 
+        // Fetch task attachments (reference files and submission files)
+        List<AttachmentEntity> attachmentEntities =
+                attachmentRepository.findByTenantIdAndTaskIdAndType(tenantId, task.getId(), "TASK_REFERENCE");
+        List<AttachmentEntity> submissionEntities =
+                attachmentRepository.findByTenantIdAndTaskIdAndType(tenantId, task.getId(), "TASK_SUBMISSION");
+
+        Set<UUID> attachmentUploaderIds = new HashSet<>();
+        attachmentEntities.stream().filter(a -> a.getUploadedBy() != null).map(AttachmentEntity::getUploadedBy).forEach(attachmentUploaderIds::add);
+        submissionEntities.stream().filter(a -> a.getUploadedBy() != null).map(AttachmentEntity::getUploadedBy).forEach(attachmentUploaderIds::add);
+        Map<UUID, AppUserEntity> attachmentUploadersById = appUserRepository.findAllById(attachmentUploaderIds)
+                .stream().filter(u -> tenantId.equals(u.getTenantId()))
+                .collect(Collectors.toMap(AppUserEntity::getId, u -> u));
+
+        List<AttachmentResponse> attachments = attachmentEntities.stream()
+                .map(a -> new AttachmentResponse(a.getId(), a.getName(), a.getFileUrl(), a.getFileType(), a.getSize(),
+                        a.getUploadedBy(),
+                        a.getUploadedBy() != null && attachmentUploadersById.containsKey(a.getUploadedBy())
+                                ? fullName(attachmentUploadersById.get(a.getUploadedBy())) : null,
+                        a.getCreatedAt()))
+                .toList();
+
+        List<AttachmentResponse> submissions = submissionEntities.stream()
+                .map(a -> new AttachmentResponse(a.getId(), a.getName(), a.getFileUrl(), a.getFileType(), a.getSize(),
+                        a.getUploadedBy(),
+                        a.getUploadedBy() != null && attachmentUploadersById.containsKey(a.getUploadedBy())
+                                ? fullName(attachmentUploadersById.get(a.getUploadedBy())) : null,
+                        a.getCreatedAt()))
+                .toList();
+
         return new TaskDetailResponse(
                 task.getId(),
                 task.getProjectId(),
@@ -1844,7 +1879,9 @@ public class ProjectModuleService {
                 canReview,
                 subtasks,
                 comments,
-                activities);
+                activities,
+                attachments,
+                submissions);
     }
 
     private void applyProjectUpsert(ProjectEntity project, ProjectUpsertRequest request) {

@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { Client } from '@stomp/stompjs'; 
+import { buildWebSocketUrl } from '../../../utils/websocket';
 import { chatApi } from '../services/chatApi';
 import type { ChatChannel } from '../types/chatTypes';
 import { useAuth } from '../../../hooks/useAuth';
 
 export function useConversations() {
+  const { tenant } = useParams<{ tenant: string }>();
   const [channels, setChannels] = useState<ChatChannel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth(); 
@@ -49,7 +52,7 @@ export function useConversations() {
     }
 
     const client = new Client({
-      brokerURL: 'ws://localhost:8080/onfis/ws/websocket', 
+      brokerURL: buildWebSocketUrl(tenant ?? 'onfis'), 
       connectHeaders: {
         'Authorization': `Bearer ${token}`,
         'X-User-ID': user.id,
