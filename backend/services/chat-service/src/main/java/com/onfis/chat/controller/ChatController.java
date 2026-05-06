@@ -84,19 +84,26 @@ public class ChatController {
         if (tempTenantId == null) {
             log.error("Lỗi: Không tìm thấy Tenant ID hợp lệ!");
             return ResponseEntity.ok(conversations.stream()
-                .map(conv -> mapToResponseDTO(conv, userId, token, companyIdStr))
+                .map(conv -> mapToResponseDTO(conv, userId, token, companyIdStr)) // Dùng hàm Overload
                 .collect(Collectors.toList()));
         }
 
-        // FIX LỖI TẠI ĐÂY: Gán vào biến final để dùng trong Lambda
         final UUID finalTenantId = tempTenantId;
         final String userAuthToken = token;
         final String finalCompanyIdStr = companyIdStr;
+
+        int companyUserCount = 0;
+        try {
+            companyUserCount = userClient.countUsersInCompany(token, finalCompanyIdStr);
+        } catch (Exception e) {
+            log.warn("Không lấy được tổng số user từ User Service: {}", e.getMessage());
+        }
+        final int finalTotalUsers = companyUserCount;
         
         List<Conversation> publicGroups = conversationRepository.findByTenantIdAndType(finalTenantId, "public_group");
         for (Conversation pubGroup : publicGroups) {
             if (conversations.stream().noneMatch(c -> c.getId().equals(pubGroup.getId()))) {
-                conversations.add(pubGroup); // Add vào Sidebar
+                conversations.add(pubGroup);
             }
         }
 
@@ -105,9 +112,7 @@ public class ChatController {
                 .anyMatch(c -> "self".equalsIgnoreCase(c.getType()));
 
         if (!hasSelfChat) {
-            String defaultName = userInfo != null 
-                ? (userInfo.firstName() + " " + userInfo.lastName()).trim() + " (You)" 
-                : "Saved Messages";
+            String defaultName = formatFullName(userInfo, "Saved Messages") + " (You)";
 
             Conversation selfChat = conversationRepository.save(Conversation.builder()
                     .tenantId(finalTenantId)
@@ -134,7 +139,6 @@ public class ChatController {
                     .build()));
 
         if (conversations.stream().noneMatch(c -> c.getId().equals(randomChannel.getId()))) {
-            // 1. Lưu User vào phòng
             memberRepository.save(ConversationMember.builder()
                     .conversationId(randomChannel.getId())
                     .userId(userId)
@@ -144,8 +148,8 @@ public class ChatController {
                     .build());
             conversations.add(randomChannel);
 
-            // SỬA 2: Bắn tin nhắn hệ thống (SYSTEM MESSAGE)
-            String userName = userInfo != null ? (userInfo.firstName() + " " + userInfo.lastName()).trim() : "A new user";
+            // Fix lỗi "null null joined the channel"
+            String userName = formatFullName(userInfo, "A new user");
             messageRepository.save(ChatMessage.builder()
                     .conversationId(randomChannel.getId())
                     .userId(userId) 
@@ -156,92 +160,10 @@ public class ChatController {
         }
 
         List<ConversationResponseDTO> responseList = conversations.stream()
-            .map(conv -> mapToResponseDTO(conv, userId, userAuthToken, finalCompanyIdStr))
+            .map(conv -> mapToResponseDTO(conv, userId, userAuthToken, finalCompanyIdStr, finalTotalUsers))
             .collect(Collectors.toList());
 
         return ResponseEntity.ok(responseList);
-    }
-
-    private ConversationResponseDTO mapToResponseDTO(Conversation conv, UUID userId, String token, String companyIdStr) {
-        String name = conv.getName();
-        String avatarUrl = null;
-        String type = conv.getType() != null ? conv.getType().toLowerCase() : "group";
-        
-        int membersCount = 0; 
-        
-        // 1. KHAI BÁO BIẾN Ở NGOÀI CÙNG
-        UUID targetUserIdForStatus = null; 
-        
-        if ("direct".equalsIgnoreCase(type)) {
-            List<ConversationMember> members = memberRepository.findByConversationId(conv.getId());
-            membersCount = members.size(); 
-            
-            UUID otherUserId = members.stream()
-                    .map(ConversationMember::getUserId)
-                    .filter(id -> !id.equals(userId))
-                    .findFirst()
-                    .orElse(null);
-
-            // Gán giá trị để lát lấy status
-            targetUserIdForStatus = otherUserId; 
-
-            if (otherUserId != null) {
-                try {
-                    UserResponseDTO otherUser = userClient.getUserProfile(token, companyIdStr, otherUserId);
-                    if (otherUser != null) {
-                        String fName = otherUser.firstName() != null ? otherUser.firstName() : "";
-                        String lName = otherUser.lastName() != null ? otherUser.lastName() : "";
-                        name = (fName + " " + lName).trim();
-                        avatarUrl = otherUser.avatarUrl();
-                    }
-                } catch (Exception ignored) {}
-            }
-        } else if ("self".equalsIgnoreCase(type)) {
-            membersCount = 1; 
-            // Nếu là phòng chat với chính mình, lấy status của chính mình
-            targetUserIdForStatus = userId; 
-
-            try {
-                UserResponseDTO myInfo = userClient.getUserProfile(token, companyIdStr, userId);
-                if (myInfo != null) {
-                    avatarUrl = myInfo.avatarUrl(); 
-                    String fName = myInfo.firstName() != null ? myInfo.firstName() : "";
-                    String lName = myInfo.lastName() != null ? myInfo.lastName() : "";
-                    name = (fName + " " + lName).trim() + " (You)";
-                }
-            } catch (Exception ignored) {}
-        } else {
-            membersCount = memberRepository.findByConversationId(conv.getId()).size();
-        }
-
-        String currentStatus = null;
-        if (targetUserIdForStatus != null) {
-            currentStatus = "offline";
-            
-            if (presenceService.isOnline(targetUserIdForStatus.toString())) {
-                currentStatus = "online";
-            } else {
-                try {
-                    UserResponseDTO memberInfo = userClient.getUserProfile(token, companyIdStr, targetUserIdForStatus);
-                    if (memberInfo != null && memberInfo.status() != null) {
-                        currentStatus = memberInfo.status(); 
-                    }
-                } catch (Exception e) {
-                    log.warn("Không lấy được trạng thái cho user {}", targetUserIdForStatus);
-                }
-            }
-        }
-
-        return ConversationResponseDTO.builder()
-                .id(conv.getId())
-                .name(name)
-                .type(type)
-                .avatarUrl(avatarUrl)
-                .status(currentStatus) 
-                .membersCount(membersCount)
-                .targetUserId(targetUserIdForStatus)
-                .isPinned(conv.isPinned())
-                .build();
     }
 
     @GetMapping("/conversations/{conversationId}/messages")
@@ -289,17 +211,9 @@ public class ChatController {
             }
             
             UserResponseDTO sender = userCache.get(senderId);
-            String fullName = "Unknown User";
-            String avatar = null;
-            String status = "offline";
-            
-            if (sender != null) {
-                String fName = sender.firstName() != null ? sender.firstName() : "";
-                String lName = sender.lastName() != null ? sender.lastName() : "";
-                fullName = (fName + " " + lName).trim();
-                avatar = sender.avatarUrl();
-                status = sender.status() != null ? sender.status() : "offline"; 
-            }
+            String fullName = formatFullName(sender, "Unknown User");
+            String avatar = sender != null ? sender.avatarUrl() : null;
+            String status = (sender != null && sender.status() != null) ? sender.status() : "offline"; 
 
             ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder()
                 .id(msg.getId())
@@ -412,7 +326,6 @@ public class ChatController {
 
         if (request.memberIds() != null && !request.memberIds().isEmpty()) {
             request.memberIds().forEach(memberId -> {
-                // Check tránh add lại chính mình
                 if (!memberId.equals(creatorId)) {
                     memberRepository.save(ConversationMember.builder()
                             .conversationId(conversation.getId())
@@ -430,7 +343,7 @@ public class ChatController {
             creatorInfo = userClient.getUserProfile(token, companyIdStr, creatorId);
         } catch (Exception ignored) {}
         
-        String creatorName = creatorInfo != null ? (creatorInfo.firstName() + " " + creatorInfo.lastName()).trim() : "A user";
+        String creatorName = formatFullName(creatorInfo, "A user");
         
         String systemMessage = creatorName + " created the channel.";
         if ("direct".equalsIgnoreCase(request.type())) {
@@ -442,24 +355,21 @@ public class ChatController {
         messageRepository.save(ChatMessage.builder()
                 .conversationId(conversation.getId())
                 .userId(creatorId) 
-                .content(systemMessage) // Thay vì hardcode, ta dùng biến vừa tạo
+                .content(systemMessage)
                 .type("system") 
                 .isEdited(false)
                 .build());
-
-        // return ResponseEntity.ok(mapToResponseDTO(conversation, creatorId, token, companyIdStr));
 
         ConversationResponseDTO responseDto = mapToResponseDTO(conversation, creatorId, token, companyIdStr);
 
         try {
             java.util.Set<UUID> notifyUserIds = new java.util.HashSet<>();
-            notifyUserIds.add(creatorId); // Bắn cho người tạo
+            notifyUserIds.add(creatorId);
             if (request.memberIds() != null) {
-                notifyUserIds.addAll(request.memberIds()); // Bắn cho những người được mời
+                notifyUserIds.addAll(request.memberIds());
             }
 
             for (UUID uid : notifyUserIds) {
-                // Phát sóng đến kênh Sidebar cá nhân của từng user
                 messagingTemplate.convertAndSend("/topic/sidebar." + uid, responseDto);
             }
         } catch (Exception e) {
@@ -477,7 +387,6 @@ public class ChatController {
             @RequestHeader("Authorization") String token,
             @RequestHeader(value = "X-Company-ID", required = false) String companyIdStr) {
 
-        // 1. Kiểm tra quyền
         if (!memberRepository.existsByConversationIdAndUserId(conversationId, currentUserId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền mời người khác");
         }
@@ -489,12 +398,10 @@ public class ChatController {
             return ResponseEntity.badRequest().body("ID người dùng không hợp lệ");
         }
 
-        // 2. Kiểm tra trùng lặp
         if (memberRepository.existsByConversationIdAndUserId(conversationId, newMemberId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Người này đã có trong nhóm rồi!");
         }
 
-        // 3. Thêm vào database
         memberRepository.save(ConversationMember.builder()
                 .conversationId(conversationId)
                 .userId(newMemberId)
@@ -503,15 +410,13 @@ public class ChatController {
                 .readAt(ZonedDateTime.now())
                 .build());
 
-        // 4. Bắn tin nhắn hệ thống (System Message) qua WebSocket
         try {
             UserResponseDTO inviterInfo = userClient.getUserProfile(token, companyIdStr, currentUserId);
             UserResponseDTO inviteeInfo = userClient.getUserProfile(token, companyIdStr, newMemberId);
             
-            String inviterName = inviterInfo != null ? (inviterInfo.firstName() + " " + inviterInfo.lastName()).trim() : "Someone";
-            String inviteeName = inviteeInfo != null ? (inviteeInfo.firstName() + " " + inviteeInfo.lastName()).trim() : "a user";
+            String inviterName = formatFullName(inviterInfo, "Someone");
+            String inviteeName = formatFullName(inviteeInfo, "a user");
 
-            // Lưu vào DB
             ChatMessage savedSysMsg = messageRepository.save(ChatMessage.builder()
                     .conversationId(conversationId)
                     .userId(currentUserId)
@@ -520,7 +425,6 @@ public class ChatController {
                     .isEdited(false)
                     .build());
 
-            // Tạo DTO
             ChatMessageResponseDTO sysMsgDto = ChatMessageResponseDTO.builder()
                     .id(savedSysMsg.getId())
                     .conversationId(savedSysMsg.getConversationId())
@@ -531,7 +435,6 @@ public class ChatController {
                     .createdAt(savedSysMsg.getCreatedAt())
                     .build();
 
-            // Phát sóng (Broadcast)
             messagingTemplate.convertAndSend("/topic/room." + conversationId, sysMsgDto);
 
         } catch (Exception e) {
@@ -592,9 +495,6 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
-    // ==========================================
-    // LẤY DANH SÁCH THÀNH VIÊN TRONG NHÓM
-    // ==========================================
     @GetMapping("/conversations/{conversationId}/members")
     public ResponseEntity<?> getConversationMembers(
             @PathVariable UUID conversationId,
@@ -614,9 +514,6 @@ public class ChatController {
         return ResponseEntity.ok(memberProfiles);
     }
 
-    // ==========================================
-    // Đổi tên và Đổi loại nhóm
-    // ==========================================
     @PutMapping("/conversations/{conversationId}/type")
     public ResponseEntity<?> updateConversation(
             @PathVariable UUID conversationId,
@@ -650,7 +547,7 @@ public class ChatController {
         Conversation conv = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng chat"));
         
-        conv.setPinned(!conv.isPinned()); // Đảo ngược trạng thái
+        conv.setPinned(!conv.isPinned()); 
         conversationRepository.save(conv);
         return ResponseEntity.ok().build();
     }
@@ -668,4 +565,98 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
+    // ==========================================
+    // HELPER: ĐẢM BẢO KHÔNG BỊ LỖI "NULL NULL"
+    // ==========================================
+    private String formatFullName(UserResponseDTO user, String defaultName) {
+        if (user == null) return defaultName;
+        String f = user.firstName() != null ? user.firstName() : "";
+        String l = user.lastName() != null ? user.lastName() : "";
+        String full = (f + " " + l).trim();
+        return (full.isEmpty() || full.equals("null null")) ? defaultName : full;
+    }
+
+    // ==========================================
+    // HELPER: OVERLOAD FIX LỖI THIẾU THAM SỐ
+    // ==========================================
+    private ConversationResponseDTO mapToResponseDTO(Conversation conv, UUID userId, String token, String companyIdStr) {
+        // Truyền 0 để fallback dùng logic cũ đếm member trong DB
+        return mapToResponseDTO(conv, userId, token, companyIdStr, 0); 
+    }
+
+    private ConversationResponseDTO mapToResponseDTO(Conversation conv, UUID userId, String token, String companyIdStr, int totalUsers) {
+        String name = conv.getName();
+        String avatarUrl = null;
+        String type = conv.getType() != null ? conv.getType().toLowerCase() : "group";
+        
+        int membersCount = 0; 
+        UUID targetUserIdForStatus = null; 
+        
+        if ("direct".equalsIgnoreCase(type)) {
+            List<ConversationMember> members = memberRepository.findByConversationId(conv.getId());
+            membersCount = members.size(); 
+            
+            UUID otherUserId = members.stream()
+                    .map(ConversationMember::getUserId)
+                    .filter(id -> !id.equals(userId))
+                    .findFirst()
+                    .orElse(null);
+
+            targetUserIdForStatus = otherUserId; 
+
+            if (otherUserId != null) {
+                try {
+                    UserResponseDTO otherUser = userClient.getUserProfile(token, companyIdStr, otherUserId);
+                    if (otherUser != null) {
+                        name = formatFullName(otherUser, name);
+                        avatarUrl = otherUser.avatarUrl();
+                    }
+                } catch (Exception ignored) {}
+            }
+        } else if ("self".equalsIgnoreCase(type)) {
+            membersCount = 1; 
+            targetUserIdForStatus = userId; 
+
+            try {
+                UserResponseDTO myInfo = userClient.getUserProfile(token, companyIdStr, userId);
+                if (myInfo != null) {
+                    avatarUrl = myInfo.avatarUrl(); 
+                    name = formatFullName(myInfo, "Saved Messages") + " (You)";
+                }
+            } catch (Exception ignored) {}
+        } else if ("public_group".equalsIgnoreCase(type)) {
+            membersCount = totalUsers > 0 ? totalUsers : memberRepository.findByConversationId(conv.getId()).size();
+        } else {
+            membersCount = memberRepository.findByConversationId(conv.getId()).size();
+        }
+
+        String currentStatus = null;
+        if (targetUserIdForStatus != null) {
+            currentStatus = "offline";
+            
+            if (presenceService.isOnline(targetUserIdForStatus.toString())) {
+                currentStatus = "online";
+            } else {
+                try {
+                    UserResponseDTO memberInfo = userClient.getUserProfile(token, companyIdStr, targetUserIdForStatus);
+                    if (memberInfo != null && memberInfo.status() != null) {
+                        currentStatus = memberInfo.status(); 
+                    }
+                } catch (Exception e) {
+                    log.warn("Không lấy được trạng thái cho user {}", targetUserIdForStatus);
+                }
+            }
+        }
+
+        return ConversationResponseDTO.builder()
+                .id(conv.getId())
+                .name(name)
+                .type(type)
+                .avatarUrl(avatarUrl)
+                .status(currentStatus) 
+                .membersCount(membersCount)
+                .targetUserId(targetUserIdForStatus)
+                .isPinned(conv.isPinned())
+                .build();
+    }
 }

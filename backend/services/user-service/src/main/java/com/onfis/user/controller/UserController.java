@@ -74,6 +74,12 @@ public class UserController {
       return ResponseEntity.ok(userService.getFullUserProfile(token, userId, tenantId, userId));
   }
 
+  @GetMapping("/tenant/count")
+  public ResponseEntity<Integer> countUsersInCompany(
+          @RequestHeader("X-Company-ID") String tenantId) {
+      return ResponseEntity.ok(userService.countUsersByTenant(tenantId));
+  }
+
   // ─── Onboarding endpoints ──────────────────────────────────────────────────
 
   @PutMapping("/me/profile")

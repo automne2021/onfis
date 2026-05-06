@@ -15,4 +15,10 @@ public interface UserClient {
       @RequestHeader("X-Company-ID") String companyId, 
       @PathVariable("id") UUID id
   );
+
+  @GetMapping("/users/tenant/count")
+  Integer countUsersInCompany(
+      @RequestHeader("Authorization") String token,
+      @RequestHeader("X-Company-ID") String companyId
+  );
 }
