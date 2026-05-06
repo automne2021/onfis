@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
+import { buildWebSocketUrl } from '../../../utils/websocket';
 
 type StatusMap = Record<string, "online" | "offline" | "busy">;
 
@@ -41,7 +42,7 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
 
     // 2. Khởi tạo một kết nối STOMP toàn cục chỉ dành cho Presence
     const client = new Client({
-      brokerURL: 'ws://localhost:8080/onfis/ws/websocket', 
+      brokerURL: buildWebSocketUrl('onfis'),
       connectHeaders: { 
         'Authorization': `Bearer ${token}`,
         'X-User-ID': userId, 

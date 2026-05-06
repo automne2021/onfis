@@ -130,7 +130,7 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
     let isMounted = true; 
 
     const client = new Client({
-      brokerURL: `${import.meta.env.VITE_WEBSOCKET_BASE_URL}/onfis/ws/websocket`, 
+      brokerURL: buildWebSocketUrl(tenant ?? 'onfis'),
       connectHeaders: { 
         'Authorization': `Bearer ${token}`,
         'X-User-ID': userId, 

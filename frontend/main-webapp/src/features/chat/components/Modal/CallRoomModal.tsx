@@ -19,10 +19,12 @@ interface CallRoomModalProps {
   token: string;
   roomName: string;
   isVideo: boolean;
+  avatarUrl?: string;
+  callerName?: string;
   onDisconnect: () => void;
 }
 
-export function CallRoomModal({ token, roomName, isVideo, onDisconnect }: CallRoomModalProps) {
+export function CallRoomModal({ token, roomName, isVideo, avatarUrl: _avatarUrl, callerName: _callerName, onDisconnect }: CallRoomModalProps) {
   if (!token) return null;
 
   const liveKitUrl = import.meta.env.VITE_LIVEKIT_URL || "wss://onfis-hzzdnptp.livekit.cloud";
