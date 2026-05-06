@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Assignee } from "../../types";
 import { ChevronDownIcon } from "../../../../components/common/Icons";
+import InitialsAvatar from "../../../../components/common/InitialsAvatar";
 
 interface AssigneeSelectorProps {
   value: Assignee | null;
@@ -11,8 +12,6 @@ interface AssigneeSelectorProps {
 export default function AssigneeSelector({ value, options, onChange }: AssigneeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -37,17 +36,7 @@ export default function AssigneeSelector({ value, options, onChange }: AssigneeS
           <div className="flex items-center gap-3">
             {value ? (
               <>
-                <div className="w-8 h-8 rounded-full bg-chart-3 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
-                  {value.avatar ? (
-                    <img
-                      src={value.avatar}
-                      alt={value.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    getInitial(value.name)
-                  )}
-                </div>
+                <InitialsAvatar name={value.name} size={32} />
                 <span className="text-sm font-medium text-neutral-900">
                   {value.name}
                 </span>
@@ -68,21 +57,12 @@ export default function AssigneeSelector({ value, options, onChange }: AssigneeS
                   onChange(assignee);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors ${value?.id === assignee.id ? "bg-neutral-50" : ""
-                  }`}
-              >
-                <div className="w-8 h-8 rounded-full bg-chart-3 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
-                  {assignee.avatar ? (
-                    <img
-                      src={assignee.avatar}
-                      alt={assignee.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    getInitial(assignee.name)
-                  )}
-                </div>
-                <span className="text-sm text-neutral-900">{assignee.name}</span>
+              className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors ${
+                value?.id === assignee.id ? "bg-neutral-50" : ""
+              }`}
+            >
+              <InitialsAvatar name={assignee.name} size={32} />
+              <span className="text-sm text-neutral-900">{assignee.name}</span>
               </button>
             ))}
             {options.length === 0 && (

@@ -36,6 +36,8 @@ public record TaskDetailResponse(
         boolean canReview,
         List<TaskSubtaskResponse> subtasks,
         List<TaskCommentResponse> comments,
-        List<TaskActivityResponse> activities
+        List<TaskActivityResponse> activities,
+        List<AttachmentResponse> attachments,
+        List<AttachmentResponse> submissions
 ) {
 }

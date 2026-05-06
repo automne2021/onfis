@@ -18,19 +18,22 @@ import { useToast } from "../../../../contexts/useToast";
 import { useRole } from "../../../../hooks/useRole";
 import { RichTextEditor } from "../../../../components/common";
 import ReviewPanel from "../ReviewPanel";
+import InitialsAvatar from "../../../../components/common/InitialsAvatar";
 import type { ReviewComment } from "../../types";
 import { addTaskComment, getTaskDetail } from "../../../../services/taskService";
 import type { ApiTaskDetail } from "../../../../services/taskService";
+import { getProjectMembers } from "../../../../services/projectService";
+import {
+  uploadTaskAttachment,
+  getTaskAttachments,
+  uploadTaskSubmission,
+  getTaskSubmissions,
+  deleteAttachment,
+  type ApiAttachment,
+} from "../../../../services/attachmentService";
+import FileAttachmentSection, { type AttachmentFile } from "../../../../components/common/FileAttachmentSection";
 import { formatVNDate, formatVNDateTime } from "../../../../utils/getTime";
 import { getSubmitForReviewError } from "../../workflowUtils";
-
-// Mock assignee options - would come from API in real app
-const mockAssignees: Assignee[] = [
-  { id: "1", name: "Sarah Jenkins", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" },
-  { id: "2", name: "John Doe", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John" },
-  { id: "3", name: "Alice Smith", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice" },
-  { id: "4", name: "Bob Wilson" },
-];
 
 // Interactive Progress bar with slider
 const ProgressBar = ({ progress, onChange, disabled }: { progress: number; onChange?: (value: number) => void; disabled?: boolean }) => {
@@ -208,6 +211,7 @@ function apiDetailToTaskDetail(api: ApiTaskDetail): TaskDetail {
   return {
     id: api.id,
     key: api.key ?? "",
+    projectId: api.projectId,
     projectTitle: api.projectTitle,
     projectSlug: api.projectSlug,
     stageId: api.stageId,
@@ -264,6 +268,9 @@ export default function TaskDetailModal({
   onDelete,
 }: TaskDetailModalProps) {
   const [task, setTask] = useState<TaskDetail>(initialTask);
+  const [memberOptions, setMemberOptions] = useState<Assignee[]>([]);
+  const [taskFiles, setTaskFiles] = useState<AttachmentFile[]>([]);
+  const [submissions, setSubmissions] = useState<AttachmentFile[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
   const [showBlockedPrompt, setShowBlockedPrompt] = useState(false);
@@ -313,6 +320,41 @@ export default function TaskDetailModal({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTask.id, isOpen]);
 
+  // Load real project members for assignee selector
+  useEffect(() => {
+    if (!isOpen || !initialTask.projectId) return;
+    let alive = true;
+    getProjectMembers(initialTask.projectId)
+      .then((members) => {
+        if (!alive) return;
+        setMemberOptions(members.map((m) => ({ id: m.id, name: m.name })));
+      })
+      .catch(() => {/* leave empty */});
+    return () => { alive = false; };
+  }, [initialTask.projectId, isOpen]);
+
+  // Load attachments when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    const toFile = (a: ApiAttachment): AttachmentFile => ({
+      id: a.id,
+      fileName: a.fileName,
+      fileUrl: a.fileUrl,
+      fileType: a.fileType,
+      size: a.size,
+      uploadedByName: a.uploadedByName,
+      createdAt: a.createdAt,
+    });
+    let alive = true;
+    getTaskAttachments(initialTask.id)
+      .then((list) => { if (alive) setTaskFiles(list.map(toFile)); })
+      .catch(() => {});
+    getTaskSubmissions(initialTask.id)
+      .then((list) => { if (alive) setSubmissions(list.map(toFile)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [initialTask.id, isOpen]);
+
   // Handle escape key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -334,6 +376,48 @@ export default function TaskDetailModal({
     onSave(task);
     onClose();
   }, [task, onSave, onClose]);
+
+  const handleUploadTaskFile = (files: File[]) => {
+    files.forEach((file) => {
+      const tempId = `temp-${Date.now()}-${file.name}`;
+      setTaskFiles((prev) => [...prev, { id: tempId, fileName: file.name, fileUrl: "", uploading: true }]);
+      uploadTaskAttachment(task.id, file)
+        .then((saved) => {
+          setTaskFiles((prev) => prev.map((f) => f.id === tempId ? { id: saved.id, fileName: saved.fileName, fileUrl: saved.fileUrl, fileType: saved.fileType, size: saved.size, uploadedByName: saved.uploadedByName, createdAt: saved.createdAt } : f));
+        })
+        .catch(() => {
+          setTaskFiles((prev) => prev.filter((f) => f.id !== tempId));
+          showToast("Failed to upload file.", "error");
+        });
+    });
+  };
+
+  const handleUploadSubmission = (files: File[]) => {
+    files.forEach((file) => {
+      const tempId = `temp-${Date.now()}-${file.name}`;
+      setSubmissions((prev) => [...prev, { id: tempId, fileName: file.name, fileUrl: "", uploading: true }]);
+      uploadTaskSubmission(task.id, file)
+        .then((saved) => {
+          setSubmissions((prev) => prev.map((f) => f.id === tempId ? { id: saved.id, fileName: saved.fileName, fileUrl: saved.fileUrl, fileType: saved.fileType, size: saved.size, uploadedByName: saved.uploadedByName, createdAt: saved.createdAt } : f));
+        })
+        .catch(() => {
+          setSubmissions((prev) => prev.filter((f) => f.id !== tempId));
+          showToast("Failed to upload submission.", "error");
+        });
+    });
+  };
+
+  const handleDeleteTaskFile = (id: string) => {
+    deleteAttachment(id)
+      .then(() => setTaskFiles((prev) => prev.filter((f) => f.id !== id)))
+      .catch(() => showToast("Failed to delete file.", "error"));
+  };
+
+  const handleDeleteSubmission = (id: string) => {
+    deleteAttachment(id)
+      .then(() => setSubmissions((prev) => prev.filter((f) => f.id !== id)))
+      .catch(() => showToast("Failed to delete file.", "error"));
+  };
 
   const handleApprove = useCallback(() => {
     const newReview: ReviewComment = {
@@ -461,6 +545,26 @@ export default function TaskDetailModal({
                   onChange={(subTasks) => setTask({ ...task, subTasks })}
                 />
 
+                {/* Task Reference Files */}
+                <FileAttachmentSection
+                  title="Task Files"
+                  attachments={taskFiles}
+                  onUpload={handleUploadTaskFile}
+                  onDelete={handleDeleteTaskFile}
+                  canUpload={isManager || isReporter}
+                  canDelete={isManager || isReporter}
+                />
+
+                {/* Work Submission Files */}
+                <FileAttachmentSection
+                  title="Work Submission"
+                  attachments={submissions}
+                  onUpload={handleUploadSubmission}
+                  onDelete={handleDeleteSubmission}
+                  canUpload={isAssignee || isManager}
+                  canDelete={false}
+                />
+
                 {/* Employee: Submit for Review */}
                 {isEmployee && isAssignee && task.status === "IN_PROGRESS" && (
                   <div className="flex flex-col gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -560,7 +664,7 @@ export default function TaskDetailModal({
                 {/* Assignee */}
                 <AssigneeSelector
                   value={task.assignees[0] || null}
-                  options={mockAssignees}
+                  options={memberOptions}
                   onChange={(assignee) =>
                     setTask({ ...task, assignees: [assignee] })
                   }
@@ -571,13 +675,7 @@ export default function TaskDetailModal({
                   <label className="text-sm font-medium text-neutral-500">Reporter / Reviewer</label>
                   {reporterAssignee ? (
                     <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl">
-                      <div className="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
-                        {reporterAssignee.avatar ? (
-                          <img src={reporterAssignee.avatar} alt={reporterAssignee.name} className="w-full h-full object-cover" />
-                        ) : (
-                          reporterAssignee.name.charAt(0).toUpperCase()
-                        )}
-                      </div>
+                      <InitialsAvatar name={reporterAssignee.name} size={32} />
                       <span className="text-sm font-medium text-neutral-900">{reporterAssignee.name}</span>
                     </div>
                   ) : (

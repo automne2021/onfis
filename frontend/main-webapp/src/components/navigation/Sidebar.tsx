@@ -4,6 +4,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useSidebar } from "../../contexts/SidebarContext";
 import { useRole } from "../../hooks/useRole";
 import { useTenantPath } from "../../hooks/useTenantPath";
+import { useTenantSettings } from "../../contexts/TenantSettingsContext";
 import Icon from "../common/Icon";
 import { CollapseIcon } from "../common/Icons";
 
@@ -230,6 +231,7 @@ export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { withTenant } = useTenantPath();
   const { isSuperAdmin, isAdmin } = useRole();
+  const { features } = useTenantSettings();
 
   // Scroll state for the nav area
   const navRef = useRef<HTMLDivElement>(null);
@@ -282,8 +284,8 @@ export default function Sidebar() {
   const navItems: Omit<NavItemProps, "isCollapsed">[] = [
     { to: dashboardPath, icon: "dashboard", label: "Dashboard" },
     ...(isSuperAdmin ? [{ to: withTenant("/delegation"), icon: "assignment_ind", label: "Delegate" }] : []),
-    { to: withTenant("/announcements"), icon: "campaign", label: "Announce" },
-    { to: withTenant("/discuss"), icon: "forum", label: "Discuss" },
+    ...(features.announcementsEnabled ? [{ to: withTenant("/announcements"), icon: "campaign", label: "Announce" }] : []),
+    ...(features.chatEnabled ? [{ to: withTenant("/discuss"), icon: "forum", label: "Discuss" }] : []),
     { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
   ];
 
@@ -325,13 +327,15 @@ export default function Sidebar() {
             ))}
 
             {/* Projects item with flyout sub-menu */}
-            <NavItemWithFlyout
-              to={withTenant("/projects")}
-              icon="view_kanban"
-              label="Project"
-              isCollapsed={isCollapsed}
-              subItems={projectSubItems}
-            />
+            {features.projectManagementEnabled && (
+              <NavItemWithFlyout
+                to={withTenant("/projects")}
+                icon="view_kanban"
+                label="Project"
+                isCollapsed={isCollapsed}
+                subItems={projectSubItems}
+              />
+            )}
 
             {/* Admin group – ADMIN role only */}
             {isAdmin && (

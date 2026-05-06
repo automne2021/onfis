@@ -30,7 +30,10 @@ public class TenantHeaderFilter implements GlobalFilter, Ordered {
     private static final Set<String> ALLOWED_ORIGINS = Set.of(
             "http://localhost:3000",
             "http://localhost:3001",
-            "http://localhost:5173");
+            "http://localhost:5173",
+            "https://onfis.me",
+            "http://onfis.me",
+            "https://www.onfis.me");
 
     private final TenantResolver tenantResolver;
 

@@ -23,3 +23,8 @@ management:
 logging:
   level:
     com.onfis: DEBUG
+supabase:
+  url: ${SUPABASE_URL}
+  key: ${SUPABASE_SERVICE_ROLE_KEY}
+  bucket:
+    name: "onfis"

@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useRole } from "../../../hooks/useRole";
 import { useLanguage, type Language } from "../../../contexts/LanguageContext";
 import { useToast } from "../../../contexts/useToast";
+import { useTenantSettings } from "../../../contexts/TenantSettingsContext";
 import Icon from "../../../components/common/Icon";
+import api from "../../../services/api";
+import { supabase } from "../../../services/supabaseClient";
 import {
   createCompanyTag,
   deleteCompanyTag,
@@ -11,7 +15,6 @@ import {
   type ApiCompanyTag,
 } from "../../../services/projectService";
 import { Button } from "../../../components/common/Buttons/Button";
-import { supabase } from "../../../services/supabaseClient";
 
 const DEFAULT_TAG_COLOR = "#64748B";
 
@@ -51,6 +54,17 @@ export default function SettingsPage() {
   const { isManagerLike, isAdmin, isAuthLoading } = useRole();
   const { showToast } = useToast();
   const { language, setLanguage, t } = useLanguage();
+  const { tenant } = useParams<{ tenant: string }>();
+  const { logoUrl: initialLogoUrl } = useTenantSettings();
+
+  // ── Logo upload state ─────────────────────────────────────────────
+  const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCurrentLogoUrl(initialLogoUrl);
+  }, [initialLogoUrl]);
 
   // ── Role-based tab configuration ──────────────────────────────────
   // All roles: General (Language only) + Security (Change Password)
@@ -79,6 +93,33 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [draftName, setDraftName] = useState("");
   const [draftColor, setDraftColor] = useState(DEFAULT_TAG_COLOR);
+  // ── Logo upload handler ───────────────────────────────────────────
+  const handleLogoUpload = async (file: File) => {
+    if (!tenant) return;
+    const ext = file.name.split(".").pop() ?? "png";
+    const path = `logos/${tenant}-logo.${ext}`;
+    setIsUploadingLogo(true);
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("onfis")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("onfis").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+
+      await api.put("/admin/tenants/me", { logoUrl: publicUrl });
+      setCurrentLogoUrl(publicUrl);
+      showToast(t("Logo updated successfully"), "success");
+    } catch (err) {
+      console.error("Logo upload error:", err);
+      showToast(t("Failed to upload logo"), "error");
+    } finally {
+      setIsUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingColor, setEditingColor] = useState(DEFAULT_TAG_COLOR);
@@ -296,6 +337,40 @@ export default function SettingsPage() {
                           <option>America/New_York (GMT-5)</option>
                           <option>Europe/London (GMT+0)</option>
                         </select>
+                      </div>
+
+                      {/* Company Branding — Logo */}
+                      <div>
+                        <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Company Logo")}</label>
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 rounded-xl border border-neutral-200 bg-neutral-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {currentLogoUrl ? (
+                              <img src={currentLogoUrl} alt="Company logo" className="w-full h-full object-contain" />
+                            ) : (
+                              <Icon name="business" size={28} color="#9ca3af" />
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <input
+                              ref={logoInputRef}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleLogoUpload(file);
+                              }}
+                            />
+                            <Button
+                              title={isUploadingLogo ? t("Uploading...") : t("Upload Logo")}
+                              style="sub"
+                              textStyle="body-4-medium"
+                              disabled={isUploadingLogo}
+                              onClick={() => logoInputRef.current?.click()}
+                            />
+                            <p className="text-xs text-neutral-400">{t("PNG, JPG or SVG. Max 2 MB.")}</p>
+                          </div>
+                        </div>
                       </div>
                     </>
                   )}

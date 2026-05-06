@@ -2,6 +2,7 @@ import type { Task } from "../types";
 import { FlagIcon, CalendarIcon } from "../../../components/common/Icons";
 import Icon from "../../../components/common/Icon";
 import { STATUS_CONFIG } from "../workflowUtils";
+import InitialsAvatar from "../../../components/common/InitialsAvatar";
 
 /** Strip HTML tags to get plain text for card previews */
 const stripHtml = (html: string): string => {
@@ -66,19 +67,10 @@ const AvatarStack = ({ assignees }: { assignees: Task["assignees"] }) => {
       {displayAssignees.map((assignee, index) => (
         <div
           key={assignee.id}
-          className="w-5 h-5 rounded-full bg-blue-400 border-[1.5px] border-white flex items-center justify-center text-[9px] font-medium text-white"
           style={{ zIndex: displayCount - index }}
           title={assignee.name}
         >
-          {assignee.avatar ? (
-            <img
-              src={assignee.avatar}
-              alt={assignee.name}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            assignee.name.charAt(0).toUpperCase()
-          )}
+          <InitialsAvatar name={assignee.name} size={20} />
         </div>
       ))}
       {remaining > 0 && (

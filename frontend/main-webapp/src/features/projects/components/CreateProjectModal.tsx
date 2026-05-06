@@ -4,6 +4,7 @@ import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { ErrorIcon, ExpandMoreIcon, InfoIcon, FlagOutlineIcon as FlagIcon, DeleteIcon, AddCircleIcon } from "../../../components/common/Icons";
 import { Button } from "../../../components/common/Buttons/Button";
+import FileAttachmentSection, { type AttachmentFile } from "../../../components/common/FileAttachmentSection";
 
 interface Milestone {
   id: string;
@@ -35,6 +36,7 @@ export interface ProjectFormData {
   tags: string[];
   description: string;
   milestones: Milestone[];
+  pendingFiles: File[];
 }
 
 function toDateOnly(value: Date) {
@@ -88,7 +90,9 @@ export default function CreateProjectModal({
     tags: [],
     description: "",
     milestones: [{ id: "1", name: "", targetDate: "" }],
+    pendingFiles: [],
   });
+  const [pendingAttachments, setPendingAttachments] = useState<AttachmentFile[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,9 +256,30 @@ export default function CreateProjectModal({
       tags: [],
       description: "",
       milestones: [{ id: "1", name: "", targetDate: "" }],
+      pendingFiles: [],
     });
+    setPendingAttachments([]);
     setErrors({});
     onClose();
+  };
+
+  const handleAddPendingFiles = (files: File[]) => {
+    setFormData((prev) => ({ ...prev, pendingFiles: [...prev.pendingFiles, ...files] }));
+    setPendingAttachments((prev) => [
+      ...prev,
+      ...files.map((f) => ({ id: `local-${Date.now()}-${f.name}`, fileName: f.name, fileUrl: "", size: f.size, fileType: f.type })),
+    ]);
+  };
+
+  const handleRemovePendingFile = (id: string) => {
+    const idx = pendingAttachments.findIndex((a) => a.id === id);
+    if (idx === -1) return;
+    setPendingAttachments((prev) => prev.filter((a) => a.id !== id));
+    setFormData((prev) => {
+      const files = [...prev.pendingFiles];
+      files.splice(idx, 1);
+      return { ...prev, pendingFiles: files };
+    });
   };
 
   const activeMilestones = formData.milestones.filter((m) => m.name.trim());
@@ -541,6 +566,16 @@ export default function CreateProjectModal({
             Add Milestone
           </button>
         </div>
+
+        {/* Attachments */}
+        <FileAttachmentSection
+          title="Project Files"
+          attachments={pendingAttachments}
+          onUpload={handleAddPendingFiles}
+          onDelete={handleRemovePendingFile}
+          canUpload
+          canDelete
+        />
       </div>
     </Modal>
   );

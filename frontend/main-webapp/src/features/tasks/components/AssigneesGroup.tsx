@@ -1,4 +1,5 @@
 import type { Assignee } from "../types";
+import InitialsAvatar from "../../../components/common/InitialsAvatar";
 
 interface AssigneesGroupProps {
   assignees: Assignee[];
@@ -12,43 +13,11 @@ export default function AssigneesGroup({
   const visibleAssignees = assignees.slice(0, maxVisible);
   const remainingCount = assignees.length - maxVisible;
 
-  // Generate a consistent color based on the user's name
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      "bg-chart-1",
-      "bg-chart-2",
-      "bg-chart-3",
-      "bg-chart-4",
-      "bg-chart-5",
-      "bg-primary",
-      "bg-tag-department",
-      "bg-tag-scope",
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
-
-  const getInitial = (name: string) => name.charAt(0).toUpperCase();
-
   return (
     <div className="flex items-center -space-x-2">
       {visibleAssignees.map((assignee) => (
-        <div
-          key={assignee.id}
-          className={`w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-white text-sm font-medium overflow-hidden ${
-            assignee.avatar ? "" : getAvatarColor(assignee.name)
-          }`}
-          title={assignee.name}
-        >
-          {assignee.avatar ? (
-            <img
-              src={assignee.avatar}
-              alt={assignee.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            getInitial(assignee.name)
-          )}
+        <div key={assignee.id} title={assignee.name}>
+          <InitialsAvatar name={assignee.name} size={28} />
         </div>
       ))}
       {remainingCount > 0 && (

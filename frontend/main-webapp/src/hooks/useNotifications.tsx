@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Client } from '@stomp/stompjs';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { buildWebSocketUrl } from '../utils/websocket';
 import { useAuth } from './useAuth';
 import type { ContentItem } from '../components/common/Dropdown/ContentList';
 
@@ -16,6 +17,7 @@ interface AppNotification {
 
 export function useNotifications() {
   const { dbUser: currentUser } = useAuth();
+  const { tenant } = useParams<{ tenant: string }>();
   const navigate = useNavigate();
   const stompClient = useRef<Client | null>(null);
 
@@ -49,7 +51,7 @@ export function useNotifications() {
     }
 
     const client = new Client({
-      brokerURL: 'ws://localhost:8080/onfis/ws/websocket',
+      brokerURL: buildWebSocketUrl(tenant ?? 'onfis'),
       connectHeaders: { 
         'Authorization': `Bearer ${token}`,
         'X-User-ID': currentUser.id, 

@@ -23,25 +23,25 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       // Tenant-prefixed API routes: /{tenant}/api/...
       '^/[^/]+/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:80',
         changeOrigin: true,
         secure: false,
       },
       // Tenant-prefixed WebSocket routes: /{tenant}/ws/...
       '^/[^/]+/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://localhost:80',
         ws: true,
         changeOrigin: true,
       },
       // Fallback for plain /api routes
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:80',
         changeOrigin: true,
         secure: false,
       },
       // Fallback for plain /ws routes
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://localhost:80',
         ws: true,
       }
     }

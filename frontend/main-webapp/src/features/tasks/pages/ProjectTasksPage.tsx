@@ -10,6 +10,7 @@ import type { Stage, ViewMode, Task } from "../types";
 import type { TaskFormData } from "../../projects/components/CreateTaskModal";
 import { getCurrentProjectUser, createProjectStage, updateProjectStage, deleteProjectStage, getProjectMembers, getProject, listCompanyTags, getProjectStages, type ApiWorkflowStage } from "../../../services/projectService";
 import { createTask, createSubtask, deleteTask, listProjectTasks, reviewTask, updateTask, getTaskDetail, type ApiTask } from "../../../services/taskService";
+import { uploadTaskAttachment } from "../../../services/attachmentService";
 import { formatVNDate } from "../../../utils/getTime";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
@@ -574,6 +575,11 @@ export default function ProjectTasksPage() {
               const validSubtasks = formData.subtasks.filter((s) => s.name.trim());
               for (const subtask of validSubtasks) {
                 await createSubtask(created.id, { title: subtask.name, completed: subtask.completed });
+              }
+
+              // Upload any pending files
+              for (const file of formData.pendingFiles ?? []) {
+                await uploadTaskAttachment(created.id, file).catch(() => {});
               }
 
               await refreshTaskBoard(projectIdentifier);

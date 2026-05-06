@@ -69,7 +69,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
 
       fetchAuthorProfile();
     }
-  }, [isProfileOpen, authId, authorProfile]);
+  }, [authId, authorProfile]);
 
   const profileCardData: FullUserProfile = authorProfile || {
     id: "unknown",
@@ -130,7 +130,11 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
           </div>
           {/* Text */}
           <div className="flex flex-col gap-0.5">
-            <p className="body-3-medium text-neutral-900">{authName}</p>
+            <p className="body-3-medium text-neutral-900">
+              {authorProfile
+                ? (`${authorProfile.firstName || ''} ${authorProfile.lastName || ''}`).trim() || authName
+                : authName}
+            </p>
             <p className="body-4-regular text-neutral-500">
               {authorProfile?.positionName || position}<span className="mx-1">•</span>{timeAgoString}
             </p>

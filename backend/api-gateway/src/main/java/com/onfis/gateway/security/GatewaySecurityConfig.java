@@ -53,7 +53,10 @@ public class GatewaySecurityConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://localhost:3001",
-                "http://localhost:5173"));
+                "http://localhost:5173",
+                "https://onfis.me",
+                "http://onfis.me",
+                "https://www.onfis.me"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

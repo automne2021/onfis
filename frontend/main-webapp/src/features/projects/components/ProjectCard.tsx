@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import type { Project, Tag } from "../types";
 import { FlagIcon, CalendarIcon, EyeIcon, TasksViewIcon as TasksIcon } from "../../../components/common/Icons";
 import { useTenantPath } from "../../../hooks/useTenantPath";
+import InitialsAvatar from "../../../components/common/InitialsAvatar";
 
 // Tag component
 const TagBadge = ({ tag }: { tag: Tag }) => {
@@ -51,21 +52,8 @@ const AvatarStack = ({ assignees }: { assignees: Project["assignees"] }) => {
   return (
     <div className="flex -space-x-2">
       {displayAssignees.map((assignee, index) => (
-        <div
-          key={assignee.id}
-          className="w-6 h-6 rounded-full bg-status-on_track border-2 border-white flex items-center justify-center text-xs font-medium text-neutral-900"
-          style={{ zIndex: displayCount - index }}
-          title={assignee.name}
-        >
-          {assignee.avatar ? (
-            <img
-              src={assignee.avatar}
-              alt={assignee.name}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            assignee.name.charAt(0).toUpperCase()
-          )}
+        <div key={assignee.id} style={{ zIndex: displayCount - index }} title={assignee.name}>
+          <InitialsAvatar name={assignee.name} size={24} />
         </div>
       ))}
     </div>

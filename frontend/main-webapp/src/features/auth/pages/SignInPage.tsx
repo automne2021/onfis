@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
@@ -15,6 +15,24 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [tenantLogoUrl, setTenantLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tenant) return;
+    const fetchLogo = async () => {
+      try {
+        const { data } = await supabase
+          .from("tenants")
+          .select("logo_url")
+          .eq("slug", tenant)
+          .single();
+        if (data?.logo_url) setTenantLogoUrl(data.logo_url as string);
+      } catch {
+        // non-critical
+      }
+    };
+    void fetchLogo();
+  }, [tenant]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +126,7 @@ export default function SignInPage() {
       >
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-5 p-8 pb-5">
           {/* Logo */}
-          <img src={logo} alt="ONFIS Logo" className="h-9" />
+          <img src={tenantLogoUrl || logo} alt="Logo" className="h-10" />
 
           {/* Welcome Text */}
           <div className="text-center">

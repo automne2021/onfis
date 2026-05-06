@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
+import { buildWebSocketUrl } from '../../../utils/websocket';
 import { chatApi } from '../services/chatApi';
 import { type BackendMessageDTO, type ChatMessage, type MessageType } from '../types/chatTypes';
 import { useCall } from '../context/CallContext';
@@ -11,6 +13,7 @@ interface CurrentUserInfo {
 }
 
 export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
+  const { tenant } = useParams<{ tenant: string }>();
   const { triggerIncomingCall, forceTerminate } = useCall();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);

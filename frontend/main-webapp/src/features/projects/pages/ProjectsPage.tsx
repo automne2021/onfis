@@ -10,6 +10,7 @@ import { ProjectCalendarView } from "../components/calendar";
 import type { Project } from "../types";
 import type { ProjectFormData } from "../components/CreateProjectModal";
 import { createMilestone, createProject, getCurrentProjectUser, listCompanyTags, listProjects, searchProjectUsers, type ApiUserSummary } from "../../../services/projectService";
+import { uploadProjectAttachment } from "../../../services/attachmentService";
 import { formatVNDate } from "../../../utils/getTime";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useToast } from "../../../contexts/useToast";
@@ -183,6 +184,11 @@ export default function ProjectsPage() {
       }
 
       setProjects((prev) => [toProjectViewModel(created), ...prev]);
+
+      // Upload pending files
+      for (const file of data.pendingFiles ?? []) {
+        await uploadProjectAttachment(created.id, file).catch(() => {});
+      }
 
       if (failedMilestones.length > 0) {
         showToast(

@@ -4,6 +4,7 @@ import com.onfis.admin.dto.ModuleSettingsDto;
 import com.onfis.admin.dto.OperationalSettingsDto;
 import com.onfis.admin.dto.SecuritySettingsDto;
 import com.onfis.admin.dto.StorageSettingsDto;
+import com.onfis.admin.dto.TenantFeaturesDto;
 import com.onfis.admin.dto.TenantSettingsDto;
 import com.onfis.admin.service.SystemSettingsService;
 import lombok.RequiredArgsConstructor;
@@ -105,5 +106,14 @@ public class SystemSettingsController {
             @RequestHeader("X-User-ID") String userId,
             @RequestBody OperationalSettingsDto body) {
         return ResponseEntity.ok(settingsService.updateOperationalSettings(tenantId, userId, body));
+    }
+
+    // ─── Public features (any authenticated user) ─────────────────────────
+
+    @GetMapping("/tenant/features")
+    public ResponseEntity<TenantFeaturesDto> getTenantFeatures(
+            @RequestHeader("X-Company-ID") String tenantId,
+            @RequestHeader("X-User-ID") String userId) {
+        return ResponseEntity.ok(settingsService.getTenantFeatures(tenantId, userId));
     }
 }

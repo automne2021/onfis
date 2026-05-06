@@ -1,6 +1,7 @@
 package com.onfis.admin.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import java.time.Duration;
 import org.springframework.boot.autoconfigure.cache.RedisCacheManagerBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -15,8 +16,19 @@ public class RedisCacheConfig {
 
         @Bean
         public RedisCacheConfiguration redisCacheConfiguration(ObjectMapper objectMapper) {
+                BasicPolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder()
+                                .allowIfSubTypeIsArray()
+                                .allowIfSubType("com.onfis.")
+                                .allowIfSubType("java.util.")
+                                .allowIfSubType("java.lang.")
+                                .build();
+                ObjectMapper typedMapper = objectMapper.copy()
+                                .activateDefaultTypingAsProperty(
+                                                ptv,
+                                                ObjectMapper.DefaultTyping.EVERYTHING,
+                                                "@class");
                 GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer(
-                                objectMapper.copy());
+                                typedMapper);
 
                 return RedisCacheConfiguration.defaultCacheConfig()
                                 .disableCachingNullValues()

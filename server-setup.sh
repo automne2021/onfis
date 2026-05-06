@@ -166,22 +166,24 @@ phase5() {
 # PHASE 6 — Cài đặt SSL/HTTPS với Let's Encrypt
 #
 # CHỈ chạy phase này sau khi:
-#   1) DNS A record đã trỏ đến 146.190.98.126
+#   1) DNS A record (apex + www) đã trỏ đến 146.190.98.126
 #   2) http://onfis.me hoạt động bình thường (HTTP OK)
 # ==============================================================
 phase6() {
     log "PHASE 6: Cài đặt SSL/HTTPS (Let's Encrypt)"
     cd "$APP_DIR"
 
-    # --- Kiểm tra DNS đã trỏ đúng chưa ---
-    RESOLVED_IP=$(dig +short $DOMAIN | tail -1)
+    # --- Kiểm tra DNS đã trỏ đúng chưa (apex + www) ---
     SERVER_IP="146.190.98.126"
-    if [ "$RESOLVED_IP" != "$SERVER_IP" ]; then
-        warn "DNS chưa trỏ đúng: $DOMAIN → $RESOLVED_IP (cần $SERVER_IP)"
-        warn "Đợi DNS propagate rồi chạy lại phase6."
-        exit 1
-    fi
-    ok "DNS OK: $DOMAIN → $RESOLVED_IP"
+    for HOST in "$DOMAIN" "www.$DOMAIN"; do
+        RESOLVED_IP=$(dig +short "$HOST" | tail -1)
+        if [ "$RESOLVED_IP" != "$SERVER_IP" ]; then
+            warn "DNS chưa trỏ đúng: $HOST → $RESOLVED_IP (cần $SERVER_IP)"
+            warn "Đợi DNS propagate rồi chạy lại phase6."
+            exit 1
+        fi
+        ok "DNS OK: $HOST → $RESOLVED_IP"
+    done
 
     # --- Kiểm tra HTTP đang hoạt động ---
     HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$DOMAIN/ || echo "000")
@@ -208,153 +210,106 @@ phase6() {
 
     ok "Certificate đã được tạo tại /etc/letsencrypt/live/$DOMAIN/"
 
-    # --- Ghi nginx.conf phiên bản HTTPS ---
-    log "Cập nhật nginx.conf cho HTTPS..."
-    cat > "$APP_DIR/infrastructure/nginx/nginx.conf" << 'NGINX_CONF'
-events {
-    worker_connections 1024;
-}
+    # --- Chuyển sang HTTPS config (file đã có sẵn trong repo) ---
+    log "Chuyển nginx.conf sang HTTPS config..."
+    cp "$APP_DIR/infrastructure/nginx/nginx.https.conf" \
+       "$APP_DIR/infrastructure/nginx/nginx.conf"
+    ok "nginx.conf đã được cập nhật"
 
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    sendfile        on;
-    keepalive_timeout  65;
-
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-    gzip_min_length 256;
-
-    upstream api_gateway {
-        server api-gateway:8080;
-    }
-
-    # Chuyển hướng HTTP → HTTPS
-    server {
-        listen 80;
-        server_name onfis.me www.onfis.me;
-        return 301 https://$host$request_uri;
-    }
-
-    # HTTPS Server
-    server {
-        listen 443 ssl;
-        server_name onfis.me www.onfis.me;
-
-        ssl_certificate     /etc/letsencrypt/live/onfis.me/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/onfis.me/privkey.pem;
-        ssl_protocols       TLSv1.2 TLSv1.3;
-        ssl_ciphers         HIGH:!aNULL:!MD5;
-        ssl_session_cache   shared:SSL:10m;
-        ssl_session_timeout 10m;
-
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-        # --- API routes (tenant-prefixed) ---
-        location ~ ^/[^/]+/api/ {
-            proxy_pass http://api_gateway;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # --- WebSocket routes (tenant-prefixed) ---
-        location ~ ^/[^/]+/ws/ {
-            proxy_pass http://api_gateway;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_read_timeout 86400;
-        }
-
-        # --- Main Webapp static assets (built with base: '/_app/') ---
-        location ^~ /_app/ {
-            alias /usr/share/nginx/html/webapp/;
-            try_files $uri $uri/ /usr/share/nginx/html/webapp/index.html;
-            expires 30d;
-            add_header Cache-Control "public, immutable";
-        }
-
-        # --- Landing Page static assets ---
-        location ^~ /assets/ {
-            root /usr/share/nginx/html/landing;
-            expires 30d;
-            add_header Cache-Control "public, immutable";
-        }
-
-        # --- Tenant routes → Main Webapp SPA ---
-        location ~ ^/[^/]+/ {
-            root /usr/share/nginx/html/webapp;
-            try_files $uri $uri/ /index.html;
-        }
-
-        # --- Root → Landing Page ---
-        location / {
-            root /usr/share/nginx/html/landing;
-            try_files $uri $uri/ /index.html;
-        }
-    }
-}
-NGINX_CONF
-
-    # --- Thêm volume mount certificate vào docker-compose.yml ---
-    # Thêm volumes cho nginx service để truy cập certs trên host
-    if ! grep -q "letsencrypt" "$APP_DIR/docker-compose.yml"; then
-        # Dùng Python vì sed trên YAML multi-line dễ sai
-        python3 << 'PYEOF'
-import re
-
-with open('/opt/onfis/docker-compose.yml', 'r') as f:
-    content = f.read()
-
-# Thêm volumes vào nginx service (trước networks)
-nginx_volumes = '''    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-'''
-content = content.replace(
-    '    container_name: onfis-nginx\n    ports:',
-    '    container_name: onfis-nginx\n' + nginx_volumes + '    ports:'
-)
-
-with open('/opt/onfis/docker-compose.yml', 'w') as f:
-    f.write(content)
-
-print("docker-compose.yml updated with certificate volume mount")
-PYEOF
-        ok "docker-compose.yml đã được cập nhật với volume mount certificate"
-    else
-        warn "Volume letsencrypt đã tồn tại trong docker-compose.yml, bỏ qua."
-    fi
-
-    # --- Rebuild nginx với config HTTPS và khởi động lại ---
-    log "Rebuild và khởi động lại nginx với HTTPS..."
-    docker compose up --build -d nginx
+    # --- Khởi động lại nginx (không cần rebuild — config dùng bind-mount) ---
+    log "Khởi động lại nginx với HTTPS..."
+    docker compose start nginx
 
     ok "HTTPS đã được cấu hình!"
     echo ""
-    ok "Kiểm tra tại: https://onfis.me"
+    ok "Kiểm tra tại: https://$DOMAIN"
 
     # --- Cài đặt tự gia hạn certificate ---
     log "Cài đặt tự gia hạn certificate (cron)..."
-    # Script gia hạn: dừng nginx → certbot renew → rebuild nginx
     cat > /usr/local/bin/certbot-renew-onfis.sh << RENEW_SCRIPT
 #!/bin/bash
 cd $APP_DIR
 docker compose stop nginx
 certbot renew --quiet
-docker compose up --build -d nginx
+docker compose start nginx
 RENEW_SCRIPT
     chmod +x /usr/local/bin/certbot-renew-onfis.sh
 
     # Chạy lúc 3 giờ sáng ngày 1 mỗi tháng
     (crontab -l 2>/dev/null; echo "0 3 1 * * /usr/local/bin/certbot-renew-onfis.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
     ok "Cron job gia hạn certificate đã được cài đặt"
+}
+
+# ==============================================================
+# REDEPLOY — Xóa toàn bộ phiên bản cũ, deploy lại từ zip mới
+#
+# Dùng khi đã deploy trước đó và muốn cập nhật lên phiên bản mới.
+# Lệnh này sẽ:
+#   1) Dừng và xóa TẤT CẢ containers, images, volumes cũ
+#   2) Xóa toàn bộ code cũ tại /opt/onfis
+#   3) Giải nén zip mới và deploy lại
+#
+# SSL certs tại /etc/letsencrypt sẽ được GIỮ NGUYÊN (không bị xóa).
+# Nếu SSL đã được cấu hình, HTTPS config sẽ tự động được áp dụng.
+#
+# USAGE:
+#   Upload zip mới: scp onfis-deploy-*.zip root@146.190.98.126:~/
+#   Chạy:          ./server-setup.sh redeploy
+# ==============================================================
+redeploy() {
+    log "REDEPLOY: Xóa phiên bản cũ và deploy từ zip mới"
+
+    # --- Tìm file zip mới nhất trong ~/ ---
+    ZIPFILE=$(ls ~/onfis-deploy-*.zip 2>/dev/null | sort | tail -1)
+    if [ -z "$ZIPFILE" ]; then
+        fail "Không tìm thấy onfis-deploy-*.zip trong ~/\nHãy upload zip trước:\n  scp onfis-deploy-*.zip root@146.190.98.126:~/"
+    fi
+    ok "Sẽ deploy từ: $ZIPFILE"
+
+    # --- Dừng và xóa toàn bộ containers, images, volumes ---
+    if [ -f "$APP_DIR/docker-compose.yml" ]; then
+        log "Dừng và xóa containers, local images và volumes cũ..."
+        cd "$APP_DIR"
+        docker compose down --volumes --rmi local 2>/dev/null || true
+    else
+        warn "$APP_DIR/docker-compose.yml không tìm thấy, bỏ qua bước dọn dẹp container."
+    fi
+
+    # --- Xóa toàn bộ code cũ ---
+    log "Xóa code cũ tại $APP_DIR ..."
+    rm -rf "$APP_DIR"
+    mkdir -p "$APP_DIR"
+
+    # --- Giải nén code mới ---
+    log "Giải nén $ZIPFILE vào $APP_DIR ..."
+    unzip -o "$ZIPFILE" -d "$APP_DIR"
+    cd "$APP_DIR"
+
+    # --- Sao chép .env.production thành .env ---
+    if [ ! -f ".env.production" ]; then
+        fail ".env.production không tồn tại trong $APP_DIR\nHãy thêm file này vào zip trước khi redeploy."
+    fi
+    cp .env.production .env
+    ok "Đã tạo .env từ .env.production"
+
+    # --- Nếu SSL đã được cấu hình, tự động dùng HTTPS config ---
+    if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+        cp "$APP_DIR/infrastructure/nginx/nginx.https.conf" \
+           "$APP_DIR/infrastructure/nginx/nginx.conf"
+        ok "SSL certs đã có → tự động dùng HTTPS config"
+    else
+        warn "SSL chưa được cấu hình → dùng HTTP config (chạy phase6 sau khi deploy)"
+    fi
+
+    # --- Build & chạy toàn bộ containers ---
+    log "Build và khởi động containers (lần đầu mất 15-30 phút)..."
+    docker compose up --build -d
+
+    ok "Redeploy hoàn tất!"
+    echo ""
+    docker compose ps
+    echo ""
+    warn "Nếu có service nào không phải 'running', xem log: docker compose logs <service-name>"
 }
 
 # ==============================================================
@@ -397,29 +352,30 @@ phase7() {
 # ENTRYPOINT
 # ==============================================================
 case "$1" in
-    phase1) phase1 ;;
-    phase2) phase2 ;;
-    phase3) phase3 ;;
-    phase4) phase4 ;;
-    phase5) phase5 ;;
-    phase6) phase6 ;;
-    phase7) phase7 ;;
+    phase1)   phase1   ;;
+    phase2)   phase2   ;;
+    phase3)   phase3   ;;
+    phase4)   phase4   ;;
+    phase5)   phase5   ;;
+    phase6)   phase6   ;;
+    phase7)   phase7   ;;
+    redeploy) redeploy ;;
     *)
         echo ""
-        echo "Onfis Server Setup Script"
+        echo "Usage: $0 <command>"
         echo ""
-        echo "Sử dụng: ./server-setup.sh <phase>"
+        echo "  Initial deployment (run in order):"
+        echo "    phase1   — Update system packages"
+        echo "    phase2   — Install Docker"
+        echo "    phase3   — Create 4GB swap file"
+        echo "    phase4   — Configure firewall (UFW)"
+        echo "    phase5   — Deploy app from zip"
+        echo "    phase6   — Setup SSL/HTTPS (Let's Encrypt)"
+        echo "    phase7   — Health check"
         echo ""
-        echo "Thứ tự chạy:"
-        echo "  ./server-setup.sh phase1   # Cập nhật hệ thống"
-        echo "  ./server-setup.sh phase2   # Cài Docker"
-        echo "  ./server-setup.sh phase3   # Tạo Swap 4GB"
-        echo "  ./server-setup.sh phase4   # Cấu hình Firewall"
-        echo "  ./server-setup.sh phase5   # Deploy ứng dụng"
-        echo "  ./server-setup.sh phase6   # Cài SSL/HTTPS (sau khi DNS hoạt động)"
-        echo "  ./server-setup.sh phase7   # Kiểm tra hệ thống"
+        echo "  Subsequent updates:"
+        echo "    redeploy — Wipe old version, deploy new zip"
         echo ""
-        echo "Lưu ý: Upload zip lên server TRƯỚC khi chạy phase5:"
-        echo "  scp onfis-deploy-*.zip root@146.190.98.126:~/"
+        exit 1
         ;;
 esac

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import Icon from "../../../components/common/Icon";
 import { Button } from "../../../components/common/Buttons/Button";
 import { useToast } from "../../../contexts/useToast";
@@ -655,14 +656,15 @@ export default function SystemSettingsPage() {
     operations: adminService.getCachedOperationalSettings() ?? operationalSettingsSnapshot,
   }));
 
-  const [activeTab, setActiveTab] = useState<TabId>("tenant");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get("tab") as TabId | null) ?? "tenant";
+  const setActiveTab = (tab: TabId) => setSearchParams({ tab }, { replace: true });
   const [tenantSettings, setTenantSettings] = useState<TenantSettings>(initialCache.tenant ?? MOCK_TENANT);
   const [storageSettings, setStorageSettings] = useState<StorageSettings>(initialCache.storage ?? MOCK_STORAGE);
   const [moduleSettings, setModuleSettings] = useState<ModuleSettings>(initialCache.modules ?? DEFAULT_MODULES);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(initialCache.security ?? DEFAULT_SECURITY);
   const [operationalSettings, setOperationalSettings] = useState<OperationalSettings>(initialCache.operations ?? DEFAULT_OPERATIONS);
   const [isLoading, setIsLoading] = useState(!(initialCache.tenant && initialCache.storage));
-  const { showToast } = useToast();
 
   const load = useCallback(async (showLoading = false, forceRefresh = false) => {
     if (showLoading) setIsLoading(true);
@@ -698,63 +700,33 @@ export default function SystemSettingsPage() {
   useEffect(() => { void load(!(initialCache.tenant && initialCache.storage), false); }, [initialCache.storage, initialCache.tenant, load]);
 
   const handleSaveTenant = async (s: TenantSettings) => {
-    try {
-      const updated = await adminService.updateTenantSettings(s);
-      tenantSettingsSnapshot = updated;
-      setTenantSettings(updated);
-    } catch {
-      tenantSettingsSnapshot = s;
-      setTenantSettings(s);
-    }
-    showToast("Tenant settings saved.", "success");
+    const updated = await adminService.updateTenantSettings(s);
+    tenantSettingsSnapshot = updated;
+    setTenantSettings(updated);
   };
 
   const handleSaveStorage = async (s: StorageSettings) => {
-    try {
-      const updated = await adminService.updateStorageSettings(s);
-      storageSettingsSnapshot = updated;
-      setStorageSettings(updated);
-    } catch {
-      storageSettingsSnapshot = s;
-      setStorageSettings(s);
-    }
-    showToast("Storage settings saved.", "success");
+    const updated = await adminService.updateStorageSettings(s);
+    storageSettingsSnapshot = updated;
+    setStorageSettings(updated);
   };
 
   const handleSaveModules = async (s: ModuleSettings) => {
-    try {
-      const updated = await adminService.updateModuleSettings(s);
-      moduleSettingsSnapshot = updated;
-      setModuleSettings(updated);
-    } catch {
-      moduleSettingsSnapshot = s;
-      setModuleSettings(s);
-    }
-    showToast("Module settings saved.", "success");
+    const updated = await adminService.updateModuleSettings(s);
+    moduleSettingsSnapshot = updated;
+    setModuleSettings(updated);
   };
 
   const handleSaveSecurity = async (s: SecuritySettings) => {
-    try {
-      const updated = await adminService.updateSecuritySettings(s);
-      securitySettingsSnapshot = updated;
-      setSecuritySettings(updated);
-    } catch {
-      securitySettingsSnapshot = s;
-      setSecuritySettings(s);
-    }
-    showToast("Security settings saved.", "success");
+    const updated = await adminService.updateSecuritySettings(s);
+    securitySettingsSnapshot = updated;
+    setSecuritySettings(updated);
   };
 
   const handleSaveOperations = async (s: OperationalSettings) => {
-    try {
-      const updated = await adminService.updateOperationalSettings(s);
-      operationalSettingsSnapshot = updated;
-      setOperationalSettings(updated);
-    } catch {
-      operationalSettingsSnapshot = s;
-      setOperationalSettings(s);
-    }
-    showToast("Operational settings saved.", "success");
+    const updated = await adminService.updateOperationalSettings(s);
+    operationalSettingsSnapshot = updated;
+    setOperationalSettings(updated);
   };
 
   return (

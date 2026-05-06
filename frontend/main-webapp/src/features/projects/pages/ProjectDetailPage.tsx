@@ -21,6 +21,13 @@ import {
 import type { ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import FileAttachmentSection, { type AttachmentFile } from "../../../components/common/FileAttachmentSection";
+import {
+  getProjectAttachments,
+  uploadProjectAttachment,
+  deleteAttachment,
+  type ApiAttachment,
+} from "../../../services/attachmentService";
 
 // Types for local use
 type ProjectStatus = "planning" | "in_progress" | "on_hold" | "completed";
@@ -118,6 +125,63 @@ const PriorityBadge = ({ priority }: { priority: Priority }) => {
     <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full font-medium text-xs leading-4 ${styles[priority]}`}>
       {labels[priority]}
     </span>
+  );
+};
+
+// Project Files Card
+const ProjectFilesSection = ({ projectId, canManage }: { projectId: string; canManage: boolean }) => {
+  const [files, setFiles] = useState<AttachmentFile[]>([]);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    let alive = true;
+    const toFile = (a: ApiAttachment): AttachmentFile => ({
+      id: a.id,
+      fileName: a.fileName,
+      fileUrl: a.fileUrl,
+      fileType: a.fileType,
+      size: a.size,
+      uploadedByName: a.uploadedByName,
+      createdAt: a.createdAt,
+    });
+    getProjectAttachments(projectId)
+      .then((list) => { if (alive) setFiles(list.map(toFile)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [projectId]);
+
+  const handleUpload = (incoming: File[]) => {
+    incoming.forEach((file) => {
+      const tempId = `temp-${Date.now()}-${file.name}`;
+      setFiles((prev) => [...prev, { id: tempId, fileName: file.name, fileUrl: "", uploading: true }]);
+      uploadProjectAttachment(projectId, file)
+        .then((saved) => {
+          setFiles((prev) => prev.map((f) => f.id === tempId ? { id: saved.id, fileName: saved.fileName, fileUrl: saved.fileUrl, fileType: saved.fileType, size: saved.size, uploadedByName: saved.uploadedByName, createdAt: saved.createdAt } : f));
+        })
+        .catch(() => {
+          setFiles((prev) => prev.filter((f) => f.id !== tempId));
+          showToast("Failed to upload file.", "error");
+        });
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    deleteAttachment(id)
+      .then(() => setFiles((prev) => prev.filter((f) => f.id !== id)))
+      .catch(() => showToast("Failed to delete file.", "error"));
+  };
+
+  return (
+    <div className="bg-white py-3 px-6 rounded-lg shadow-md mt-3">
+      <FileAttachmentSection
+        title="Project Files"
+        attachments={files}
+        onUpload={handleUpload}
+        onDelete={handleDelete}
+        canUpload={canManage}
+        canDelete={canManage}
+      />
+    </div>
   );
 };
 
@@ -1069,6 +1133,9 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Project Files */}
+      <ProjectFilesSection projectId={project?.id ?? ''} canManage={canManageProject} />
 
       {/* Delete project confirmation dialog */}
       <ConfirmDialog
