@@ -136,17 +136,30 @@ public class MeetingController {
                     .build());
         }
 
-        // LẤY TÊN USER ĐỂ HIỂN THỊ TRONG VIDEO CALL
         String userName = "Guest";
         try {
+            log.info("Đang gọi sang User Service để lấy thông tin của ID: {}", userId);
+            
             UserResponseDTO userInfo = userClient.getUserProfile(token, companyIdStr, userId);
+            
+            log.info("Dữ liệu User Service trả về: {}", userInfo);
+            
             if (userInfo != null) {
-                userName = (userInfo.firstName() + " " + userInfo.lastName()).trim();
+                String fName = userInfo.firstName() != null ? userInfo.firstName() : "";
+                String lName = userInfo.lastName() != null ? userInfo.lastName() : "";
+                String fullName = (fName + " " + lName).trim();
+                
+                if (!fullName.isEmpty() && !fullName.equals("null null")) {
+                    userName = fullName;
+                } else if (userInfo.email() != null) {
+                    userName = userInfo.email(); 
+                }
             }
-        } catch (Exception ignored) {}
-
-        // SỬ DỤNG LIVEKIT SERVICE ĐỂ TẠO TOKEN THẬT
-        String videoToken = liveKitService.createToken(meeting.getMeetingLink(), userId.toString(), userName); 
+        } catch (Exception e) {
+            log.error("❌ FeignClient Lỗi (Không lấy được data từ User Service): ", e);
+        }
+        log.info("✅ Cấp token LiveKit cho User: {} với Tên: {}", userId, userName);
+        String videoToken = liveKitService.createToken(meeting.getMeetingLink(), userId.toString(), userName);
 
         return ResponseEntity.ok(Map.of(
                 "roomName", meeting.getMeetingLink(),
@@ -184,7 +197,13 @@ public class MeetingController {
     @GetMapping("/{meetingId}")
     public ResponseEntity<?> getMeeting(@PathVariable UUID meetingId) {
         Meetings meeting = meetingRepository.findById(meetingId).orElse(null);
-        if (meeting == null) return ResponseEntity.notFound().build();
+        if (meeting == null) {
+            return ResponseEntity.ok(MeetingDTO.builder()
+                    .id(meetingId)
+                    .type("VIDEO")
+                    .status("ENDED") 
+                    .build());
+        }
         return ResponseEntity.ok(mapToMeetingDTO(meeting));
     }
 

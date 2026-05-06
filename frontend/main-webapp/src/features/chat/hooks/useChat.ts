@@ -103,7 +103,7 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
     const authDataString = localStorage.getItem(authKey);
     
     let token = null;
-    let tenantId = "00000000-0000-0000-0000-000000000001"; // Fallback mặc định
+    let tenantId = "00000000-0000-0000-0000-000000000001"; 
     let userId = currentUserRef.current?.id || "";
 
     if (authDataString) {
@@ -130,7 +130,7 @@ export function useChat(conversationId: string, currentUser?: CurrentUserInfo) {
     let isMounted = true; 
 
     const client = new Client({
-      brokerURL: buildWebSocketUrl(tenant ?? 'onfis'), 
+      brokerURL: `${import.meta.env.VITE_WEBSOCKET_BASE_URL}/onfis/ws/websocket`, 
       connectHeaders: { 
         'Authorization': `Bearer ${token}`,
         'X-User-ID': userId, 

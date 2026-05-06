@@ -6,10 +6,9 @@ import { MeetingCard } from './MeetingCard';
 interface MessageBubbleProps {
   msg: ChatMessage;
   isOwn: boolean;
-  onJoinCall: (token: string, room: string, meetingId: string, isHost: boolean, isVideo: boolean, avatarUrl?: string, name?: string) => void;
 }
 
-export function MessageBubble({ msg, isOwn, onJoinCall }: MessageBubbleProps) {
+export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
 
   // Tin nhắn hệ thống (Nằm giữa màn hình)
   if (msg.type === 'system') {
@@ -63,9 +62,7 @@ export function MessageBubble({ msg, isOwn, onJoinCall }: MessageBubbleProps) {
         {/* 2. NẾU LÀ CUỘC GỌI (Meeting) -> Render Card ngay trong khung này */}
         {msg.type === 'meeting' && (
           <div className={`rounded-2xl shadow-sm border border-neutral-100 overflow-hidden ${isOwn ? 'bg-secondary/5' : 'bg-white'}`}>
-             <MeetingCard msg={msg} onJoin={(token, room) => onJoinCall(
-                 token, room, msg.meeting!.id, isOwn, msg.meeting!.type === 'VIDEO', msg.sender.avatarUrl, msg.sender.name
-               )} />
+             <MeetingCard msg={msg} />
           </div>
         )}
 

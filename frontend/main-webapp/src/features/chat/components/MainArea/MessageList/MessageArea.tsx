@@ -3,9 +3,6 @@ import type { ChatChannel, ChatMessage } from '../../../types/chatTypes';
 import { useAuth } from '../../../../../hooks/useAuth';
 import { DateSeparator } from './DateSeparator';
 import { MessageBubble } from './MessageBubble';
-// import { MeetingCard } from './MeetingCard';
-// import { CallRoomModal } from '../../Modal/CallRoomModal';
-import { useCall } from '../../../context/CallContext';
 
 interface MessageAreaProps {
   channel?: ChatChannel | null;
@@ -14,7 +11,6 @@ interface MessageAreaProps {
 
 export function MessageArea({ channel, messages }: MessageAreaProps) {
   const { user } = useAuth();
-  const { startLiveKit } = useCall()
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +43,7 @@ export function MessageArea({ channel, messages }: MessageAreaProps) {
           return (
             <div key={msg.id} className="flex flex-col w-full">
               {msg.dateSeparator && <DateSeparator date={msg.dateSeparator} />}
-              <MessageBubble msg={msg} isOwn={isOwn} onJoinCall={startLiveKit} />
+              <MessageBubble msg={msg} isOwn={isOwn} />
             </div>
           );
         })}
