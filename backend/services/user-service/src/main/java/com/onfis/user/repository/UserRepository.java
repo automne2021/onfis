@@ -14,5 +14,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
   @Query("SELECT u FROM User u WHERE u.tenantId = :tenantId AND (" +
            "LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    List<User> searchUsersByKeyword(@Param("tenantId") UUID tenantId, @Param("keyword") String keyword);
+  List<User> searchUsersByKeyword(@Param("tenantId") UUID tenantId, @Param("keyword") String keyword);
+  long countByTenantId(UUID tenantId);
 }

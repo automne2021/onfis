@@ -278,4 +278,15 @@ public class UserService {
     user.setIsFirstLogin(false);
     userRepository.save(user);
   }
+
+  // ─── Đếm số lượng nhân viên ──────────────────────────────────────────────────
+  public Integer countUsersByTenant(String tenantIdStr) {
+      if (tenantIdStr == null || tenantIdStr.isEmpty()) {
+          return 0;
+      }
+      
+      UUID tenantId = UUID.fromString(tenantIdStr);
+      int usersCount = (int) userRepository.countByTenantId(tenantId);
+      return usersCount;
+  }
 }
