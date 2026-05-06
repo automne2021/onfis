@@ -3,10 +3,45 @@ import { getAccessToken } from './auth';
 import { getTenantFromPath } from '../utils/tenant';
 // import { supabase } from './supabaseClient';
 
-const ROOT_URL: string = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/$/, '');
+const DOCKER_INTERNAL_HOSTS = new Set([
+  'api-gateway',
+  'admin-service',
+  'user-service',
+  'project-service',
+  'position-service',
+  'chat-service',
+  'announcement-service',
+]);
+
+function resolveRootUrl(): string {
+  const rawValue = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? '';
+  if (!rawValue) {
+    return '';
+  }
+
+  try {
+    const parsedUrl = new URL(rawValue);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    // Browser cannot resolve Docker internal service names.
+    if (DOCKER_INTERNAL_HOSTS.has(hostname)) {
+      return '';
+    }
+
+    return parsedUrl.origin;
+  } catch {
+    return '';
+  }
+}
+
+const ROOT_URL: string = resolveRootUrl();
+
+function buildTenantApiBase(tenant: string): string {
+  return ROOT_URL ? `${ROOT_URL}/${tenant}/api` : `/${tenant}/api`;
+}
 
 const api: AxiosInstance = axios.create({
-  baseURL: ROOT_URL,
+  baseURL: ROOT_URL || '/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +56,7 @@ api.interceptors.request.use(
     const tenant = getTenantFromPath();
 
     if (tenant) {
-      config.baseURL = `${ROOT_URL}/${tenant}/api`;
+      config.baseURL = buildTenantApiBase(tenant);
     }
 
     if (token && config.headers) {

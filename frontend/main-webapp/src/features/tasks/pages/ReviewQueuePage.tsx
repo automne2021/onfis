@@ -693,7 +693,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
 
 export default function ReviewQueuePage() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { isManager } = useRole();
+  const { isManagerLike } = useRole();
   const { dbUser: currentUser } = useAuth();
 
   if (!currentUser?.id) {
@@ -704,5 +704,5 @@ export default function ReviewQueuePage() {
     );
   }
 
-  return isManager ? <ManagerReviewQueue projectId={projectId} /> : <EmployeeSubmissions projectId={projectId} />;
+  return isManagerLike ? <ManagerReviewQueue projectId={projectId} /> : <EmployeeSubmissions projectId={projectId} />;
 }

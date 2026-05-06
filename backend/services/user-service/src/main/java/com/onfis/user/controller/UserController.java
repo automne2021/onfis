@@ -73,4 +73,21 @@ public class UserController {
       // Gọi getFullUserProfile: người yêu cầu (requesterId) và người bị xem (targetUserId) đều là chính user đó (userId)
       return ResponseEntity.ok(userService.getFullUserProfile(token, userId, tenantId, userId));
   }
+
+  // ─── Onboarding endpoints ──────────────────────────────────────────────────
+
+  @PutMapping("/me/profile")
+  public ResponseEntity<Map<String, String>> updateOwnProfile(
+      @RequestHeader("X-User-ID") UUID userId,
+      @RequestBody Map<String, Object> profileData) {
+    userService.updateOwnProfile(userId, profileData);
+    return ResponseEntity.ok(Map.of("status", "ok"));
+  }
+
+  @PutMapping("/me/complete-onboarding")
+  public ResponseEntity<Map<String, String>> completeOnboarding(
+      @RequestHeader("X-User-ID") UUID userId) {
+    userService.completeOnboarding(userId);
+    return ResponseEntity.ok(Map.of("status", "ok"));
+  }
 }

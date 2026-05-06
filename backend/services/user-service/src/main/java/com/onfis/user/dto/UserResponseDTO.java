@@ -11,5 +11,6 @@ public record UserResponseDTO(
   String email,
   String role,
   UUID positionId,
-  String status
+  String status,
+  Boolean isFirstLogin
 ) {}

@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Collections;
 import java.util.List;
@@ -53,14 +55,7 @@ public class UserService {
       return "online"; 
   }
 
-  public UserResponseDTO getBasicUserProfile(UUID userId) {
-    User user = userRepository.findById(userId)
-      .orElseThrow(() -> new RuntimeException("Cannot find use with ID: " + userId));
-
-    // if (!user.getTenantId().toString().equals(tenantId)) {
-    //     throw new RuntimeException("Access Denied: This user does not belong to your company.");
-    // }
-
+  private UserResponseDTO toDto(User user) {
     return new UserResponseDTO(
       user.getId(),
       user.getTenantId(),
@@ -70,8 +65,16 @@ public class UserService {
       user.getEmail(),
       user.getRole(),
       user.getPositionId(),
-      getUserStatus(user.getId())
+      getUserStatus(user.getId()),
+      user.getIsFirstLogin()
     );
+  }
+
+  public UserResponseDTO getBasicUserProfile(UUID userId) {
+    User user = userRepository.findById(userId)
+      .orElseThrow(() -> new RuntimeException("Cannot find use with ID: " + userId));
+
+    return toDto(user);
   }
 
     public UserProfileResponseDTO getFullUserProfile(String token, UUID targetUserId, String tenantId, UUID requesterId) {
@@ -177,17 +180,7 @@ public class UserService {
     UUID tenantId = UUID.fromString(tenantIdStr);
     List<User> users = userRepository.findByTenantId(tenantId);
     
-    return users.stream().map(user -> new UserResponseDTO(
-            user.getId(),
-            user.getTenantId(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getAvatarUrl(),
-            user.getEmail(),
-            user.getRole(),
-            user.getPositionId(),
-            getUserStatus(user.getId())
-    )).collect(Collectors.toList());
+    return users.stream().map(this::toDto).collect(Collectors.toList());
   }
 
   public List<UserResponseDTO> searchUsers(String tenantIdStr, String keyword) {
@@ -198,17 +191,91 @@ public class UserService {
         UUID tenantId = UUID.fromString(tenantIdStr);
         List<User> users = userRepository.searchUsersByKeyword(tenantId, keyword.trim());
         
-        return users.stream().map(user -> new UserResponseDTO(
-                user.getId(),
-                user.getTenantId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getAvatarUrl(),
-                user.getEmail(),
-                user.getRole(),
-                user.getPositionId(),
-                getUserStatus(user.getId())
-        )).collect(Collectors.toList());
+        return users.stream().map(this::toDto).collect(Collectors.toList());
     }
-  
+
+  // ─── Onboarding ──────────────────────────────────────────────────────────────
+
+  /**
+   * Update own profile during onboarding. Updates both users and user_profiles tables.
+   */
+  @SuppressWarnings("unchecked")
+  public void updateOwnProfile(UUID userId, Map<String, Object> profileData) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+    // Update users table fields
+    if (profileData.containsKey("firstName")) {
+      user.setFirstName((String) profileData.get("firstName"));
+    }
+    if (profileData.containsKey("lastName")) {
+      user.setLastName((String) profileData.get("lastName"));
+    }
+    userRepository.save(user);
+
+    // Update user_profiles table fields
+    UserProfileEntity profile = profileRepository.findById(userId)
+        .orElseGet(() -> {
+          UserProfileEntity p = new UserProfileEntity();
+          p.setUserId(userId);
+          p.setTenantId(user.getTenantId());
+          return p;
+        });
+
+    if (profileData.containsKey("phoneNumber"))
+      profile.setPhoneNumber((String) profileData.get("phoneNumber"));
+    if (profileData.containsKey("workPhone"))
+      profile.setWorkPhone((String) profileData.get("workPhone"));
+    if (profileData.containsKey("personalEmail"))
+      profile.setPersonalEmail((String) profileData.get("personalEmail"));
+    if (profileData.containsKey("address"))
+      profile.setAddress((String) profileData.get("address"));
+    if (profileData.containsKey("nationality"))
+      profile.setNationality((String) profileData.get("nationality"));
+    if (profileData.containsKey("gender"))
+      profile.setGender((String) profileData.get("gender"));
+    if (profileData.containsKey("nationId"))
+      profile.setNationId((String) profileData.get("nationId"));
+    if (profileData.containsKey("workLocation"))
+      profile.setWorkLocation((String) profileData.get("workLocation"));
+    if (profileData.containsKey("bio"))
+      profile.setBio((String) profileData.get("bio"));
+    if (profileData.containsKey("dob") && profileData.get("dob") != null) {
+      profile.setDob(java.time.LocalDate.parse((String) profileData.get("dob")));
+    }
+    if (profileData.containsKey("skills")) {
+      profile.setSkills((List<String>) profileData.get("skills"));
+    }
+    if (profileData.containsKey("bankingInfo")) {
+      profile.setBankingInfo((Map<String, Object>) profileData.get("bankingInfo"));
+    }
+    if (profileData.containsKey("taxInfo")) {
+      profile.setTaxInfo((Map<String, Object>) profileData.get("taxInfo"));
+    }
+    if (profileData.containsKey("emergencyContact")) {
+      profile.setEmergencyContact((Map<String, Object>) profileData.get("emergencyContact"));
+    }
+    if (profileData.containsKey("contractInfo")) {
+      profile.setContractInfo((Map<String, Object>) profileData.get("contractInfo"));
+    }
+    if (profileData.containsKey("educationInfo")) {
+      profile.setEducationInfo((Map<String, Object>) profileData.get("educationInfo"));
+    }
+    if (profileData.containsKey("compensationInfo")) {
+      profile.setCompensationInfo((Map<String, Object>) profileData.get("compensationInfo"));
+    }
+
+    profile.setUpdatedAt(LocalDateTime.now());
+    profileRepository.save(profile);
+  }
+
+  /**
+   * Mark onboarding as complete — sets is_first_login = false.
+   */
+  public void completeOnboarding(UUID userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+    user.setIsFirstLogin(false);
+    userRepository.save(user);
+  }
 }

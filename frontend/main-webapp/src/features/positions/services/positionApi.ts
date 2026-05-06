@@ -144,3 +144,24 @@ export async function removeUnassignedUser(userId: string) {
   await api.delete(`/positions/unassigned-users/${userId}`);
 }
 
+// ── Department CRUD ──────────────────────────────────────────────
+
+export interface DepartmentCreateData {
+  name: string;
+  description?: string;
+}
+
+export async function createDepartment(data: DepartmentCreateData): Promise<DepartmentItem> {
+  const res = await api.post('/positions/departments', data);
+  return res.data;
+}
+
+export async function updateDepartment(id: string, data: DepartmentCreateData): Promise<DepartmentItem> {
+  const res = await api.put(`/positions/departments/${id}`, data);
+  return res.data;
+}
+
+export async function deleteDepartment(id: string): Promise<void> {
+  await api.delete(`/positions/departments/${id}`);
+}
+

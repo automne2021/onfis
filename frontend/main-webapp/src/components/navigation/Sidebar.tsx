@@ -7,6 +7,26 @@ import { useTenantPath } from "../../hooks/useTenantPath";
 import Icon from "../common/Icon";
 import { CollapseIcon } from "../common/Icons";
 
+// ─── Nav scroll arrow ─────────────────────────────────────────────────────────
+
+function ScrollArrow({ direction, onClick }: { direction: "up" | "down"; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center justify-center w-full py-1 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-colors duration-150"
+      aria-label={direction === "down" ? "Cuộn xuống" : "Cuộn lên"}
+    >
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        {direction === "down"
+          ? <path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          : <path d="M3 9L7 5L11 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        }
+      </svg>
+    </button>
+  );
+}
+
 interface SubItem {
   to: string;
   label: string;
@@ -24,6 +44,9 @@ interface NavItemProps {
 
 interface NavItemWithFlyoutProps extends NavItemProps {
   subItems: SubItem[];
+  /** Path prefixes that mark this item as active. Defaults to ["/projects", "/my-tasks"] */
+  activePathMatch?: string[];
+  flyoutTitle?: string;
 }
 
 const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
@@ -63,11 +86,13 @@ const NavItem = ({ to, icon, label, isCollapsed }: NavItemProps) => (
 // Flyout panel rendered in a portal so it isn't clipped by the sidebar's overflow
 const FlyoutPanel = ({
   items,
+  title,
   position,
   onMouseEnter,
   onMouseLeave,
 }: {
   items: SubItem[];
+  title: string;
   position: { top: number; left: number };
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -80,7 +105,7 @@ const FlyoutPanel = ({
       onMouseLeave={onMouseLeave}
     >
       <p className="px-3 pt-1 pb-2 text-[10px] font-semibold text-neutral-400 uppercase tracking-widest">
-        Projects
+        {title}
       </p>
       {items.map((item) => (
         <NavLink
@@ -106,16 +131,16 @@ const FlyoutPanel = ({
     document.body
   );
 
-const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWithFlyoutProps) => {
+const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems, activePathMatch, flyoutTitle }: NavItemWithFlyoutProps) => {
   const itemRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 0, left: 0 });
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { isManager, isEmployee } = useRole();
+  const { isManagerLike, isEmployee } = useRole();
   const { pathname } = useLocation();
 
   const visibleItems = subItems.filter(
-    (item) => (!item.managerOnly || isManager) && (!item.employeeOnly || isEmployee)
+    (item) => (!item.managerOnly || isManagerLike) && (!item.employeeOnly || isEmployee)
   );
 
   const showPanel = useCallback(() => {
@@ -141,9 +166,8 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
     []
   );
 
-  const isActive =
-    pathname.includes("/projects") ||
-    pathname.includes("/my-tasks");
+  const matchPaths = activePathMatch ?? ["/projects", "/my-tasks"];
+  const isActive = matchPaths.some((p) => pathname.includes(p));
 
   return (
     <div
@@ -190,6 +214,7 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
       {isVisible && visibleItems.length > 0 && (
         <FlyoutPanel
           items={visibleItems}
+          title={flyoutTitle ?? "Projects"}
           position={panelPos}
           onMouseEnter={showPanel}
           onMouseLeave={scheduleHide}
@@ -199,10 +224,40 @@ const NavItemWithFlyout = ({ to, icon, label, isCollapsed, subItems }: NavItemWi
   );
 };
 
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+
 export default function Sidebar() {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { withTenant } = useTenantPath();
-  const { isManager } = useRole();
+  const { isSuperAdmin, isAdmin } = useRole();
+
+  // Scroll state for the nav area
+  const navRef = useRef<HTMLDivElement>(null);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    setCanScrollUp(el.scrollTop > 4);
+    setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const el = navRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", checkScroll);
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      ro.disconnect();
+    };
+  }, [checkScroll]);
+
+  const scrollDown = () => navRef.current?.scrollBy({ top: 100, behavior: "smooth" });
+  const scrollUp = () => navRef.current?.scrollBy({ top: -100, behavior: "smooth" });
 
   const projectSubItems: SubItem[] = [
     { to: withTenant("/projects"), label: "All Projects", icon: "view_kanban" },
@@ -211,8 +266,22 @@ export default function Sidebar() {
     { to: withTenant("/projects/reviews"), label: "My Reviews", icon: "send", employeeOnly: true },
   ];
 
+  const adminNavItems: SubItem[] = [
+    { to: withTenant("/admin/requests"), icon: "support_agent", label: "Requests" },
+    { to: withTenant("/admin/users"), icon: "group", label: "Users" },
+    { to: withTenant("/admin/system"), icon: "tune", label: "System Settings" },
+    { to: withTenant("/admin/audit"), icon: "manage_search", label: "Audit Log" },
+  ];
+
+  const dashboardPath = isSuperAdmin
+    ? withTenant("/leader-dashboard")
+    : isAdmin
+      ? withTenant("/admin/dashboard")
+      : withTenant("/dashboard");
+
   const navItems: Omit<NavItemProps, "isCollapsed">[] = [
-    { to: withTenant("/dashboard"), icon: "dashboard", label: "Dashboard" },
+    { to: dashboardPath, icon: "dashboard", label: "Dashboard" },
+    ...(isSuperAdmin ? [{ to: withTenant("/delegation"), icon: "assignment_ind", label: "Delegate" }] : []),
     { to: withTenant("/announcements"), icon: "campaign", label: "Announce" },
     { to: withTenant("/discuss"), icon: "forum", label: "Discuss" },
     { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
@@ -221,7 +290,7 @@ export default function Sidebar() {
   return (
     <aside
       className={`bg-white flex flex-col items-center gap-1 py-3 rounded-xl shadow-md border-2 border-neutral-200 sticky top-0 self-start h-[calc(100vh-60px-16px)]
-                   transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-visible
+                   transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden overflow-x-visible
                    ${isCollapsed ? "w-[56px] px-2" : "w-[80px] px-1.5"}`}
     >
       {/* Collapse Toggle Button */}
@@ -229,7 +298,7 @@ export default function Sidebar() {
         type="button"
         onClick={toggleSidebar}
         className={`flex items-center justify-center rounded-lg transition-all duration-200
-                    hover:bg-neutral-100 active:scale-95 mb-1
+                    hover:bg-neutral-100 active:scale-95 mb-1 shrink-0
                     ${isCollapsed ? "w-10 h-8" : "w-full h-8"}`}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
@@ -237,39 +306,65 @@ export default function Sidebar() {
       </button>
 
       {/* Subtle divider */}
-      <div className={`h-px bg-neutral-100 transition-all duration-300 mb-1 ${isCollapsed ? "w-8" : "w-full"}`} />
+      <div className={`h-px bg-neutral-100 transition-all duration-300 mb-1 shrink-0 ${isCollapsed ? "w-8" : "w-full"}`} />
 
-      {/* Navigation Items */}
-      <nav className="flex flex-col items-center gap-1 w-full">
-        {navItems.map((item) => (
-          <NavItem key={item.to} {...item} isCollapsed={isCollapsed} />
-        ))}
+      {/* Scrollable nav area */}
+      <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+        {/* Up arrow */}
+        {canScrollUp && <ScrollArrow direction="up" onClick={scrollUp} />}
 
-        {/* Projects item with flyout sub-menu */}
-        <NavItemWithFlyout
-          to={withTenant("/projects")}
-          icon="view_kanban"
-          label="Project"
-          isCollapsed={isCollapsed}
-          subItems={projectSubItems}
-        />
-      </nav>
+        {/* Navigation Items – hidden scrollbar */}
+        <div
+          ref={navRef}
+          className="flex-1 overflow-y-auto overflow-x-visible w-full [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: "none" }}
+        >
+          <nav className="flex flex-col items-center gap-1 w-full">
+            {navItems.map((item) => (
+              <NavItem key={item.to} {...item} isCollapsed={isCollapsed} />
+            ))}
 
-      {/* Spacer pushes Settings to bottom */}
-      <div className="flex-1" />
+            {/* Projects item with flyout sub-menu */}
+            <NavItemWithFlyout
+              to={withTenant("/projects")}
+              icon="view_kanban"
+              label="Project"
+              isCollapsed={isCollapsed}
+              subItems={projectSubItems}
+            />
+
+            {/* Admin group – ADMIN role only */}
+            {isAdmin && (
+              <>
+                <div className={`h-px bg-neutral-100 my-1 ${isCollapsed ? "w-8" : "w-full"}`} />
+                <NavItemWithFlyout
+                  to={withTenant("/admin/dashboard")}
+                  icon="admin_panel_settings"
+                  label="Admin"
+                  isCollapsed={isCollapsed}
+                  subItems={adminNavItems}
+                  activePathMatch={["/admin"]}
+                  flyoutTitle="Admin"
+                />
+              </>
+            )}
+          </nav>
+        </div>
+
+        {/* Down arrow */}
+        {canScrollDown && <ScrollArrow direction="down" onClick={scrollDown} />}
+      </div>
 
       {/* Bottom divider */}
-      <div className={`h-px bg-neutral-100 transition-all duration-300 ${isCollapsed ? "w-8" : "w-full"}`} />
+      <div className={`h-px bg-neutral-100 transition-all duration-300 shrink-0 ${isCollapsed ? "w-8" : "w-full"}`} />
 
-      {/* Settings Button */}
-      {isManager && (
-        <NavItem
-          to={withTenant("/settings")}
-          icon="settings"
-          label="Settings"
-          isCollapsed={isCollapsed}
-        />
-      )}
+      {/* Settings Button — available to all roles */}
+      <NavItem
+        to={withTenant("/settings")}
+        icon="settings"
+        label="Settings"
+        isCollapsed={isCollapsed}
+      />
     </aside>
   );
 }

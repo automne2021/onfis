@@ -39,4 +39,7 @@ public class User {
 
   @Column(name = "position_id")
   private UUID positionId;
+
+  @Column(name = "is_first_login")
+  private Boolean isFirstLogin;
 }

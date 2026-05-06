@@ -33,7 +33,8 @@ public class SupabaseStorageService {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + supabaseKey);
             headers.set("apikey", supabaseKey);
-            headers.setContentType(MediaType.valueOf(file.getContentType() != null ? file.getContentType() : "application/octet-stream"));
+            headers.setContentType(MediaType
+                    .valueOf(file.getContentType() != null ? file.getContentType() : "application/octet-stream"));
 
             HttpEntity<byte[]> requestEntity = new HttpEntity<>(file.getBytes(), headers);
 
@@ -41,8 +42,7 @@ public class SupabaseStorageService {
                     endpoint,
                     HttpMethod.POST,
                     requestEntity,
-                    String.class
-            );
+                    String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 return String.format("%s/storage/v1/object/public/%s/%s", supabaseUrl, bucketName, fileName);
@@ -52,6 +52,36 @@ public class SupabaseStorageService {
         } catch (Exception e) {
             log.error("Lỗi khi upload file lên Supabase: {}", e.getMessage());
             throw new RuntimeException("Không thể upload file", e);
+        }
+    }
+
+    /**
+     * Delete a file from Supabase Storage by its public URL.
+     * Silently logs failures so that a missing/already-deleted file never blocks
+     * business logic.
+     */
+    public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.isBlank())
+            return;
+        try {
+            // Extract the object path after "/object/public/<bucket>/"
+            String prefix = String.format("%s/storage/v1/object/public/%s/", supabaseUrl, bucketName);
+            String objectPath = fileUrl.startsWith(prefix) ? fileUrl.substring(prefix.length()) : null;
+            if (objectPath == null || objectPath.isBlank()) {
+                log.warn("Không thể trích xuất đường dẫn object từ URL: {}", fileUrl);
+                return;
+            }
+
+            String endpoint = String.format("%s/storage/v1/object/%s/%s", supabaseUrl, bucketName, objectPath);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + supabaseKey);
+            headers.set("apikey", supabaseKey);
+
+            restTemplate.exchange(endpoint, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
+            log.info("Đã xóa file khỏi Supabase: {}", objectPath);
+        } catch (Exception e) {
+            log.warn("Không thể xóa file Supabase (bỏ qua): {} — {}", fileUrl, e.getMessage());
         }
     }
 }

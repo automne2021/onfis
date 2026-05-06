@@ -81,7 +81,7 @@ function ReviewTimeline({ reviews }: { reviews: ReviewComment[] }) {
 }
 
 export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestChanges }: ReviewPanelProps) {
-  const { isManager } = useRole();
+  const { isManagerLike: isManager } = useRole();
   const { dbUser: currentUser } = useAuth();
   const [comment, setComment] = useState("");
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");

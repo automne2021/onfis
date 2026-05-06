@@ -10,10 +10,13 @@ import java.util.UUID;
 @Repository
 public interface AnnouncementCommentRepository extends JpaRepository<AnnouncementComment, UUID> {
     List<AnnouncementComment> findByTenantIdAndAnnouncementIdOrderByCreatedAtAsc(UUID tenantId, UUID announcementId);
-    
-    List<AnnouncementComment> findByTenantIdAndAnnouncementIdAndParentIdIsNullOrderByCreatedAtAsc(UUID tenantId, UUID announcementId);
+
+    List<AnnouncementComment> findByTenantIdAndAnnouncementIdAndParentIdIsNullOrderByCreatedAtAsc(UUID tenantId,
+            UUID announcementId);
 
     long countByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
+
+    List<AnnouncementComment> findByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
 
     void deleteByTenantIdAndAnnouncementId(UUID tenantId, UUID announcementId);
 }

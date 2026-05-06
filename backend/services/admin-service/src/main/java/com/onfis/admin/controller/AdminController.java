@@ -1,13 +1,26 @@
 package com.onfis.admin.controller;
 
+import com.onfis.admin.dto.AdminDashboardResponse;
+import com.onfis.admin.dto.LeaderDashboardResponse;
+import com.onfis.admin.dto.TenantUpdateRequest;
+import com.onfis.admin.service.AdminDashboardService;
+import com.onfis.admin.service.LeaderDashboardService;
+import com.onfis.admin.service.TenantService;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/admin")
+@RequiredArgsConstructor
 public class AdminController {
+
+  private final LeaderDashboardService leaderDashboardService;
+  private final AdminDashboardService adminDashboardService;
+  private final TenantService tenantService;
+
   @GetMapping("/health")
   public ResponseEntity<Map<String, String>> health(
       @RequestHeader(value = "X-Company-ID", required = false) String companyId) {
@@ -15,7 +28,34 @@ public class AdminController {
     response.put("service", "admin-service");
     response.put("status", "UP");
     response.put("port", "8084");
-    if (companyId != null) response.put("companyId", companyId);
+    if (companyId != null)
+      response.put("companyId", companyId);
     return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/leader-dashboard")
+  public ResponseEntity<LeaderDashboardResponse> getLeaderDashboard(
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") String userId) {
+    return ResponseEntity.ok(leaderDashboardService.getLeaderDashboard(tenantId, userId));
+  }
+
+  @GetMapping("/dashboard")
+  public ResponseEntity<AdminDashboardResponse> getAdminDashboard(
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") String userId) {
+    return ResponseEntity.ok(adminDashboardService.getDashboard(tenantId, userId));
+  }
+
+  /**
+   * Update tenant info — used by the leader setup wizard.
+   * Only SUPER_ADMIN (leader) can call this endpoint.
+   */
+  @PutMapping("/tenants/me")
+  public ResponseEntity<Map<String, Object>> updateTenant(
+      @RequestHeader("X-Company-ID") String tenantId,
+      @RequestHeader("X-User-ID") String userId,
+      @RequestBody TenantUpdateRequest request) {
+    return ResponseEntity.ok(tenantService.updateTenant(tenantId, userId, request));
   }
 }

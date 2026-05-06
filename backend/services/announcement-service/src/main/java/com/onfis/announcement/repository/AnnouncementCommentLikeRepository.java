@@ -7,13 +7,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface AnnouncementCommentLikeRepository extends JpaRepository<AnnouncementCommentLike, UUID> {
     boolean existsByTenantIdAndCommentIdAndUserId(UUID tenantId, UUID commentId, UUID userId);
+
     void deleteByTenantIdAndCommentIdAndUserId(UUID tenantId, UUID commentId, UUID userId);
+
     List<AnnouncementCommentLike> findByTenantIdAndCommentId(UUID tenantId, UUID commentId);
 
     @Modifying

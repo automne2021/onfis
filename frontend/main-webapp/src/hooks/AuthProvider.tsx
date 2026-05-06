@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
 import { getCurrentUser } from '../services/authService';
-import { AuthContext, type AuthUser, type UserRole } from './useAuth';
+import { normalizeRole } from '../utils/roles';
+import { AuthContext, type AuthUser } from './useAuth';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [session, setSession] = useState<import('@supabase/supabase-js').Session | null>(null);
+    const [session, setSession] = useState<Session | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [dbUser, setDbUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -19,46 +20,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
             try {
-                // console.log("Starting to fetch DB user for ID:", supabaseUser.id);
                 const me = await getCurrentUser();
-                // console.log("Fetch DB user success:", me);
+                const normalizedRole = normalizeRole(me?.role);
+                if (!normalizedRole) {
+                    throw new Error(`Unsupported role value: ${String(me?.role)}`);
+                }
+
                 if (mounted) {
                     setDbUser({
                         id: me.id,
                         name: `${me.firstName || ''} ${me.lastName || ''}`.trim() || "N/A",
                         avatar: undefined,
-                        role: me.role as UserRole,
-                        permissions: me.permissions || [],
-                        departmentId: me.departmentId
+                        role: normalizedRole,
+                        permissions: Array.isArray(me.permissions) ? me.permissions : [],
+                        departmentId: me.departmentId,
+                        email: me.email,
                     });
                 }
             } catch (error) {
                 console.error("Failed to load project user profile:", error);
-                if (mounted) setDbUser(null);
+                if (mounted) {
+                    setDbUser(null);
+                }
+            }
+        };
+
+        const syncAuthState = async (nextSession: Session | null) => {
+            if (!mounted) {
+                return;
+            }
+
+            setSession(nextSession);
+            const currentUser = nextSession?.user ?? null;
+            setUser(currentUser);
+            setIsLoading(true);
+
+            await fetchDatabaseUser(currentUser);
+
+            if (mounted) {
+                setIsLoading(false);
             }
         };
 
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (mounted) {
-                setSession(session);
-                const currentUser = session?.user ?? null;
-                setUser(currentUser);
-
-                void fetchDatabaseUser(currentUser).finally(() => {
-                    if (mounted) setIsLoading(false);
-                });
-            }
+            void syncAuthState(session);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (mounted) {
-                setSession(session);
-                const currentUser = session?.user ?? null;
-                setUser(currentUser);
-
-                void fetchDatabaseUser(currentUser);
-                setIsLoading(false);
-            }
+            void syncAuthState(session);
         });
 
         return () => {

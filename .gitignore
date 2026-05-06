@@ -65,3 +65,11 @@ coverage/
 *.out
 /*.sql
 /infrastructure/sql/*.sql
+/.agents/skills/supabase-postgres-best-practices
+/.agents/skills/supabase
+/.augment/skills/supabase
+/package.json
+/skills-lock.json
+/.claude/skills/supabase
+/.claude/skills/supabase-postgres-best-practices
+/.agent/skills/refactor-ui
