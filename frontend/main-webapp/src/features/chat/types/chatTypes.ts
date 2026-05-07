@@ -19,6 +19,7 @@ export interface ChatChannel {
   isPinned?: boolean;
   unreadCount?: number;
   targetUserId?: string;
+  canManage: boolean;
 }
 
 // Cấu trúc cho file đính kèm

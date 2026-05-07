@@ -132,6 +132,7 @@ function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser, onTo
           avatarUrl={headerAvatarUrl}
           status={headerStatus} 
           conversationId={currentChannel.id}
+          canManage={currentChannel.canManage}
         />
       ) : (
          <div className="h-[48px] px-4 flex items-center border-b border-neutral-200">Start a chat now!</div>
