@@ -43,7 +43,7 @@ export function MessageArea({ channel, messages }: MessageAreaProps) {
           return (
             <div key={msg.id} className="flex flex-col w-full">
               {msg.dateSeparator && <DateSeparator date={msg.dateSeparator} />}
-              <MessageBubble msg={msg} isOwn={isOwn} />
+              <MessageBubble msg={msg} isOwn={isOwn} channelStatus={channel?.status} />
             </div>
           );
         })}

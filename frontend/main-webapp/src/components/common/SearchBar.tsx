@@ -3,6 +3,7 @@ import { Search } from '@mui/icons-material';
 
 import { useDebounce } from "../../hooks/useDebounce";
 import { announcementApi } from "../../features/announcements/services/announcementApi";
+import { generateSlug } from "../../utils/generateSlug";
 
 export interface SearchResult {
   id: string | number
@@ -51,7 +52,7 @@ export function SearchBar({ scope, onSearch, onQueryChange, onIsSearchingChange,
                 id: item.id,
                 title: item.title,
                 type: 'announcement',
-                url: `/announcements/${item.id}` 
+                url: `/announcements/${item.id}/${generateSlug(item.title)}` 
               }));
             }
             break;

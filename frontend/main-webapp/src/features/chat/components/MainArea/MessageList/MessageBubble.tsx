@@ -2,13 +2,17 @@ import type { ChatMessage } from '../../../types/chatTypes';
 import { StatusBubble } from '../../../../../components/common/StatusBubble';
 import { FileAttachment } from './FileAttachments';
 import { MeetingCard } from './MeetingCard';
+import { usePresence } from '../../../context/PresenceContext';
 
 interface MessageBubbleProps {
   msg: ChatMessage;
   isOwn: boolean;
+  channelStatus?: "online" | "busy" | "offline";
 }
 
-export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
+export function MessageBubble({ msg, isOwn, channelStatus }: MessageBubbleProps) {
+
+  const { statuses } = usePresence();
 
   // Tin nhắn hệ thống (Nằm giữa màn hình)
   if (msg.type === 'system') {
@@ -21,7 +25,7 @@ export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
     );
   }
 
-  // ĐÃ XÓA ĐOẠN RETURN SỚM CỦA MEETING Ở ĐÂY
+  const liveStatus = statuses[msg.sender.id] || (!isOwn ? channelStatus : undefined) || msg.sender.status;
 
   return (
     <div className={`flex gap-2.5 w-full ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -33,7 +37,7 @@ export function MessageBubble({ msg, isOwn }: MessageBubbleProps) {
           alt={msg.sender.name}
           className="w-full h-full object-cover rounded-full"
         />
-        <StatusBubble status={msg.sender.status} />
+        <StatusBubble status={liveStatus} />
       </div>
 
       {/* Nội dung tin nhắn (Bong bóng) */}
