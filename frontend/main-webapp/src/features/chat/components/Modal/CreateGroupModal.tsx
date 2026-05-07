@@ -16,6 +16,7 @@ interface UserDTO {
   lastName: string;
   email: string;
   avatarUrl: string | null;
+  role?: string;
 }
 
 export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModalProps) {
@@ -30,6 +31,15 @@ export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModal
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
+
+  const currentUserData = companyUsers.find(u => u.id === user?.id);
+  const isSystemAdmin = currentUserData?.role === 'SUPER_ADMIN' || currentUserData?.role === 'ADMIN';
+
+  useEffect(() => {
+    if (!isLoadingUsers && currentUserData && !isSystemAdmin) {
+      setIsPrivate(true); 
+    }
+  }, [isLoadingUsers, currentUserData, isSystemAdmin]);
 
   // 1. Gọi API lấy danh sách User khi mở Modal
   useEffect(() => {
@@ -147,15 +157,33 @@ export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModal
 
           <div className="flex flex-col gap-3">
             <label className="body-3-medium text-neutral-900">Visibility</label>
-            
+
             <div 
-              onClick={() => setIsPrivate(false)}
-              className={`flex gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${!isPrivate ? 'border-primary bg-primary/5' : 'border-neutral-200'}`}
+              onClick={() => {
+                if (isSystemAdmin) setIsPrivate(false);
+              }}
+              className={`flex gap-3 p-3 rounded-xl border transition-colors ${
+                !isSystemAdmin 
+                  ? 'opacity-60 cursor-not-allowed bg-neutral-100 border-neutral-200' 
+                  : !isPrivate 
+                    ? 'border-primary bg-primary/5 cursor-pointer' 
+                    : 'border-neutral-200 cursor-pointer hover:bg-neutral-50'
+              }`}
             >
-              <Hash size={20} className={!isPrivate ? 'text-primary' : 'text-neutral-500'} />
-              <div>
-                <p className={`body-3-medium ${!isPrivate ? 'text-primary' : 'text-neutral-900'}`}>Public</p>
+              <Hash size={20} className={!isPrivate && isSystemAdmin ? 'text-primary' : 'text-neutral-500'} />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className={`body-3-medium ${!isPrivate && isSystemAdmin ? 'text-primary' : 'text-neutral-900'}`}>
+                    Public
+                  </p>
+                  {!isSystemAdmin && <Lock size={14} className="text-neutral-400" />}
+                </div>
                 <p className="body-4-regular text-neutral-500">Anyone in your company can find and join.</p>
+                
+                {/* Dòng text cảnh báo */}
+                {!isSystemAdmin && (
+                  <p className="text-[11px] text-red-500 mt-1 font-medium">Only System Admins can create public channels.</p>
+                )}
               </div>
             </div>
 

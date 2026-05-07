@@ -16,7 +16,8 @@ interface ChatHeaderProps {
   avatarUrl?: string;
   status?: "online" | "busy" | "offline";
   conversationId: string;
-  onTogglePin?: () => void; // 1. THÊM PROP: Nhận hàm xử lý từ Component cha
+  onTogglePin?: () => void;
+  canManage?: boolean;
 }
 
 export function ChatHeader({
@@ -27,7 +28,8 @@ export function ChatHeader({
   avatarUrl,
   status = 'offline',
   conversationId,
-  onTogglePin // Destructure prop
+  onTogglePin, 
+  canManage
 }: ChatHeaderProps) {
 
   const { startLiveKit } = useCall();
@@ -149,7 +151,7 @@ export function ChatHeader({
           customStyle='p-2'
         />
 
-        <div className="relative" ref={menuRef}>
+        {/* <div className="relative" ref={menuRef}>
           <button
             type='button'
             onClick={() => setShowMenu(!showMenu)}
@@ -168,6 +170,41 @@ export function ChatHeader({
                 <Settings size={14} /> Settings
               </button>
               {type === 'private_group' && (
+                <button 
+                  onClick={() => {
+                    setShowMenu(false);
+                    setIsInviteModalOpen(true);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
+                >
+                  <UserPlus size={14} /> Invite Member
+                </button>
+              )}
+            </div>
+          )}
+        </div> */}
+        <div className="relative" ref={menuRef}>
+          <button
+            type='button'
+            onClick={() => setShowMenu(!showMenu)}
+            className={`p-2 rounded-full transition ${showMenu ? 'bg-neutral-200 text-neutral-900' : 'text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900'}`}
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          {showMenu && (
+            <div className="absolute right-0 top-10 w-48 bg-white border shadow-lg rounded-lg py-1 z-50">
+              <button onClick={() => setIsMembersOpen(true)} className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-neutral-50">
+                <Users size={14} /> View Members
+              </button>
+              
+              {canManage && isGroupChat && (
+                <button onClick={() => setIsSettingsOpen(true)} className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-neutral-50">
+                  <Settings size={14} /> Settings
+                </button>
+              )}
+
+              {canManage && type === 'private_group' && (
                 <button 
                   onClick={() => {
                     setShowMenu(false);

@@ -19,4 +19,7 @@ public class ConversationResponseDTO {
     
     private int unreadCount;
     private UUID targetUserId;
+
+    @JsonProperty("canManage")
+    private boolean canManage;
 }

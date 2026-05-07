@@ -292,7 +292,23 @@ public class ChatController {
             @RequestHeader("Authorization") String token,
             @RequestHeader("X-User-ID") UUID creatorId,
             @RequestHeader("X-Company-ID") String companyIdStr) {
-
+        
+        if ("public_group".equalsIgnoreCase(request.type())) {
+            try {
+                UserResponseDTO creatorInfo = userClient.getUserProfile(token, companyIdStr, creatorId);
+                boolean isSystemAdmin = creatorInfo != null && 
+                    ("SUPER_ADMIN".equals(creatorInfo.role()) || "ADMIN".equals(creatorInfo.role()));
+                
+                if (!isSystemAdmin) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body("Chỉ Super Admin hoặc Admin mới có quyền tạo kênh công khai (Public Group).");
+                }
+            } catch (Exception e) {
+                log.error("Lỗi kiểm tra quyền tạo public group: ", e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Không thể xác thực quyền hạn lúc này.");
+            }
+        }
+        
         if ("private_group".equalsIgnoreCase(request.type())) {
             long uniqueAddedMembers = 0;
             if (request.memberIds() != null) {
@@ -379,6 +395,26 @@ public class ChatController {
         return ResponseEntity.ok(responseDto);
     }
 
+    private boolean checkManagePermission(Conversation conv, UUID userId, String token, String companyIdStr) {
+        try {
+            UserResponseDTO myInfo = userClient.getUserProfile(token, companyIdStr, userId);
+            boolean isSystemAdmin = myInfo != null && ("SUPER_ADMIN".equals(myInfo.role()) || "ADMIN".equals(myInfo.role()));
+
+            if ("public_group".equalsIgnoreCase(conv.getType())) {
+                return isSystemAdmin; // Public group: Chỉ Super Admin/Admin
+            } else if ("private_group".equalsIgnoreCase(conv.getType())) {
+                ConversationMember myMembership = memberRepository.findByConversationId(conv.getId()).stream()
+                        .filter(m -> m.getUserId().equals(userId))
+                        .findFirst().orElse(null);
+                boolean isGroupAdmin = myMembership != null && "ADMIN".equalsIgnoreCase(myMembership.getRole());
+                return isSystemAdmin || isGroupAdmin; // Private group: Admin hệ thống hoặc người tạo nhóm
+            }
+        } catch (Exception e) {
+            log.warn("Lỗi phân quyền: {}", e.getMessage());
+        }
+        return false;
+    }
+
     @PostMapping("/conversations/{conversationId}/members")
     public ResponseEntity<?> addMemberToConversation(
             @PathVariable UUID conversationId,
@@ -387,8 +423,11 @@ public class ChatController {
             @RequestHeader("Authorization") String token,
             @RequestHeader(value = "X-Company-ID", required = false) String companyIdStr) {
 
-        if (!memberRepository.existsByConversationIdAndUserId(conversationId, currentUserId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền mời người khác");
+        Conversation conv = conversationRepository.findById(conversationId).orElse(null);
+        if (conv == null) return ResponseEntity.notFound().build();
+
+        if (!checkManagePermission(conv, currentUserId, token, companyIdStr)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền mời người khác vào nhóm này");
         }
 
         UUID newMemberId;
@@ -442,7 +481,6 @@ public class ChatController {
         }
 
         try {
-            Conversation conv = conversationRepository.findById(conversationId).orElse(null);
             if (conv != null) {
                 ConversationResponseDTO sidebarDto = mapToResponseDTO(conv, newMemberId, token, companyIdStr);
                 messagingTemplate.convertAndSend("/topic/sidebar." + newMemberId, sidebarDto);
@@ -458,14 +496,16 @@ public class ChatController {
     public ResponseEntity<?> renameConversation(
             @PathVariable UUID conversationId,
             @RequestBody Map<String, String> payload,
-            @RequestHeader("X-User-ID") UUID userId) {
+            @RequestHeader("X-User-ID") UUID userId,
+            @RequestHeader("Authorization") String token,
+            @RequestHeader(value = "X-Company-ID", required = false) String companyIdStr) {
         
-        if (!memberRepository.existsByConversationIdAndUserId(conversationId, userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền thao tác");
-        }
-
         Conversation conv = conversationRepository.findById(conversationId).orElse(null);
         if (conv == null) return ResponseEntity.notFound().build();
+
+        if (!checkManagePermission(conv, userId, token, companyIdStr)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền đổi tên nhóm này");
+        }
 
         String newName = payload.get("name");
         if (newName != null && !newName.trim().isEmpty()) {
@@ -478,10 +518,15 @@ public class ChatController {
     @DeleteMapping("/conversations/{conversationId}")
     public ResponseEntity<?> deleteConversation(
             @PathVariable UUID conversationId,
-            @RequestHeader("X-User-ID") UUID userId) {
+            @RequestHeader("X-User-ID") UUID userId,
+            @RequestHeader("Authorization") String token,
+            @RequestHeader(value = "X-Company-ID", required = false) String companyIdStr) {
         
-        if (!memberRepository.existsByConversationIdAndUserId(conversationId, userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền thao tác");
+        Conversation conv = conversationRepository.findById(conversationId).orElse(null);
+        if (conv == null) return ResponseEntity.notFound().build();
+
+        if (!checkManagePermission(conv, userId, token, companyIdStr)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền xóa nhóm này");
         }
 
         List<ChatMessage> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
@@ -588,6 +633,7 @@ public class ChatController {
         String name = conv.getName();
         String avatarUrl = null;
         String type = conv.getType() != null ? conv.getType().toLowerCase() : "group";
+        boolean canManage = checkManagePermission(conv, userId, token, companyIdStr);
         
         int membersCount = 0; 
         UUID targetUserIdForStatus = null; 
@@ -657,6 +703,7 @@ public class ChatController {
                 .membersCount(membersCount)
                 .targetUserId(targetUserIdForStatus)
                 .isPinned(conv.isPinned())
+                .canManage(canManage)
                 .build();
     }
 }

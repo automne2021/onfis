@@ -294,41 +294,36 @@ export function ChatSidebar({
           ) : (
             <>
               {pinnedChannels.length > 0 && (
-                <ChatGroup title="Pinned Channels"> 
-                  {pinnedChannels.map(channel => {
-                    const isDirectOrSelf = channel.type === 'direct' || channel.type === 'self';
+                <ChatGroup title="Pinned">
+                  {pinnedChannels.map((channel) => {
                     const isPrivate = channel.type === 'private_group';
-                    
-                    // Xử lý tên và avatar giống hệt Direct Messages
-                    const cleanName = (channel.name || "").replace(/\(You\)/g, '').trim() || (channel.type === 'self' ? "You" : "User");
-                    const defaultAvatar = channel.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=random`;
-                    
-                    // Lấy realtime status
-                    const liveStatus = channel.targetUserId && statuses[channel.targetUserId]
-                                      ? statuses[channel.targetUserId]
-                                      : channel.status || (channel.type === 'self' ? "online" : "offline");
+                    const isDirect = channel.type === 'direct';
+                    const isSelf = channel.type === 'self';
 
                     return (
-                    <ChatItem 
-                      key={channel.id} 
-                      name={isDirectOrSelf ? cleanName : channel.name}
-                      isActive={activeChannelId === channel.id}
-                      onClick={() => onChannelSelect(channel.id)}
-                      
-                      // Nếu là Group thì hiện Icon, nếu là Direct/Self thì hiện Avatar
-                      icon={!isDirectOrSelf ? (isPrivate ? <Lock size={16} /> : <Hash size={16} />) : undefined}
-                      avatarUrl={isDirectOrSelf ? defaultAvatar : undefined}
-                      status={isDirectOrSelf ? liveStatus : undefined}
-                      
-                      onRename={() => {
-                        setNewChannelName(channel.name);
-                        setActionModal({ type: 'rename', channelId: channel.id, channelName: channel.name });
-                      }}
-                      onDelete={() => {
-                        setActionModal({ type: 'delete', channelId: channel.id, channelName: channel.name });
-                      }}
-                    />
-                  )})}
+                      <ChatItem
+                        key={channel.id}
+                        name={channel.name}
+                        isActive={activeChannelId === channel.id}
+                        onClick={() => onChannelSelect(channel.id)}
+                        icon={isPrivate ? <Lock size={16} /> : isDirect ? <User size={16} /> : <Hash size={16} />}
+                        avatarUrl={channel.avatarUrl}
+                        status={channel.status}
+                        
+                        // logic phân quyền: 
+                        // 1. Nếu là chat Direct hoặc Self -> Luôn cho phép Rename/Delete (để ẩn/xóa hội thoại cá nhân)
+                        // 2. Nếu là Group (Public/Private) -> Phải có cờ canManage = true từ Backend
+                        onRename={(isDirect || isSelf || channel.canManage) ? () => {
+                          setNewChannelName(channel.name);
+                          setActionModal({ type: 'rename', channelId: channel.id, channelName: channel.name });
+                        } : undefined}
+                        
+                        onDelete={(isDirect || isSelf || channel.canManage) ? () => {
+                          setActionModal({ type: 'delete', channelId: channel.id, channelName: channel.name });
+                        } : undefined}
+                      />
+                    );
+                  })}
                 </ChatGroup>
               )}
 
@@ -342,13 +337,14 @@ export function ChatSidebar({
                       isActive={activeChannelId === channel.id}
                       onClick={() => onChannelSelect(channel.id)}
                       icon={isPrivate ? <Lock size={16} /> : <Hash size={16} />}
-                      onRename={() => {
+                      onRename={channel.canManage ? () => {
                         setNewChannelName(channel.name);
                         setActionModal({ type: 'rename', channelId: channel.id, channelName: channel.name });
-                      }}
-                      onDelete={() => {
+                      } : undefined}
+                      
+                      onDelete={channel.canManage ? () => {
                         setActionModal({ type: 'delete', channelId: channel.id, channelName: channel.name });
-                      }}
+                      } : undefined}
                     />
                   );
                 })}
