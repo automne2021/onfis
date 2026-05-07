@@ -8,6 +8,7 @@ import { ContentList, type ContentItem } from "../../../components/common/Dropdo
 import { SearchBar, type SearchResult } from "../../../components/common/SearchBar";
 import type { AnnouncementFilterOption } from "../types/AnnouncementTypes";
 import { Check } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface NavbarProps {
   currentFilter?: AnnouncementFilterOption;
@@ -15,6 +16,10 @@ interface NavbarProps {
 }
 
 export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps) {
+
+  const navigate = useNavigate();
+  const { tenant } = useParams();
+  console.log(tenant);
 
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // 'filter' | 'search' | null
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -29,14 +34,17 @@ export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps
   
   const closeMenu = () => setActiveMenu(null)
   
-  const handleSearchResultClick = () => {
+  const handleSearchResultClick = (url?: string) => {
+    if (url) {
+      navigate(`/${tenant}/${url}`);
+    }
     closeMenu()
     setSearchResults([])
   }
   
   const searchContentItem: ContentItem[] = searchResults.slice(0,5).map(item => ({
     content: item.title,
-    onClick: () => handleSearchResultClick()
+    onClick: () => handleSearchResultClick(item.url)
   }))
 
   const handleSearchData = useCallback((results: SearchResult[]) => {
