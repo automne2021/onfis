@@ -51,7 +51,7 @@ function SettingsSkeleton() {
 }
 
 export default function SettingsPage() {
-  const { isManagerLike, isAdmin, isAuthLoading } = useRole();
+  const { isAdmin, isSuperAdmin, isAuthLoading } = useRole();
   const { showToast } = useToast();
   const { language, setLanguage, t } = useLanguage();
   const { tenant } = useParams<{ tenant: string }>();
@@ -75,8 +75,8 @@ export default function SettingsPage() {
       { id: "general", label: "General", icon: "settings" },
     ];
 
-    // Only Admin sees the Workspace (Tag Management) tab
-    if (isAdmin) {
+    // Only Admin and Super Admin see the Workspace (Tag Management) tab
+    if (isSuperAdmin || isAdmin) {
       tabs.push({ id: "workspace", label: "Workspace", icon: "workspaces" });
     }
 
@@ -136,8 +136,8 @@ export default function SettingsPage() {
       return;
     }
 
-    // Only load tags if user is admin
-    if (!isAdmin) {
+    // Only load tags if user is admin or super admin
+    if (!isAdmin && !isSuperAdmin) {
       setLoading(false);
       return;
     }
@@ -155,7 +155,7 @@ export default function SettingsPage() {
     };
 
     void load();
-  }, [isAuthLoading, isAdmin, showToast]);
+  }, [isAuthLoading, isAdmin, isSuperAdmin, showToast]);
 
   // ── Tag handlers ──────────────────────────────────────────────────
 
@@ -323,8 +323,8 @@ export default function SettingsPage() {
               <h2 className="text-lg font-bold text-neutral-900 mb-6">{t("General Settings")}</h2>
               <div className="space-y-6 max-w-2xl">
                 <div className="grid grid-cols-1 gap-6">
-                  {/* Full settings for managers and leaders */}
-                  {isManagerLike && (
+                  {/* Full settings for Super Admin and Admin */}
+                  {(isSuperAdmin || isAdmin) && (
                     <>
                       <div>
                         <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Company Name")}</label>
@@ -389,7 +389,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {isManagerLike && (
+                {(isSuperAdmin || isAdmin) && (
                   <div className="pt-6 border-t border-neutral-100 flex justify-end">
                     <Button title={t("Save Changes")} style="primary" textStyle="body-4-medium" />
                   </div>
@@ -398,8 +398,8 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* ── Workspace / Tag Management (Admin only) ───────────────── */}
-          {activeTab === "workspace" && isAdmin && (
+          {/* ── Workspace / Tag Management (Admin and Super Admin) ───────────────── */}
+          {activeTab === "workspace" && (isSuperAdmin || isAdmin) && (
             <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>

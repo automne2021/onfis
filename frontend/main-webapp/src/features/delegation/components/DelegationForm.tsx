@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import type { CreateExecutiveRequest, AssigneeUser } from "../services/delegationService";
 import { delegationService } from "../services/delegationService";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import { Button } from "../../../components/common/Buttons/Button";
 
 interface DelegationFormProps {
   onSubmit: (data: CreateExecutiveRequest) => Promise<void>;
@@ -280,20 +281,19 @@ export default function DelegationForm({ onSubmit, isSubmitting, onCancel }: Del
       </div>
 
       <div className="flex justify-end gap-3 pt-2">
-        <button
+        <Button
           type="button"
+          style="sub"
+          title={t("Cancel")}
           onClick={onCancel}
-          className="px-5 py-2.5 text-sm font-semibold text-neutral-600 hover:text-neutral-900 transition-colors"
-        >
-          {t("Cancel")}
-        </button>
-        <button
+        />
+        <Button
           type="submit"
+          style="primary"
+          title={isSubmitting ? t("Creating...") : t("Create Delegation")}
           disabled={isSubmitting}
-          className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-500 disabled:opacity-50 transition-all shadow-md shadow-indigo-600/20"
-        >
-          {isSubmitting ? t("Creating...") : t("Create Delegation")}
-        </button>
+          loading={isSubmitting}
+        />
       </div>
     </form>
   );

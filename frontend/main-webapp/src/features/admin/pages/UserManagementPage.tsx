@@ -295,6 +295,7 @@ export default function UserManagementPage() {
     };
   });
   const [users, setUsers] = useState<AdminUser[]>(initialUsers?.users ?? []);
+  const [totalCount, setTotalCount] = useState<number>(initialUsers?.total ?? 0);
   const [isLoading, setIsLoading] = useState(!initialUsers);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [onboardOpen, setOnboardOpen] = useState(false);
@@ -313,9 +314,10 @@ export default function UserManagementPage() {
     }
 
     try {
-      const res = await adminService.listUsers(undefined, { forceRefresh });
+      const res = await adminService.listUsers({ size: 500 }, { forceRefresh });
       userManagementSnapshot = res.users;
       setUsers(res.users);
+      setTotalCount(res.total);
     } catch {
       const fallbackUsers = userManagementSnapshot ?? [];
       userManagementSnapshot = fallbackUsers;
@@ -409,7 +411,7 @@ export default function UserManagementPage() {
           <Icon name="group" size={22} color="#0014A8" />
           <div>
             <h1 className="text-base font-bold text-neutral-900">User & Access Management</h1>
-            <p className="text-xs text-neutral-500">{users.length} accounts in tenant</p>
+            <p className="text-xs text-neutral-500">{totalCount} accounts in tenant</p>
           </div>
         </div>
         <Button
