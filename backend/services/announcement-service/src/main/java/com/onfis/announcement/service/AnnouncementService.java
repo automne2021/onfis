@@ -520,10 +520,9 @@ public class AnnouncementService {
             throw new RuntimeException("Không tìm thấy thông tin người dùng.");
         }
 
-        // LƯU Ý: Bạn hãy kiểm tra tên trường Role trong UserResponseDTO của bạn (ví dụ: getRole(), getRoleName()...)
         String role = myProfile.getRole(); 
 
-        if ("ADMIN".equalsIgnoreCase(role)) {
+        if ("SUPER_ADMIN".equals(role) || "ADMIN".equalsIgnoreCase(role)) {
             // Admin có quyền ghim/bỏ ghim mọi bài viết trong hệ thống
         } else if ("MANAGER".equalsIgnoreCase(role)) {
             // Manager chỉ được phép ghim bài nếu bài đó thuộc về phòng ban của họ
