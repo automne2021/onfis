@@ -186,8 +186,12 @@ export default function ProjectsPage() {
       setProjects((prev) => [toProjectViewModel(created), ...prev]);
 
       // Upload pending files
+      let filesFailed = 0;
       for (const file of data.pendingFiles ?? []) {
-        await uploadProjectAttachment(created.id, file).catch(() => {});
+        await uploadProjectAttachment(created.id, file).catch(() => { filesFailed++; });
+      }
+      if (filesFailed > 0) {
+        showToast(`${filesFailed} file(s) failed to upload. Please try again from the project page.`, "warning");
       }
 
       if (failedMilestones.length > 0) {

@@ -21,7 +21,7 @@ export async function uploadTaskAttachment(taskId: string, file: File): Promise<
   const { data } = await api.post<ApiAttachment>(
     `/projects/tasks/${taskId}/attachments`,
     toFormData(file),
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined } },
   );
   return data;
 }
@@ -35,7 +35,7 @@ export async function uploadTaskSubmission(taskId: string, file: File): Promise<
   const { data } = await api.post<ApiAttachment>(
     `/projects/tasks/${taskId}/submissions`,
     toFormData(file),
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined } },
   );
   return data;
 }
@@ -49,7 +49,7 @@ export async function uploadProjectAttachment(projectId: string, file: File): Pr
   const { data } = await api.post<ApiAttachment>(
     `/projects/${projectId}/attachments`,
     toFormData(file),
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined } },
   );
   return data;
 }

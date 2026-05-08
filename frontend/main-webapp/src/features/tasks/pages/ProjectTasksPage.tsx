@@ -578,8 +578,12 @@ export default function ProjectTasksPage() {
               }
 
               // Upload any pending files
+              let filesFailed = 0;
               for (const file of formData.pendingFiles ?? []) {
-                await uploadTaskAttachment(created.id, file).catch(() => {});
+                await uploadTaskAttachment(created.id, file).catch(() => { filesFailed++; });
+              }
+              if (filesFailed > 0) {
+                showToast(`${filesFailed} file(s) failed to upload. Please try again from the task details.`, "warning");
               }
 
               await refreshTaskBoard(projectIdentifier);

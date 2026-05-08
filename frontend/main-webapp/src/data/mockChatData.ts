@@ -18,13 +18,13 @@ export const MOCK_USERS: Record<string, ChatUser> = {
 // --- 2. MOCK CHANNELS (SIDEBAR) ---
 export const MOCK_CHANNELS: ChatChannel[] = [
   // Project Groups
-  { id: "proj-alpha", name: "Project-Alpha", type: "public_group", membersCount: 32, isPinned: true },
-  { id: "mkt-q4", name: "Marketing-Q4", type: "public_group", membersCount: 10, isPinned: false },
-  { id: "ds-system", name: "Design-System", type: "public_group", membersCount: 15, isPinned: true },
+  { id: "proj-alpha", name: "Project-Alpha", type: "public_group", membersCount: 32, isPinned: true, canManage: false },
+  { id: "mkt-q4", name: "Marketing-Q4", type: "public_group", membersCount: 10, isPinned: false, canManage: false },
+  { id: "ds-system", name: "Design-System", type: "public_group", membersCount: 15, isPinned: true, canManage: false },
   // Direct Messages (Lấy tên User làm tên Channel luôn cho tiện)
-  { id: "dm-bob", name: "Bob Smith", type: "direct" },
-  { id: "dm-sarah", name: "Sarah Jenkins", type: "direct" },
-  { id: "dm-david", name: "David Kim", type: "direct" },
+  { id: "dm-bob", name: "Bob Smith", type: "direct", canManage: false },
+  { id: "dm-sarah", name: "Sarah Jenkins", type: "direct", canManage: false },
+  { id: "dm-david", name: "David Kim", type: "direct", canManage: false },
 ];
 
 // --- 3. MOCK MESSAGES (CHO CHANNEL 'Project-Alpha') ---

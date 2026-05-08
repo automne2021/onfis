@@ -26,7 +26,9 @@ public class SupabaseStorageService {
 
     public String uploadFile(String folder, MultipartFile file) {
         try {
-            String fileName = folder + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String originalName = file.getOriginalFilename();
+            String safeName = (originalName == null || originalName.isBlank()) ? "unnamed" : originalName;
+            String fileName = folder + "/" + UUID.randomUUID() + "_" + safeName;
             String endpoint = String.format("%s/storage/v1/object/%s/%s", supabaseUrl, bucketName, fileName);
 
             HttpHeaders headers = new HttpHeaders();
