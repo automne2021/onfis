@@ -584,8 +584,11 @@ export default function TaskDetailModal({
                             type="button"
                             disabled={!!submitError}
                             onClick={() => {
-                              setTask({ ...task, status: "IN_REVIEW" as const });
+                              const updated = { ...task, status: "IN_REVIEW" as const };
+                              setTask(updated);
+                              onSave(updated);
                               showToast("Task submitted for review.", "info");
+                              onClose();
                             }}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors w-fit"
                           >

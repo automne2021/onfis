@@ -88,6 +88,8 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - JAVA_TOOL_OPTIONS=-Xmx256m -Xms128m
+    #ports:
+    #  - "8085:8085"    # exposed for local WS load-testing (ws://localhost:8085/ws-native)
     networks:
       - onfis-network
     depends_on:

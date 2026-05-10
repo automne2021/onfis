@@ -168,7 +168,8 @@ public class UserService {
         profile != null ? profile.getEmergencyContact() : null, // Liên hệ khẩn cấp nên để Manager thấy
         (canViewStrictPrivateInfo && profile != null) ? profile.getContractInfo() : null,
         profile != null ? profile.getEducationInfo() : null,
-        (canViewStrictPrivateInfo && profile != null) ? profile.getCompensationInfo() : null // LƯƠNG
+        (canViewStrictPrivateInfo && profile != null) ? profile.getCompensationInfo() : null, // LƯƠNG
+        targetUser.getIsFirstLogin()
         );
     }
 
