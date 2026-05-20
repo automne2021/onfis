@@ -5,18 +5,20 @@ import {
   CalendarMonthOutlined
 } from '@mui/icons-material';
 import { TitleHeader } from "../TitleHeader";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export function Education({ icon, userInfo }: OverviewProps) {
+  const { t } = useLanguage();
 
   const educationInfo = [
-    { label: 'Highest Degree', icon: <WorkspacePremium />, content: userInfo.educationInfo?.degree, subcontent: userInfo.educationInfo?.major },
-    { label: 'Institution', icon: <DomainOutlined />, content: userInfo.educationInfo?.institution },
-    { label: 'Graduation year', icon: <CalendarMonthOutlined />, content: userInfo.educationInfo?.graduationYear },
+    { label: t('Highest Degree'), icon: <WorkspacePremium />, content: userInfo.educationInfo?.degree, subcontent: userInfo.educationInfo?.major },
+    { label: t('Institution'), icon: <DomainOutlined />, content: userInfo.educationInfo?.institution },
+    { label: t('Graduation year'), icon: <CalendarMonthOutlined />, content: userInfo.educationInfo?.graduationYear },
   ]
 
   return (
     <div className="profile-section">
-      <TitleHeader icon={icon} title="Education" />
+      <TitleHeader icon={icon} title={t("Education")} />
 
       <div className="flex flex-wrap items-stretch justify-between gap-3">
         {educationInfo.map((item, index) => (

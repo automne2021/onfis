@@ -5,6 +5,7 @@ import { projectToTimelineItem } from "./types";
 import TimelineToolbar from "./TimelineToolbar";
 import ProjectTimelineGrid from "./ProjectTimelineGrid";
 import { generateTimelineConfig } from "./timelineUtils";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface ProjectTimelineViewProps {
   projects: Project[];
@@ -19,6 +20,7 @@ export default function ProjectTimelineView({
   currentDate,
   onCurrentDateChange,
 }: ProjectTimelineViewProps) {
+  const { t } = useLanguage();
   const [internalCurrentDate, setInternalCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<TimelineViewMode>("week");
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(undefined);
@@ -68,7 +70,7 @@ export default function ProjectTimelineView({
       <div className="flex flex-1 mt-2 overflow-hidden">
         {timelineProjects.length === 0 ? (
           <div className="flex flex-1 items-center justify-center text-sm text-neutral-500 bg-white border border-neutral-200 rounded-lg">
-            No projects to display
+            {t("No projects to display")}
           </div>
         ) : (
           <ProjectTimelineGrid

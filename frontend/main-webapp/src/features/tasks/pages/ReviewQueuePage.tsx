@@ -9,6 +9,7 @@ const stripHtml = (html: string): string => {
 import { useRole } from "../../../hooks/useRole";
 import { useAuth } from "../../../hooks/useAuth";
 import { useToast } from "../../../contexts/useToast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import { TaskDetailModal } from "../components";
 import type { TaskDetail } from "../components";
 import type { Task, ReviewComment } from "../types";
@@ -118,6 +119,8 @@ function PaginationBar({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const { t } = useLanguage();
+
   if (totalPages <= 1) {
     return null;
   }
@@ -130,10 +133,10 @@ function PaginationBar({
         disabled={page <= 0}
         className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        Previous
+        {t("Previous")}
       </button>
       <span className="text-xs text-neutral-500">
-        Page {page + 1} / {totalPages}
+        {t("Page")} {page + 1} / {totalPages}
       </span>
       <button
         type="button"
@@ -141,7 +144,7 @@ function PaginationBar({
         disabled={page + 1 >= totalPages}
         className="px-3 py-1.5 text-sm rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        Next
+        {t("Next")}
       </button>
     </div>
   );
@@ -163,6 +166,7 @@ function Avatar({ name, avatar, size = 28 }: { name: string; avatar?: string; si
 }
 
 function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
 
@@ -174,7 +178,7 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
         className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
       >
         <span className="material-symbols-rounded" style={{ fontSize: 14 }}>undo</span>
-        Request Changes
+        {t("Request Changes")}
       </button>
     );
   }
@@ -186,7 +190,7 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
         autoFocus
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        placeholder="Brief reason..."
+        placeholder={t("Brief reason...")}
         className="flex-1 px-3 py-1.5 text-sm border border-amber-300 rounded-lg outline-none focus:border-amber-500 bg-amber-50"
         onKeyDown={(e) => {
           if (e.key === "Enter" && reason.trim()) {
@@ -212,7 +216,7 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
         }}
         className="px-3 py-1.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-40"
       >
-        Send
+        {t("Send")}
       </button>
       <button
         type="button"
@@ -231,6 +235,7 @@ function RequestChangesInline({ onSubmit }: { onSubmit: (reason: string) => void
 function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const topRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<ManagerFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
@@ -269,7 +274,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         setTasks(reviewQueue.content.map((task) => toReviewTask(task)));
         setTotalPages(reviewQueue.totalPages);
       } catch {
-        showToast("Failed to load review queue", "error");
+        showToast(t("Failed to load review queue"), "error");
       } finally {
         setLoading(false);
       }
@@ -287,9 +292,9 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         .map((task) => (task.id === taskId ? toReviewTask(updated) : task))
         .filter((task) => (filter === "pending" ? task.id !== taskId : true))
       );
-      showToast("Task approved and marked as DONE.", "success");
+      showToast(t("Task approved and marked as DONE."), "success");
     } catch {
-      showToast("Unable to approve task", "error");
+      showToast(t("Unable to approve task"), "error");
     }
   };
 
@@ -300,9 +305,9 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         .map((task) => (task.id === taskId ? toReviewTask(updated) : task))
         .filter((task) => (filter === "pending" ? task.id !== taskId : true))
       );
-      showToast("Changes requested.", "warning");
+      showToast(t("Changes requested."), "warning");
     } catch {
-      showToast("Unable to request changes", "error");
+      showToast(t("Unable to request changes"), "error");
     }
   };
 
@@ -325,7 +330,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         });
         setTasks((prev) => prev.map((task) => (task.id === saved.id ? toReviewTask(saved) : task)));
       } catch {
-        showToast("Unable to update task", "error");
+        showToast(t("Unable to update task"), "error");
       }
     };
     void run();
@@ -336,12 +341,12 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
       <div className="navbar-style">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-bold text-neutral-900">Review Queue</h1>
-            <p className="text-sm text-neutral-400 mt-0.5">Tasks submitted for your review</p>
+            <h1 className="text-xl font-bold text-neutral-900">{t("Review Queue")}</h1>
+            <p className="text-sm text-neutral-400 mt-0.5">{t("Tasks submitted for your review")}</p>
           </div>
           {pendingCount > 0 && (
             <span className="inline-flex items-center justify-center px-2.5 py-1 text-sm font-bold text-white bg-amber-500 rounded-full shadow-sm">
-              {pendingCount} pending
+              {pendingCount} {t("pending")}
             </span>
           )}
         </div>
@@ -350,7 +355,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
           className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-primary transition-colors"
         >
           <span className="material-symbols-rounded" style={{ fontSize: 16 }}>arrow_back</span>
-          Back to project
+          {t("Back to project")}
         </Link>
       </div>
 
@@ -369,7 +374,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                 : "text-neutral-500 border-transparent hover:text-neutral-800"
             }`}
           >
-            {opt.label}
+            {t(opt.label)}
           </button>
         ))}
       </div>
@@ -386,7 +391,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
         {!loading && tasks.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3 bg-white rounded-xl border border-neutral-100">
             <span className="material-symbols-rounded text-neutral-300" style={{ fontSize: 48 }}>done_all</span>
-            <p className="text-sm text-neutral-400">No tasks match this filter.</p>
+            <p className="text-sm text-neutral-400">{t("No tasks match this filter.")}</p>
           </div>
         ) : (
           tasks.map((task) => {
@@ -416,7 +421,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                           : "bg-neutral-50 text-neutral-600 border-neutral-200"
                       }`}
                     >
-                      {PRIORITY_LABEL[task.priority]}
+                      {t(PRIORITY_LABEL[task.priority])}
                     </span>
                     <div className={`w-2 h-2 rounded-full ${statusCfg.color}`} />
                     <span className="text-xs font-medium text-neutral-600">{statusCfg.label}</span>
@@ -451,7 +456,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
                       className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
                     >
                       <span className="material-symbols-rounded" style={{ fontSize: 14 }}>check</span>
-                      Approve
+                      {t("Approve")}
                     </button>
                     <RequestChangesInline onSubmit={(reason) => void handleRequestChanges(task.id, reason)} />
                   </div>
@@ -484,6 +489,7 @@ function ManagerReviewQueue({ projectId }: { projectId: string | undefined }) {
 function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const topRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<EmployeeFilter>("all");
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
@@ -522,7 +528,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         setTasks(reviewQueue.content.map((task) => toReviewTask(task)));
         setTotalPages(reviewQueue.totalPages);
       } catch {
-        showToast("Failed to load your submissions", "error");
+        showToast(t("Failed to load your submissions"), "error");
       } finally {
         setLoading(false);
       }
@@ -541,15 +547,15 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
     <div className="onfis-section" ref={topRef}>
       <div className="navbar-style">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">My Reviews</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">Tasks you've submitted for review</p>
+          <h1 className="text-xl font-bold text-neutral-900">{t("My Reviews")}</h1>
+          <p className="text-sm text-neutral-400 mt-0.5">{t("Tasks you've submitted for review")}</p>
         </div>
         <Link
           to={withTenant(`/projects/${projectId ?? ""}`)}
           className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-primary transition-colors"
         >
           <span className="material-symbols-rounded" style={{ fontSize: 16 }}>arrow_back</span>
-          Back to project
+          {t("Back to project")}
         </Link>
       </div>
 
@@ -568,7 +574,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                 : "text-neutral-500 border-transparent hover:text-neutral-800"
             }`}
           >
-            {opt.label}
+            {t(opt.label)}
           </button>
         ))}
       </div>
@@ -585,7 +591,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
         {!loading && tasks.length === 0 ? (
           <div className="flex flex-col items-center py-16 gap-3 bg-white rounded-xl border border-neutral-100">
             <span className="material-symbols-rounded text-neutral-300" style={{ fontSize: 48 }}>rate_review</span>
-            <p className="text-sm text-neutral-400">No submitted tasks match this filter.</p>
+            <p className="text-sm text-neutral-400">{t("No submitted tasks match this filter.")}</p>
           </div>
         ) : (
           tasks.map((task) => {
@@ -618,7 +624,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                   {display && (
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border flex-shrink-0 ${display.bg}`}>
                       <span className="material-symbols-rounded" style={{ fontSize: 12 }}>{display.icon}</span>
-                      {display.label}
+                      {t(display.label)}
                     </span>
                   )}
                 </div>
@@ -680,7 +686,7 @@ function EmployeeSubmissions({ projectId }: { projectId: string | undefined }) {
                   blockedReason: updated.blockedReason,
                 });
               } catch {
-                showToast("Unable to update task", "error");
+                showToast(t("Unable to update task"), "error");
               }
             };
             void run();

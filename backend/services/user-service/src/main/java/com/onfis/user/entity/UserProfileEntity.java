@@ -86,6 +86,9 @@ public class UserProfileEntity {
     @Column(name = "contract_info", columnDefinition = "jsonb")
     private Map<String, Object> contractInfo;
 
+    @Column(name = "language", length = 10)
+    private String language;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

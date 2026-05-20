@@ -403,8 +403,8 @@ export default function SettingsPage() {
             <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-sm animate-page-enter">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
-                  <h2 className="text-lg font-bold text-neutral-900">Tag Management</h2>
-                  <p className="text-sm text-neutral-500 mt-0.5">Manage shared company tags used in Projects and Tasks</p>
+                  <h2 className="text-lg font-bold text-neutral-900">{t("Tag Management")}</h2>
+                  <p className="text-sm text-neutral-500 mt-0.5">{t("Manage shared company tags used in Projects and Tasks")}</p>
                 </div>
               </div>
 
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                   className="h-11 w-11 p-1 rounded-xl border border-neutral-200 bg-white cursor-pointer hover:border-indigo-300 transition-colors"
                 />
                 <Button
-                  title="Add Tag"
+                  title={t("Add Tag")}
                   iconLeft={<Icon name="add" size={18} color="currentColor" />}
                   onClick={() => void handleCreate()}
                   style="primary"
@@ -436,7 +436,7 @@ export default function SettingsPage() {
                 {tags.length === 0 && (
                   <div className="px-3 py-10 text-sm text-neutral-500 border-2 border-dashed border-neutral-200 rounded-xl text-center bg-neutral-50/50">
                     <Icon name="local_offer" size={32} className="mx-auto mb-3 text-neutral-300" />
-                    <p>No shared tags configured yet.</p>
+                    <p>{t("No shared tags configured yet.")}</p>
                   </div>
                 )}
 
@@ -475,13 +475,13 @@ export default function SettingsPage() {
                       {isEditing ? (
                         <div className="flex items-center gap-2">
                           <Button
-                            title="Save"
+                            title={t("Save")}
                             onClick={() => void handleSaveEdit()}
                             style="primary"
                             textStyle="text-xs font-semibold"
                           />
                           <Button
-                            title="Cancel"
+                            title={t("Cancel")}
                             onClick={handleCancelEdit}
                             style="sub"
                             textStyle="text-xs font-semibold"

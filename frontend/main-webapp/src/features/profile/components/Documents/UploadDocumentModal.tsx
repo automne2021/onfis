@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Icon from "../../../../components/common/Icon";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface UploadDocumentModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface UploadDocumentModalProps {
 }
 
 export function UploadDocumentModal({ isOpen, onClose }: UploadDocumentModalProps) {
+  const { t } = useLanguage();
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +89,7 @@ export function UploadDocumentModal({ isOpen, onClose }: UploadDocumentModalProp
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="text-base font-bold text-neutral-900">Upload New Document</h2>
+          <h2 className="text-base font-bold text-neutral-900">{t("Upload New Document")}</h2>
           <button
             onClick={handleClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors text-neutral-500"
@@ -121,10 +123,10 @@ export function UploadDocumentModal({ isOpen, onClose }: UploadDocumentModalProp
               </div>
               <div>
                 <p className="text-sm font-medium text-neutral-700">
-                  {dragActive ? "Drop your file here" : "Click or drag file to upload"}
+                  {dragActive ? t("Drop your file here") : t("Click or drag file to upload")}
                 </p>
                 <p className="text-xs text-neutral-400 mt-1">
-                  PDF, DOC, DOCX, XLS, XLSX, PNG, JPG up to 10MB
+                  {t("PDF, DOC, DOCX, XLS, XLSX, PNG, JPG up to 10MB")}
                 </p>
               </div>
             </div>
@@ -167,14 +169,14 @@ export function UploadDocumentModal({ isOpen, onClose }: UploadDocumentModalProp
             onClick={handleClose}
             className="px-4 py-2 text-sm font-medium text-neutral-600 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             onClick={handleUpload}
             disabled={!selectedFile}
             className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Upload
+            {t("Upload")}
           </button>
         </div>
       </div>

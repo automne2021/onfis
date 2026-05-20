@@ -4,18 +4,20 @@ import {
   AccountBalanceOutlined,
 } from '@mui/icons-material';
 import { CopyArea } from "../Copy/CopyArea";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export function BankingAndTax({ icon, userInfo }: OverviewProps) {
+  const { t } = useLanguage();
 
   const bankingInfo = [
-    { label: "Bank name", icon: <AccountBalanceOutlined />, content: userInfo.bankingInfo?.bankName },
-    { label: "Account number", content: userInfo.bankingInfo?.accountNumber },
-    { label: "Tax ID", content: userInfo.bankingInfo?.taxId },
+    { label: t("Bank name"), icon: <AccountBalanceOutlined />, content: userInfo.bankingInfo?.bankName },
+    { label: t("Account number"), content: userInfo.bankingInfo?.accountNumber },
+    { label: t("Tax ID"), content: userInfo.bankingInfo?.taxId },
   ]
 
   return (
     <div className="profile-section">
-      <TitleHeader icon={icon} title="Banking & Tax" />
+      <TitleHeader icon={icon} title={t("Banking & Tax")} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         {bankingInfo.map((item, index) => (

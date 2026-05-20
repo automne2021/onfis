@@ -1,5 +1,6 @@
 import { useParams, useSearchParams } from "react-router-dom"
 import { useEffect, useState } from "react"
+import { useLanguage } from "../../../contexts/LanguageContext"
 import type { FullUserProfile } from "../../../types/userType"
 import { Loading } from "../components/Loading"
 import userProfileImg from "../../../assets/images/user-profile-img.png"
@@ -17,8 +18,10 @@ const tabItems = [
   { id: 'documents', label: "Documents", isDisplay: true },
 ]
 
+
 export function UserProfile() {
 
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>()
 
   const [searchParams] = useSearchParams()
@@ -50,7 +53,7 @@ export function UserProfile() {
 
 
   if (isLoading) return <Loading />
-  if (!info) return <div className="p-10 text-center text-neutral-500">User not found!</div>
+  if (!info) return <div className="p-10 text-center text-neutral-500">{t("User not found!")}</div>
 
   const avatarImg = info.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(`${info.firstName} ${info.lastName}`)}&background=random` || userProfileImg 
 
@@ -104,7 +107,7 @@ export function UserProfile() {
 
       {/* Navigation */}
       <div className="bg-white pt-1.5 px-2">
-        <TabGroup tabItems={tabItems} defaultTab="overview" />
+        <TabGroup tabItems={tabItems.map(item => ({ ...item, label: t(item.label) }))} defaultTab="overview" />
       </div>
 
       <div className="my-2">

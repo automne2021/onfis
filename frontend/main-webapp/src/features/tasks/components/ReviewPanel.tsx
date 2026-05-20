@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRole } from "../../../hooks/useRole";
 import { useAuth } from "../../../hooks/useAuth";
 import type { ReviewComment, ReviewAction } from "../types";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface ReviewPanelProps {
   reviews: ReviewComment[];
@@ -83,6 +84,7 @@ function ReviewTimeline({ reviews }: { reviews: ReviewComment[] }) {
 export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestChanges }: ReviewPanelProps) {
   const { isManagerLike: isManager } = useRole();
   const { dbUser: currentUser } = useAuth();
+  const { t } = useLanguage();
   const [comment, setComment] = useState("");
   const [mode, setMode] = useState<"idle" | "approve" | "reject">("idle");
 
@@ -95,7 +97,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-neutral-800 flex items-center gap-2">
           <span className="material-symbols-rounded text-neutral-500" style={{ fontSize: 18 }}>rate_review</span>
-          Reviews
+          {t("Reviews")}
           {reviews.length > 0 && (
             <span className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-neutral-200 text-neutral-600 rounded-full">
               {reviews.length}
@@ -105,7 +107,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
         {isDone && (
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full">
             <span className="material-symbols-rounded" style={{ fontSize: 12 }}>verified</span>
-            Approved
+            {t("Approved")}
           </span>
         )}
       </div>
@@ -114,7 +116,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
       {reviews.length > 0 ? (
         <ReviewTimeline reviews={reviews} />
       ) : (
-        <p className="text-sm text-neutral-400 italic">No review activity yet.</p>
+        <p className="text-sm text-neutral-400 italic">{t("No review activity yet.")}</p>
       )}
 
       {/* Manager action area — only when task is IN_REVIEW */}
@@ -126,7 +128,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors"
           >
             <span className="material-symbols-rounded" style={{ fontSize: 14 }}>check</span>
-            Approve
+            {t("Approve")}
           </button>
           <button
             type="button"
@@ -134,58 +136,57 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
           >
             <span className="material-symbols-rounded" style={{ fontSize: 14 }}>undo</span>
-            Request Changes
+            {t("Request Changes")}
           </button>
         </div>
       )}
 
       {/* Approve confirmation */}
-      {isManager && isInReview && mode === "approve" && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-sm font-medium text-emerald-800">
-            Optionally leave an approval note:
-          </p>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Great work! Task approved..."
-            rows={2}
-            className="w-full text-sm text-neutral-900 border border-emerald-200 rounded-lg p-2.5 resize-none outline-none focus:border-emerald-400 bg-white"
-          />
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => { setMode("idle"); setComment(""); }}
-              className="px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onApprove?.(comment.trim());
-                setMode("idle");
-                setComment("");
-              }}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5"
-            >
-              <span className="material-symbols-rounded" style={{ fontSize: 14 }}>check</span>
-              Confirm Approval
-            </button>
-          </div>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col gap-3">
+        <p className="text-sm font-medium text-emerald-800">
+          {t("Optionally leave an approval note:")}
+        </p>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder={t("Great work! Task approved...")}
+          rows={2}
+          className="w-full text-sm text-neutral-900 border border-emerald-200 rounded-lg p-2.5 resize-none outline-none focus:border-emerald-400 bg-white"
+        />
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={() => { setMode("idle"); setComment(""); }}
+            className="px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors"
+          >
+            {t("Cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onApprove?.(comment.trim());
+              setMode("idle");
+              setComment("");
+            }}
+            className="px-4 py-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <span className="material-symbols-rounded" style={{ fontSize: 14 }}>check</span>
+            {t("Confirm Approval")}
+          </button>
         </div>
-      )}
+      </div>
+      
 
       {/* Request changes */}
       {isManager && isInReview && mode === "reject" && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col gap-3">
           <p className="text-sm font-medium text-amber-800">
-            Describe what needs to be revised:
+            {t("Describe what needs to be revised:")}
           </p>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Please revise the following..."
+            placeholder={t("Please revise the following...")}
             rows={3}
             className="w-full text-sm text-neutral-900 border border-amber-200 rounded-lg p-2.5 resize-none outline-none focus:border-amber-400 bg-white"
           />
@@ -195,7 +196,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
               onClick={() => { setMode("idle"); setComment(""); }}
               className="px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="button"
@@ -208,7 +209,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
               className="px-4 py-1.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <span className="material-symbols-rounded" style={{ fontSize: 14 }}>send</span>
-              Request Changes
+              {t("Request Changes")}
             </button>
           </div>
         </div>
@@ -218,7 +219,7 @@ export default function ReviewPanel({ reviews, taskStatus, onApprove, onRequestC
       {!isManager && isInReview && (
         <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
           <span className="material-symbols-rounded" style={{ fontSize: 16 }}>hourglass_top</span>
-          Your submission is awaiting review. You will be notified once the manager takes action.
+          {t("Your submission is awaiting review. You will be notified once the manager takes action.")}
         </div>
       )}
 

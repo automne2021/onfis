@@ -2,20 +2,22 @@ import type { OverviewProps } from "../../types/userProfileTypes";
 import { EmailOutlined, PhoneOutlined, BusinessOutlined } from '@mui/icons-material';
 import { TitleHeader } from "../TitleHeader";
 import { CopyArea } from "../Copy/CopyArea";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export function ContactInformation({ icon, userInfo }: OverviewProps) {
+  const { t } = useLanguage();
   const displayAddress = userInfo.address || "N/A";
 
   const officeContactInfo = [
-    { label: "Work Email", icon: <EmailOutlined />, content: userInfo.email },
-    { label: "Work Phone Number", icon: <PhoneOutlined />, content: userInfo.workPhone },
-    { label: "Office Location", icon: <BusinessOutlined />, content: userInfo.workLocation },
+    { label: t("Work Email"), icon: <EmailOutlined />, content: userInfo.email },
+    { label: t("Work Phone Number"), icon: <PhoneOutlined />, content: userInfo.workPhone },
+    { label: t("Office Location"), icon: <BusinessOutlined />, content: userInfo.workLocation },
   ]
 
   const personalContactInfo = [
-    { label: "Personal Email", icon: <EmailOutlined />, content: userInfo.personalEmail },
-    { label: "Personal Phone Number", icon: <PhoneOutlined />, content: userInfo.phoneNumber },
-    { label: "Home Address", icon: <BusinessOutlined />, content: displayAddress },
+    { label: t("Personal Email"), icon: <EmailOutlined />, content: userInfo.personalEmail },
+    { label: t("Personal Phone Number"), icon: <PhoneOutlined />, content: userInfo.phoneNumber },
+    { label: t("Home Address"), icon: <BusinessOutlined />, content: displayAddress },
   ]
 
   // Kiểm tra xem Backend có trả về một trong các thông tin cá nhân không
@@ -23,11 +25,11 @@ export function ContactInformation({ icon, userInfo }: OverviewProps) {
 
   return (
     <div className="profile-section">
-      <TitleHeader icon={icon} title="Contact Information" />
+      <TitleHeader icon={icon} title={t("Contact Information")} />
       <div className="flex flex-col gap-10">
         {/* Office Contact info */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {officeContactInfo.map((item, index) => (
+              {officeContactInfo.map((item, index) => (
             <div key={index} className="flex flex-1 flex-col justify-center gap-2 min-w-[280px] px-4 py-3">
               <p className="text-neutral-500 body-3-medium uppercase">{item.label}</p>
               <CopyArea icon={item.icon} index={index} content={item.content || 'N/A'} />
@@ -62,7 +64,7 @@ export function ContactInformation({ icon, userInfo }: OverviewProps) {
                           >
                             <img src="https://www.google.com/maps/vt/pb=!1m4!1m3!1i15!2i5239!3i12692!2m3!1e0!2sm!3i42012048!3m7!2sen!5e1105!12m4!1e68!2m2!1sset!2sRoadmap!4e0!5m1!1e0!23i1301875" alt="Map" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                             <div className="absolute inset-0 bg-black/5 flex items-center justify-center group-hover:bg-black/20">
-                              <span className="bg-white text-black text-[10px] font-bold px-3 py-1 rounded shadow-sm">View</span>
+                              <span className="bg-white text-black text-[10px] font-bold px-3 py-1 rounded shadow-sm">{t("View")}</span>
                             </div>
                           </a>
                         )}

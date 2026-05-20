@@ -2,6 +2,7 @@ import userProfileImg from "../../../../assets/images/user-profile-img.png"
 import { Public, PushPinOutlined, ArrowForwardOutlined, ThumbUpOutlined, ThumbUp, CommentOutlined, Groups } from '@mui/icons-material';
 import { Tags } from "../Tags/Tags";
 import { useEffect, useState } from "react";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 import { getFileType } from "../../../../config/fileConfig";
 import { SmallTags } from "../Tags/SmallTags";
 import { Link } from "react-router-dom";
@@ -43,6 +44,7 @@ interface AnnouncementCardProps {
 
 export function AnnouncementCard({ id, authId, authName, position, date, avatarUrl, isPinned, scope, targetDepartmentName, title, content, attachments = [], initialIsLike = false, numberOfLike = 0, numberOfComments = 0, onToggleLike, onToggleComment, isProfileOpen = false, onToggleProfile }: AnnouncementCardProps) {
 
+  const { t } = useLanguage();
   const [isLiked, setIsLiked] = useState(initialIsLike)
   const [likeCount, setLikeCount] = useState(numberOfLike)
   const [authorProfile, setAuthorProfile] = useState<FullUserProfile | null>(null);
@@ -96,7 +98,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
     }
   }
 
-  const displayDeptName = targetDepartmentName || "My Department";
+  const displayDeptName = targetDepartmentName || t("My Department");
 
   return (
     <div
@@ -115,7 +117,7 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
             >
               <img
                 src={avatarImg}
-                alt="User Avatar"
+                alt={t("User Avatar")}
                 className="w-full h-full object-cover pointer-events-none select-none"
               />
             </div>
@@ -145,12 +147,12 @@ export function AnnouncementCard({ id, authId, authName, position, date, avatarU
         <div className="flex items-center gap-2">
           {isPinned && (
             <Tags
-              label="Pinned"
+              label={t("Pinned")}
               icon={<PushPinOutlined sx={{ fontSize: 16 }} />}
             />
           )}
           {scope === 'company' ? (
-            <Tags label="Global" icon={<Public sx={{ fontSize: 16 }} />} />
+            <Tags label={t("Global")} icon={<Public sx={{ fontSize: 16 }} />} />
           ) : (
             <Tags
               label={displayDeptName}

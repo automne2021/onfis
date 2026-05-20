@@ -1,6 +1,7 @@
 import type { CalendarDay } from "./types";
 import { getFullDayNames } from "./calendarUtils";
 import CalendarEventBadge from "./CalendarEventBadge";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface CalendarGridProps {
   days: CalendarDay[];
@@ -11,7 +12,8 @@ interface CalendarGridProps {
 const MAX_VISIBLE_EVENTS = 2;
 
 export default function CalendarGrid({ days, onDayClick, onEventClick }: CalendarGridProps) {
-  const dayNames = getFullDayNames();
+  const { language } = useLanguage();
+  const dayNames = getFullDayNames(language);
 
   // Split days into weeks (6 rows of 7 days)
   const weeks: CalendarDay[][] = [];

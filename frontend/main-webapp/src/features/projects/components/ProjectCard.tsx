@@ -3,6 +3,7 @@ import type { Project, Tag } from "../types";
 import { FlagIcon, CalendarIcon, EyeIcon, TasksViewIcon as TasksIcon } from "../../../components/common/Icons";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import InitialsAvatar from "../../../components/common/InitialsAvatar";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 // Tag component
 const TagBadge = ({ tag }: { tag: Tag }) => {
@@ -68,6 +69,7 @@ interface ProjectCardProps {
 export default function ProjectCard({ project }: ProjectCardProps) {
   const navigate = useNavigate();
   const { withTenant } = useTenantPath();
+  const { t } = useLanguage();
 
   return (
     <div className="group relative bg-white rounded-[12px] shadow-sm border border-neutral-100 px-3 py-3 flex flex-col gap-3 overflow-hidden min-w-0 cursor-pointer card-hover">
@@ -81,7 +83,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           className="w-[140px] flex items-center justify-center gap-2 px-4 py-2 bg-white text-primary rounded-lg font-medium text-sm hover:bg-neutral-50 transition-colors shadow-md"
         >
           <EyeIcon />
-          View Detail
+          {t("View Detail")}
         </button>
         <button
           onClick={(e) => {
@@ -91,7 +93,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           className="w-[140px] flex items-center justify-center gap-2 px-4 py-2 bg-white/20 text-white border border-white/40 rounded-lg font-medium text-sm hover:bg-white/30 transition-colors"
         >
           <TasksIcon />
-          View Task
+          {t("View Task")}
         </button>
       </div>
 

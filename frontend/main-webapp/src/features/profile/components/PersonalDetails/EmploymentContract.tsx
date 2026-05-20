@@ -1,16 +1,18 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
 import { TitleHeader } from "../TitleHeader";
 import { FILE_ICONS, FILE_COLORS, getFileType } from "../../../../config/fileConfig";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export function EmploymentContract({ icon, userInfo }: OverviewProps) {
+  const { t } = useLanguage();
 
   const contractInfo = [
-    { label: "Contract Type", content: userInfo.contractInfo?.type },
-    { label: "Working Schedule", content: userInfo.contractInfo?.schedule },
-    { label: "Start Date", content: userInfo.contractInfo?.startDate },
-    { label: "Notice Period", content: userInfo.contractInfo?.noticePeriod },
-    { label: "End Date", content: userInfo.contractInfo?.endDate },
-    { label: "Probation Period", content: userInfo.contractInfo?.probationPeriod },
+    { label: t("Contract Type"), content: userInfo.contractInfo?.type },
+    { label: t("Working Schedule"), content: userInfo.contractInfo?.schedule },
+    { label: t("Start Date"), content: userInfo.contractInfo?.startDate },
+    { label: t("Notice Period"), content: userInfo.contractInfo?.noticePeriod },
+    { label: t("End Date"), content: userInfo.contractInfo?.endDate },
+    { label: t("Probation Period"), content: userInfo.contractInfo?.probationPeriod },
   ]
 
   const fileName = userInfo.contractInfo?.fileName || "N/A";
@@ -20,7 +22,7 @@ export function EmploymentContract({ icon, userInfo }: OverviewProps) {
 
   return (
     <div className="profile-section">
-      <TitleHeader icon={icon} title="Employment Contract" />
+      <TitleHeader icon={icon} title={t("Employment Contract")} />
 
       <div className="flex flex-col gap-5 justify-center mt-2">
         {/* Basic information */}
@@ -53,7 +55,7 @@ export function EmploymentContract({ icon, userInfo }: OverviewProps) {
                 {fileName}
               </p>
               <p className="body-4-regular text-neutral-500 mt-1">
-                {userInfo.contractInfo?.fileSize || "2.4 MB"} • Uploaded on {userInfo.contractInfo?.uploadDate || "Oct 12, 2020"}
+                {userInfo.contractInfo?.fileSize || "2.4 MB"} • {t("Uploaded on")} {userInfo.contractInfo?.uploadDate || "Oct 12, 2020"}
               </p>
             </div>
           </div>
@@ -63,7 +65,7 @@ export function EmploymentContract({ icon, userInfo }: OverviewProps) {
             className={`body-3-regular transition-colors text-neutral-500 hover:text-primary hover:underline`}
             onClick={() => window.open(userInfo.contractInfo?.fileUrl, '_blank')}
           >
-            Download
+            {t("Download")}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "../../../../components/common/Icons";
 import { getDayNames, getCalendarDays } from "./calendarUtils";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface MiniCalendarProps {
   year: number;
@@ -19,7 +20,8 @@ export default function MiniCalendar({
   onNextMonth,
 }: MiniCalendarProps) {
 
-  const dayNames = getDayNames();
+  const { language } = useLanguage();
+  const dayNames = getDayNames(language);
   const days = getCalendarDays(year, month, []);
 
   // Split into weeks

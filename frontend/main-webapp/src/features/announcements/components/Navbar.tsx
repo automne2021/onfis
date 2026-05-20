@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 import { FilterList } from '@mui/icons-material';
 
@@ -16,6 +17,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps) {
+  const { t } = useLanguage();
 
   const navigate = useNavigate();
   const { tenant } = useParams();
@@ -64,15 +66,15 @@ export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps
   );
 
   const filterContents: ContentItem[] = [
-    { content: renderFilterText("Newest First", 'newest'), onClick: () => handleSelectFilter('newest') },
-    { content: renderFilterText("Oldest First", 'oldest'), onClick: () => handleSelectFilter('oldest') },
+    { content: renderFilterText(t("Newest First"), 'newest'), onClick: () => handleSelectFilter('newest') },
+    { content: renderFilterText(t("Oldest First"), 'oldest'), onClick: () => handleSelectFilter('oldest') },
   ];
 
   return(
     <nav className="navbar-style">
       {/* Tên */}
       <p className="body-3-regular text-neutral-900">
-        Annoucement
+        {t("Annoucement")}
       </p>
 
       {/* Search bar */}
@@ -91,7 +93,7 @@ export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps
         children={
           <ContentList 
             data={searchContentItem}
-            emptyLabel={isSearching ? "Searching..." : "No result available"}
+            emptyLabel={isSearching ? t("Searching...") : t("No result available")}
             onItemClick={closeMenu}
           />
         }
@@ -104,7 +106,7 @@ export function Navbar({ currentFilter = 'newest', onFilterChange }: NavbarProps
         isOpen={activeMenu === 'filter'}
         trigger={
           <Button
-            title="Filter"
+            title={t("Filter")}
             iconLeft={<FilterList sx={{ fontSize: 16 }}/>}
             onClick={() => toggleMenu('filter')}
             style='sub'

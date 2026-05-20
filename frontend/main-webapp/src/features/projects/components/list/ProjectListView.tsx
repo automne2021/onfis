@@ -3,23 +3,24 @@ import type { Project } from "../../types";
 import ProjectListHeader from "./ProjectListHeader";
 import ProjectListRow from "./ProjectListRow";
 import type { ProjectListColumn, SortConfig } from "./types";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface ProjectListViewProps {
   projects: Project[];
   onProjectClick?: (project: Project) => void;
 }
 
-const columns: ProjectListColumn[] = [
-  { key: "title", label: "Project", sortable: true },
-  { key: "status", label: "Status", sortable: true },
-  { key: "progress", label: "Progress", sortable: true },
-  { key: "assignees", label: "Team", sortable: false },
-  { key: "dueDate", label: "Due Date", sortable: true },
-  { key: "priority", label: "Priority", sortable: true },
-  { key: "actions", label: "", sortable: false },
-];
-
 export default function ProjectListView({ projects, onProjectClick }: ProjectListViewProps) {
+  const { t } = useLanguage();
+  const columns: ProjectListColumn[] = [
+    { key: "title", label: t("Project"), sortable: true },
+    { key: "status", label: t("Status"), sortable: true },
+    { key: "progress", label: t("Progress"), sortable: true },
+    { key: "assignees", label: t("Team"), sortable: false },
+    { key: "dueDate", label: t("Due Date"), sortable: true },
+    { key: "priority", label: t("Priority"), sortable: true },
+    { key: "actions", label: "", sortable: false },
+  ];
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: "asc" });
 
@@ -97,7 +98,7 @@ export default function ProjectListView({ projects, onProjectClick }: ProjectLis
       <div className="flex-1 overflow-y-auto">
         {sortedProjects.length === 0 ? (
           <div className="flex items-center justify-center h-full text-neutral-400">
-            No projects found
+            {t("No projects found")}
           </div>
         ) : (
           sortedProjects.map((project) => (
@@ -116,14 +117,14 @@ export default function ProjectListView({ projects, onProjectClick }: ProjectLis
       {selectedProjects.size > 0 && (
         <div className="px-3 py-2 bg-primary/5 border-t border-primary/20 flex items-center justify-between">
           <span className="text-sm text-primary font-medium">
-            {selectedProjects.size} project{selectedProjects.size !== 1 ? "s" : ""} selected
+          {selectedProjects.size} {selectedProjects.size !== 1 ? t("projects") : t("project")}{t(" selected")}
           </span>
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
-              Cancel
+              {t("Cancel")}
             </button>
             <button className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-              Bulk Actions
+              {t("Bulk Actions")}
             </button>
           </div>
         </div>

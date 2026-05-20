@@ -169,7 +169,8 @@ public class UserService {
         (canViewStrictPrivateInfo && profile != null) ? profile.getContractInfo() : null,
         profile != null ? profile.getEducationInfo() : null,
         (canViewStrictPrivateInfo && profile != null) ? profile.getCompensationInfo() : null, // LƯƠNG
-        targetUser.getIsFirstLogin()
+        targetUser.getIsFirstLogin(),
+        profile != null ? (profile.getLanguage() != null ? profile.getLanguage() : "en") : "en"
         );
     }
 
@@ -264,6 +265,12 @@ public class UserService {
     }
     if (profileData.containsKey("compensationInfo")) {
       profile.setCompensationInfo((Map<String, Object>) profileData.get("compensationInfo"));
+    }
+    if (profileData.containsKey("language")) {
+      String lang = (String) profileData.get("language");
+      if ("en".equals(lang) || "vi".equals(lang)) {
+        profile.setLanguage(lang);
+      }
     }
 
     profile.setUpdatedAt(LocalDateTime.now());

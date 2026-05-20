@@ -1,6 +1,7 @@
 import type { ProjectTimelineItem } from "./types";
 import { formatDate } from "./timelineUtils";
 import { CloseIcon, FlagIconGantt as FlagIcon } from "../../../../components/common/Icons";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface ProjectTimelineDetailPanelProps {
   project: ProjectTimelineItem | null;
@@ -13,13 +14,6 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   in_progress: { bg: "bg-primary/15", text: "text-primary" },
   on_hold: { bg: "bg-status-off_track/15", text: "text-status-off_track" },
   completed: { bg: "bg-status-done/15", text: "text-status-done" },
-};
-
-const statusLabels: Record<string, string> = {
-  planning: "Planning",
-  in_progress: "In Progress",
-  on_hold: "On Hold",
-  completed: "Completed",
 };
 
 const priorityColors: Record<string, string> = {
@@ -42,9 +36,16 @@ export default function ProjectTimelineDetailPanel({
   isOpen,
   onClose,
 }: ProjectTimelineDetailPanelProps) {
+  const { t } = useLanguage();
   if (!project || !isOpen) return null;
 
   const statusColor = statusColors[project.status] ?? { bg: "bg-neutral-100", text: "text-neutral-600" };
+  const statusLabels: Record<string, string> = {
+    planning: t("Planning"),
+    in_progress: t("In Progress"),
+    on_hold: t("On Hold"),
+    completed: t("Completed"),
+  };
   const statusLabel = statusLabels[project.status] ?? project.status;
 
   return (
@@ -81,7 +82,7 @@ export default function ProjectTimelineDetailPanel({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              Priority
+              {t("Priority")}
             </label>
             <div className="mt-1 flex items-center gap-1.5">
               <FlagIcon className={priorityColors[project.priority ?? "medium"]} />
@@ -92,7 +93,7 @@ export default function ProjectTimelineDetailPanel({
           </div>
           <div>
             <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              Due Date
+              {t("Due Date")}
             </label>
             <p className="mt-1 text-sm font-medium text-neutral-900">
               {formatDate(project.endDate)}
@@ -104,7 +105,7 @@ export default function ProjectTimelineDetailPanel({
         {project.assignees && project.assignees.length > 0 && (
           <div>
             <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              Assignees
+              {t("Assignees")}
             </label>
             <div className="mt-2 space-y-2">
               {project.assignees.map((assignee) => (
@@ -131,7 +132,7 @@ export default function ProjectTimelineDetailPanel({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-              Progress
+              {t("Progress")}
             </label>
             <span className="text-xs font-semibold text-neutral-900">{project.progress}%</span>
           </div>
@@ -151,7 +152,7 @@ export default function ProjectTimelineDetailPanel({
           <p className="mt-2 text-sm text-neutral-700 leading-relaxed">
             {project.description
               ? <span dangerouslySetInnerHTML={{ __html: project.description }} />
-              : "No description available."}
+              : t("No description available.")}
           </p>
         </div>
       </div>
@@ -162,7 +163,7 @@ export default function ProjectTimelineDetailPanel({
           onClick={onClose}
           className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
         >
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>

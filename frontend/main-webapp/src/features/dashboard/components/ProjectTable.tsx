@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "../../../components/common/Icons";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 type ProjectStatus = "completed" | "in_progress" | "on_hold" | "planning";
 
@@ -47,6 +48,7 @@ const statusConfig: Record<
 };
 
 export default function ProjectTable({ projects, itemsPerPage = 10 }: ProjectTableProps) {
+  const { t } = useLanguage();
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(projects.length / itemsPerPage);
@@ -65,16 +67,16 @@ export default function ProjectTable({ projects, itemsPerPage = 10 }: ProjectTab
       {/* Table Header */}
       <div className="bg-neutral-200 px-3 grid grid-cols-[2fr_1.5fr_1fr_1.5fr] gap-3 items-center">
         <div className="font-medium text-xs uppercase tracking-wider text-neutral-700 py-2">
-          Project Name
+          {t("Project Name")}
         </div>
         <div className="font-medium text-xs uppercase tracking-wider text-neutral-700 py-2">
-          Last Update
+          {t("Last Update")}
         </div>
         <div className="font-medium text-xs uppercase tracking-wider text-neutral-700 py-2">
-          Status
+          {t("Status")}
         </div>
         <div className="font-medium text-xs uppercase tracking-wider text-neutral-700 py-2">
-          Progress
+          {t("Progress")}
         </div>
       </div>
 
@@ -103,7 +105,7 @@ export default function ProjectTable({ projects, itemsPerPage = 10 }: ProjectTab
                 <span
                   className={`inline-flex items-center justify-center px-2 py-1 rounded-[12px] font-medium text-xs leading-4 ${config.bgClass} ${config.textClass}`}
                 >
-                  {config.label}
+                  {t(config.label)}
                 </span>
               </div>
 
@@ -128,7 +130,7 @@ export default function ProjectTable({ projects, itemsPerPage = 10 }: ProjectTab
       {projects.length > itemsPerPage && (
         <div className="bg-neutral-50 border-t border-neutral-200 px-3 py-2 flex items-center justify-between">
           <span className="text-xs text-neutral-500">
-            Showing {startIndex + 1}-{Math.min(endIndex, projects.length)} of {projects.length}
+            {t("Showing")} {startIndex + 1}-{Math.min(endIndex, projects.length)} {t("of")} {projects.length}
           </span>
 
           <div className="flex items-center gap-1">
@@ -137,7 +139,7 @@ export default function ProjectTable({ projects, itemsPerPage = 10 }: ProjectTab
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
               className="p-1 rounded hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-neutral-600"
-              aria-label="Previous page"
+              aria-label={t("Previous page")}
             >
               <ChevronLeftIcon />
             </button>
@@ -162,7 +164,7 @@ export default function ProjectTable({ projects, itemsPerPage = 10 }: ProjectTab
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="p-1 rounded hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-neutral-600"
-              aria-label="Next page"
+              aria-label={t("Next page")}
             >
               <ChevronRightIcon />
             </button>

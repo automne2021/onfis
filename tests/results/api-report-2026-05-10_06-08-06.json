@@ -1,0 +1,3435 @@
+{
+  "collection": {
+    "_": {
+      "postman_id": "onfis-system-tests-v1"
+    },
+    "item": [
+      {
+        "id": "2df9904e-b96a-43b3-8678-5d38166993ac",
+        "name": "TC-AUTH — Authentication",
+        "item": [
+          {
+            "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+            "name": "TC-AUTH-01 Login as Manager (valid)",
+            "request": {
+              "url": {
+                "path": [
+                  "auth",
+                  "v1",
+                  "token"
+                ],
+                "host": [
+                  "{{supabaseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                    "pm.collectionVariables.set('managerToken', body.access_token);"
+                  ],
+                  "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+                }
+              }
+            ]
+          },
+          {
+            "id": "2fd2ab9e-699e-4a91-907b-8910139007d2",
+            "name": "TC-AUTH-02 Login as Employee (valid)",
+            "request": {
+              "url": {
+                "path": [
+                  "auth",
+                  "v1",
+                  "token"
+                ],
+                "host": [
+                  "{{supabaseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"email\": \"{{employeeEmail}}\", \"password\": \"{{testPassword}}\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "37fbccf4-713c-4644-967d-e3a4c8860340",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                    "pm.collectionVariables.set('employeeToken', body.access_token);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "aa438371-3261-408f-9bcc-0047690894cc",
+            "name": "TC-AUTH-03 Login with wrong password",
+            "request": {
+              "url": {
+                "path": [
+                  "auth",
+                  "v1",
+                  "token"
+                ],
+                "host": [
+                  "{{supabaseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "grant_type",
+                    "value": "password"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"WrongPassword!\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "051a4bcd-def1-4291-baba-2a2ea78f6788",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "4c4012cc-5da5-49d0-ac32-a18f7e49e023",
+            "name": "TC-AUTH-04 Access protected API without token",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "60aa24f1-b68b-40c7-856c-2d4183dd56fc",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 401 or 403', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "24171f65-fa4b-408a-84d0-a5992cb22a17",
+            "name": "TC-AUTH-05 Get current user (/users/me)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "users",
+                  "me"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "a6316d38-60ff-481c-aba3-9a49c8dd6c30",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('userId present', () => pm.expect(body.id || body.userId).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "a582ece3-3b24-4211-b07b-988695e4edea",
+        "name": "TC-TENANT — Multi-Tenant Security",
+        "item": [
+          {
+            "id": "5da83fb7-1653-4966-a070-d3a65a5bf299",
+            "name": "TC-TENANT-01 List projects with correct tenant",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "ab3d0266-df2b-4c53-a509-364fcb19e9a8",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "17ccc85f-d314-4722-a077-88e4be12c9ac",
+            "name": "TC-TENANT-02 List projects with wrong tenant ID (cross-tenant isolation)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "f958531f-783b-4e8f-aceb-1e65c4cfbbfb",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 401, 403, or returns empty list', () => {",
+                    "  const code = pm.response.code;",
+                    "  if ([401, 403].includes(code)) { pm.expect(code).to.be.oneOf([401, 403]); return; }",
+                    "  pm.expect(pm.response.code).to.equal(200);",
+                    "  const body = pm.response.json();",
+                    "  const items = Array.isArray(body) ? body : (body.content || []);",
+                    "  pm.test('No data leaked from other tenant', () => pm.expect(items.length).to.equal(0));",
+                    "});"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "da4d7d83-a06f-4412-83c2-967e018afe11",
+            "name": "TC-TENANT-03 Health check — API Gateway up",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "health"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "22c53431-b4f3-4f99-8252-d2d334eeb63a",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "74fd3d7c-1af6-482e-ba49-986cd4a6aa7e",
+        "name": "TC-PROJ — Project Management",
+        "item": [
+          {
+            "id": "a10fe1ed-b769-4377-9a91-5d2935f06bf1",
+            "name": "TC-PROJ-01 List projects (Manager)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cfc31cff-a1a6-477e-85e1-e55d49b4408e",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "ee70beb8-2e83-4a68-88df-1a751fadcc05",
+            "name": "TC-PROJ-02 Create project (Manager)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"title\": \"TC-PROJ-02 Auto Project\", \"description\": \"Created by Newman\", \"status\": \"PLANNING\", \"priority\": \"MEDIUM\", \"progress\": 0 }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "8aaeaae9-9755-4827-b12d-90b7d16550cd",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                    "const body = pm.response.json();",
+                    "pm.test('Project has id', () => pm.expect(body.id).to.be.a('string'));",
+                    "pm.collectionVariables.set('createdProjectId', body.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "6f5ffa37-e041-41cd-8b07-c91ebf36f514",
+            "name": "TC-PROJ-03 Create project (Employee — must be forbidden)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{employeeId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"title\": \"Unauthorized Project\", \"status\": \"PLANNING\", \"priority\": \"LOW\", \"progress\": 0 }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "0abad5c0-0968-4377-bcbd-49ac61262a4f",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "daa9159a-3ca1-4ffa-a1df-7961a497cdb0",
+            "name": "TC-PROJ-04 Create workflow stage in test project",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "{{seedProjectId}}",
+                  "stages"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"name\": \"In Progress\", \"color\": \"#3B82F6\", \"sortOrder\": 1 }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "6fcbf277-be80-4b9c-ae53-26e8050ceec0",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                    "const body = pm.response.json();",
+                    "pm.test('Stage has id', () => pm.expect(body.id).to.be.a('string'));",
+                    "pm.collectionVariables.set('createdStageId', body.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "e25930c7-592f-4ebb-b014-b56a7c386761",
+            "name": "TC-PROJ-05 Get project detail",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "{{seedProjectId}}",
+                  "detail"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "3659b3b4-0e4d-46a5-bab8-ecfeda0b648b",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('Project has title', () => pm.expect(body.title).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "cf52113d-2819-4c5d-a649-26f2a93d1e9c",
+            "name": "TC-PROJ-06 Add project member",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "{{seedProjectId}}",
+                  "members"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"userId\": \"{{employeeId}}\", \"role\": \"DEVELOPER\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "b99bd0a9-4f51-4263-8cb2-07d57b6a06f8",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "08d1a0f2-e126-440a-a12d-e856f795edb5",
+            "name": "TC-PROJ-07 Delete created project (cleanup)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "{{createdProjectId}}"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "DELETE"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "298efbc7-3399-432e-b67d-429fa2d5de51",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "d16239b1-360b-4f92-a19e-21e2f20bccb9",
+        "name": "TC-TASK — Task Management",
+        "item": [
+          {
+            "id": "518a0279-d68d-49fa-9f45-41640f0407b9",
+            "name": "TC-TASK-01 Create task (Manager)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "{{seedProjectId}}",
+                  "tasks"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"title\": \"TC-TASK-01 Auto Task\", \"description\": \"<p>Created by Newman</p>\", \"status\": \"TODO\", \"priority\": \"MEDIUM\", \"progress\": 0, \"assigneeIds\": [\"{{employeeId}}\"], \"reporterId\": \"{{managerId}}\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "29009b78-00a2-448d-ad63-8cb134d131df",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                    "const body = pm.response.json();",
+                    "pm.test('Task has id', () => pm.expect(body.id).to.be.a('string'));",
+                    "pm.test('Default status is TODO', () => pm.expect(body.status).to.equal('TODO'));",
+                    "pm.collectionVariables.set('createdTaskId', body.id);"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "038907f4-21db-4181-8d0e-bf107621443c",
+            "name": "TC-TASK-02 Move task TODO → IN_PROGRESS (valid transition)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "tasks",
+                  "{{createdTaskId}}",
+                  "stage"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PATCH",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"status\": \"IN_PROGRESS\", \"stageId\": \"{{createdStageId}}\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "ace4da99-a558-4d90-bfd1-ec7ca701751c",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('Status is IN_PROGRESS', () => pm.expect(body.status).to.equal('IN_PROGRESS'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "781ce69c-f6a0-4157-9685-13117ca8e630",
+            "name": "TC-TASK-03 Move task IN_PROGRESS → IN_REVIEW (valid transition)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "tasks",
+                  "{{createdTaskId}}",
+                  "stage"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "PATCH",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"status\": \"IN_REVIEW\", \"stageId\": \"{{createdStageId}}\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cb9567db-3129-422c-b4c1-c54acdaf44d8",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('Status is IN_REVIEW', () => pm.expect(body.status).to.equal('IN_REVIEW'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "dbda508e-5f86-42d2-83a3-2f8a2811e538",
+            "name": "TC-TASK-04 Manager approves task → status becomes DONE",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "tasks",
+                  "{{createdTaskId}}",
+                  "reviews"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"action\": \"APPROVED\", \"content\": \"Looks good — approved by Newman test.\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "6071b056-c98b-4125-b671-1e424e77f43d",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('Task status is DONE', () => pm.expect(body.status).to.equal('DONE'));",
+                    "pm.test('Progress is 100', () => pm.expect(body.progress).to.equal(100));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "2740fec8-7b55-4f8a-a4d0-eaf36d26da27",
+            "name": "TC-TASK-05 Add subtask",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "tasks",
+                  "{{createdTaskId}}",
+                  "subtasks"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"title\": \"Auto subtask\", \"completed\": false }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "cee7aa61-045f-4cf1-9029-28ebfab79ccd",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                    "const body = pm.response.json();",
+                    "pm.test('Subtask has id', () => pm.expect(body.id).to.be.a('string'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "29e9b033-f222-466c-8a2c-19ccb38ba42d",
+            "name": "TC-TASK-06 Add comment to task",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "tasks",
+                  "{{createdTaskId}}",
+                  "comments"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "method": "POST",
+              "body": {
+                "mode": "raw",
+                "raw": "{ \"content\": \"Automated comment from Newman test.\" }",
+                "options": {
+                  "raw": {
+                    "language": "json"
+                  }
+                }
+              }
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "a22d6f04-501e-4d42-9519-33baf0618f5d",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "e1f67aa7-d6e4-4336-a9d0-bffb630d8bb9",
+            "name": "TC-TASK-07 Get task detail",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "projects",
+                  "tasks",
+                  "{{createdTaskId}}",
+                  "detail"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "e0870ec3-2fef-4841-a3d3-36f95f95d43f",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('Has subtasks array',  () => pm.expect(body.subtasks).to.be.an('array'));",
+                    "pm.test('Has comments array',  () => pm.expect(body.comments).to.be.an('array'));",
+                    "pm.test('Has activities array', () => pm.expect(body.activities).to.be.an('array'));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "f8eead83-6c3a-4e65-ad20-88b3a61e87b6",
+        "name": "TC-ANN — Announcements",
+        "item": [
+          {
+            "id": "a1f74220-a930-4798-8af8-684afff3dc8a",
+            "name": "TC-ANN-01 List all announcements",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "announcements",
+                  "all"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "page",
+                    "value": "0"
+                  },
+                  {
+                    "key": "size",
+                    "value": "10"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d193d3d2-9d3d-416c-8f9b-a4efeb44f4a5",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('Has content array', () => pm.expect(body.content).to.be.an('array'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "fb94635a-0406-492b-bc3b-3c21b5ac7dd2",
+            "name": "TC-ANN-02 Employee cannot access — list (permission check)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "announcements",
+                  "all"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "page",
+                    "value": "0"
+                  },
+                  {
+                    "key": "size",
+                    "value": "5"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{employeeId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "5474a5d6-253b-4930-a36a-b7c154befd69",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(pm.response.code));",
+                    "// Employees CAN list announcements — ensure no 500 error",
+                    "pm.test('Not a server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "2fef1554-42ee-4e24-947b-ebe088d6acd4",
+            "name": "TC-ANN-03 Search announcements",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "announcements",
+                  "search"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [
+                  {
+                    "key": "keyword",
+                    "value": "test"
+                  },
+                  {
+                    "key": "page",
+                    "value": "0"
+                  },
+                  {
+                    "key": "size",
+                    "value": "5"
+                  }
+                ],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "baf39144-b56f-4b0e-bfab-16c5896d3a04",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "dc42ea64-99bf-4336-a24c-c599bb2963a5",
+        "name": "TC-POS — Positions & Departments",
+        "item": [
+          {
+            "id": "2ef22caa-b951-41e2-89d8-fec44cc32928",
+            "name": "TC-POS-01 Get position tree",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "positions",
+                  "tree"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "45290517-4983-4dba-a7ed-5f1f3b7ed8f7",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "a4167acb-8178-4d24-823e-f9d60d22010f",
+            "name": "TC-POS-02 Get departments with employees",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "positions",
+                  "departments"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "d7125cf0-8d90-4c4d-ae65-a55ffbef4e1d",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "a6f16d03-4f20-4dbb-9a7d-0dd32a4cb7d6",
+            "name": "TC-POS-03 Get current user position (/positions/me)",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "positions",
+                  "me"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{employeeToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{employeeId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "25221fee-80b2-41e7-8800-5137617dae24",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      },
+      {
+        "id": "70d9d333-3e18-483e-8b7c-bc188f4df492",
+        "name": "TC-CHAT — Chat Service",
+        "item": [
+          {
+            "id": "ddd0cf9f-a77c-4e07-b50a-597f7c06df47",
+            "name": "TC-CHAT-01 Chat service health check",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "chat",
+                  "health"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "1c90eb52-1385-48cc-9b03-7829fc1aa584",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                    "const body = pm.response.json();",
+                    "pm.test('status is UP', () => pm.expect(body.status).to.equal('UP'));"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "021386a4-1f9e-4a64-9f98-9c0b83520d4e",
+            "name": "TC-CHAT-02 List conversations",
+            "request": {
+              "url": {
+                "path": [
+                  "api",
+                  "chat",
+                  "conversations"
+                ],
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "query": [],
+                "variable": []
+              },
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{managerToken}}"
+                },
+                {
+                  "key": "X-Company-ID",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "X-User-ID",
+                  "value": "{{managerId}}"
+                }
+              ],
+              "method": "GET"
+            },
+            "response": [],
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "id": "ff394121-75b5-483c-967f-78ad17ea6a79",
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "event": []
+      }
+    ],
+    "event": [],
+    "variable": [
+      {
+        "type": "any",
+        "value": "",
+        "key": "managerToken"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "employeeToken"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "createdProjectId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "createdTaskId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "createdStageId"
+      },
+      {
+        "type": "any",
+        "value": "",
+        "key": "createdAnnId"
+      }
+    ],
+    "info": {
+      "_postman_id": "onfis-system-tests-v1",
+      "name": "ONFIS System Tests",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Automated API integration tests for the ONFIS ERP platform.\nRun with: newman run tests/api/onfis-collection.json -e tests/api/environments/local.json",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment"
+    },
+    "id": "onfis-local-env",
+    "name": "ONFIS — Local",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://localhost:8080",
+        "key": "baseUrl"
+      },
+      {
+        "type": "any",
+        "value": "https://jtoibkbaomzqmseveplp.supabase.co",
+        "key": "supabaseUrl"
+      },
+      {
+        "type": "any",
+        "value": "00000000-0000-0000-0000-000000000099",
+        "key": "tenantId"
+      },
+      {
+        "type": "any",
+        "value": "test-corp",
+        "key": "tenantSlug"
+      },
+      {
+        "type": "any",
+        "value": "00000000-0000-0000-0000-000000000101",
+        "key": "managerId"
+      },
+      {
+        "type": "any",
+        "value": "00000000-0000-0000-0000-000000000102",
+        "key": "employeeId"
+      },
+      {
+        "type": "any",
+        "value": "manager@test-corp.local",
+        "key": "managerEmail"
+      },
+      {
+        "type": "any",
+        "value": "employee@test-corp.local",
+        "key": "employeeEmail"
+      },
+      {
+        "type": "any",
+        "value": "Test@12345",
+        "key": "testPassword"
+      },
+      {
+        "type": "any",
+        "value": "00000000-0000-0000-0000-000000000401",
+        "key": "seedProjectId"
+      },
+      {
+        "type": "any",
+        "value": "00000000-0000-0000-0000-000000000501",
+        "key": "conversationId"
+      }
+    ]
+  },
+  "globals": {
+    "id": "ffb5378e-f9fe-4655-8f2d-5ff6d1a957e2",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 1,
+        "pending": 0,
+        "failed": 1
+      },
+      "prerequests": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "tests": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 2,
+        "pending": 0,
+        "failed": 2
+      },
+      "testScripts": {
+        "total": 1,
+        "pending": 0,
+        "failed": 1
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 238,
+      "responseMin": 238,
+      "responseMax": 238,
+      "responseSd": 0,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1778368126700,
+      "completed": 1778368127024
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 30,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "d85e1d3c-116a-49cd-8d5d-31a89c561f7f",
+          "httpRequestId": "7267a415-29cc-419c-8d6a-296c18317972"
+        },
+        "item": {
+          "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+          "name": "TC-AUTH-01 Login as Manager (valid)",
+          "request": {
+            "url": {
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
+              "host": [
+                "{{supabaseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('managerToken', body.access_token);"
+                ],
+                "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "https",
+            "path": [
+              "auth",
+              "v1",
+              "token"
+            ],
+            "host": [
+              "jtoibkbaomzqmseveplp",
+              "supabase",
+              "co"
+            ],
+            "query": [
+              {
+                "key": "grant_type",
+                "value": "password"
+              }
+            ],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "313c9205-b3c6-49f2-829d-0f01a2e6004c",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "jtoibkbaomzqmseveplp.supabase.co",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            },
+            {
+              "key": "Content-Length",
+              "value": "64",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{ \"email\": \"manager@test-corp.local\", \"password\": \"Test@12345\" }",
+            "options": {
+              "raw": {
+                "language": "json"
+              }
+            }
+          }
+        },
+        "response": {
+          "id": "6bc30f15-e9fb-48e2-821c-db23570b1094",
+          "status": "Unauthorized",
+          "code": 401,
+          "header": [
+            {
+              "key": "Date",
+              "value": "Sat, 09 May 2026 23:08:47 GMT"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json;charset=UTF-8"
+            },
+            {
+              "key": "Content-Length",
+              "value": "101"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "access-control-allow-methods",
+              "value": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS,TRACE,CONNECT"
+            },
+            {
+              "key": "access-control-max-age",
+              "value": "3600"
+            },
+            {
+              "key": "sb-gateway-version",
+              "value": "1"
+            },
+            {
+              "key": "sb-project-ref",
+              "value": "jtoibkbaomzqmseveplp"
+            },
+            {
+              "key": "sb-request-id",
+              "value": "019e0f00-22ca-7e77-ad43-e213204c1d89"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains; preload"
+            },
+            {
+              "key": "set-cookie",
+              "value": "__cf_bm=M4szn5EVBSIufwS8NG6tp.r501FOvDtSIgWyxMOQZmQ-1778368127.6865804-1.0.1.1-QlgLuvOYVttFaRVrlMpxHsFG9Y6rIvGm3iXYFvcIujfSAhL0Ri7k0hCbF3aZNEFPl.d8L87tSQ9Yx9xKdM1FnrKRIWGawqTo9CufmGP8ydTnQ9GKQ55GhkY8CDY00wPA; HttpOnly; Secure; Path=/; Domain=supabase.co; Expires=Sat, 09 May 2026 23:38:47 GMT"
+            },
+            {
+              "key": "Server",
+              "value": "cloudflare"
+            },
+            {
+              "key": "CF-RAY",
+              "value": "9f945e3e0859509d-HKG"
+            },
+            {
+              "key": "alt-svc",
+              "value": "h3=\":443\"; ma=86400"
+            }
+          ],
+          "stream": {
+            "type": "Buffer",
+            "data": [
+              123,
+              34,
+              109,
+              101,
+              115,
+              115,
+              97,
+              103,
+              101,
+              34,
+              58,
+              34,
+              78,
+              111,
+              32,
+              65,
+              80,
+              73,
+              32,
+              107,
+              101,
+              121,
+              32,
+              102,
+              111,
+              117,
+              110,
+              100,
+              32,
+              105,
+              110,
+              32,
+              114,
+              101,
+              113,
+              117,
+              101,
+              115,
+              116,
+              34,
+              44,
+              34,
+              104,
+              105,
+              110,
+              116,
+              34,
+              58,
+              34,
+              78,
+              111,
+              32,
+              96,
+              97,
+              112,
+              105,
+              107,
+              101,
+              121,
+              96,
+              32,
+              114,
+              101,
+              113,
+              117,
+              101,
+              115,
+              116,
+              32,
+              104,
+              101,
+              97,
+              100,
+              101,
+              114,
+              32,
+              111,
+              114,
+              32,
+              117,
+              114,
+              108,
+              32,
+              112,
+              97,
+              114,
+              97,
+              109,
+              32,
+              119,
+              97,
+              115,
+              32,
+              102,
+              111,
+              117,
+              110,
+              100,
+              46,
+              34,
+              125
+            ]
+          },
+          "cookie": [],
+          "responseTime": 238,
+          "responseSize": 101
+        },
+        "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+        "assertions": [
+          {
+            "assertion": "Status is 200",
+            "skipped": false,
+            "error": {
+              "name": "AssertionError",
+              "index": 0,
+              "test": "Status is 200",
+              "message": "expected response to have status code 200 but got 401",
+              "stack": "AssertionError: expected response to have status code 200 but got 401\n   at Object.eval sandbox-script.js:1:1)"
+            }
+          },
+          {
+            "assertion": "access_token present",
+            "skipped": false,
+            "error": {
+              "name": "AssertionError",
+              "index": 1,
+              "test": "access_token present",
+              "message": "expected undefined to be a string",
+              "stack": "AssertionError: expected undefined to be a string\n   at Object.eval sandbox-script.js:2:1)"
+            }
+          }
+        ],
+        "testScript": [
+          {
+            "error": {
+              "name": "AssertionFailure",
+              "message": "Status is 200, access_token present",
+              "stack": "AssertionFailure: Status is 200, access_token present\n    at postProcessContext (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js:41:17)\n    at PostmanCollectionRun.<anonymous> (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js:513:39)\n    at PostmanSandbox.<anonymous> (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-sandbox\\lib\\postman-sandbox.js:139:13)\n    at Object.onceWrapper (node:events:623:26)\n    at PostmanSandbox.emit (node:events:508:28)\n    at context.__uvm_emit (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\uvm\\lib\\bridge.js:71:21)\n    at Object.dispatch (evalmachine.<anonymous>:20:13)\n    at Object.<anonymous> (evalmachine.<anonymous>:66:7860)\n    at t.exports.terminate (evalmachine.<anonymous>:66:22105)\n    at Immediate._onImmediate (evalmachine.<anonymous>:66:5993)\n    at process.processImmediate (node:internal/timers:506:21)",
+              "checksum": "4709524e352422dda031dbe25b31f06c",
+              "id": "0a9f88f5-19c6-4aa0-8f2c-507efaa3d090",
+              "timestamp": 1778368127000,
+              "stacktrace": [
+                {
+                  "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js",
+                  "lineNumber": 41,
+                  "functionName": "postProcessContext",
+                  "typeName": "Object",
+                  "methodName": null,
+                  "columnNumber": 17,
+                  "native": false
+                },
+                {
+                  "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js",
+                  "lineNumber": 513,
+                  "functionName": "",
+                  "typeName": "PostmanCollectionRun",
+                  "methodName": null,
+                  "columnNumber": 39,
+                  "native": false
+                },
+                {
+                  "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-sandbox\\lib\\postman-sandbox.js",
+                  "lineNumber": 139,
+                  "functionName": "",
+                  "typeName": "PostmanSandbox",
+                  "methodName": null,
+                  "columnNumber": 13,
+                  "native": false
+                },
+                {
+                  "fileName": "node:events",
+                  "lineNumber": 623,
+                  "functionName": "Object.onceWrapper",
+                  "typeName": "Object",
+                  "methodName": "onceWrapper",
+                  "columnNumber": 26,
+                  "native": false
+                },
+                {
+                  "fileName": "node:events",
+                  "lineNumber": 508,
+                  "functionName": "PostmanSandbox.emit",
+                  "typeName": "PostmanSandbox",
+                  "methodName": "emit",
+                  "columnNumber": 28,
+                  "native": false
+                },
+                {
+                  "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\uvm\\lib\\bridge.js",
+                  "lineNumber": 71,
+                  "functionName": "context.__uvm_emit",
+                  "typeName": "context",
+                  "methodName": "__uvm_emit",
+                  "columnNumber": 21,
+                  "native": false
+                },
+                {
+                  "fileName": "evalmachine.<anonymous>",
+                  "lineNumber": 20,
+                  "functionName": "Object.dispatch",
+                  "typeName": "Object",
+                  "methodName": "dispatch",
+                  "columnNumber": 13,
+                  "native": false
+                },
+                {
+                  "fileName": "evalmachine.<anonymous>",
+                  "lineNumber": 66,
+                  "functionName": "",
+                  "typeName": "Object",
+                  "methodName": null,
+                  "columnNumber": 7860,
+                  "native": false
+                },
+                {
+                  "fileName": "evalmachine.<anonymous>",
+                  "lineNumber": 66,
+                  "functionName": "t.exports.terminate",
+                  "typeName": "t",
+                  "methodName": "exports.terminate",
+                  "columnNumber": 22105,
+                  "native": false
+                },
+                {
+                  "fileName": "evalmachine.<anonymous>",
+                  "lineNumber": 66,
+                  "functionName": "Immediate._onImmediate",
+                  "typeName": "Immediate",
+                  "methodName": "_onImmediate",
+                  "columnNumber": 5993,
+                  "native": false
+                },
+                {
+                  "fileName": "node:internal/timers",
+                  "lineNumber": 506,
+                  "functionName": "process.processImmediate",
+                  "typeName": "process",
+                  "methodName": "processImmediate",
+                  "columnNumber": 21,
+                  "native": false
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 101
+    },
+    "failures": [
+      {
+        "error": {
+          "name": "AssertionError",
+          "index": 0,
+          "test": "Status is 200",
+          "message": "expected response to have status code 200 but got 401",
+          "stack": "AssertionError: expected response to have status code 200 but got 401\n   at Object.eval sandbox-script.js:1:1)",
+          "checksum": "1d9fbc887d5107d9208f573a01229de9",
+          "id": "33c9edd7-bf0b-4039-8c68-9a7bd9cbb457",
+          "timestamp": 1778368126990,
+          "stacktrace": [
+            {
+              "fileName": "sandbox-script.js",
+              "lineNumber": 1,
+              "functionName": "Object.eval",
+              "typeName": "Object",
+              "methodName": "eval",
+              "columnNumber": 1,
+              "native": false
+            }
+          ]
+        },
+        "at": "assertion:0 in test-script",
+        "source": {
+          "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+          "name": "TC-AUTH-01 Login as Manager (valid)",
+          "request": {
+            "url": {
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
+              "host": [
+                "{{supabaseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('managerToken', body.access_token);"
+                ],
+                "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+              }
+            }
+          ]
+        },
+        "parent": {
+          "id": "2df9904e-b96a-43b3-8678-5d38166993ac",
+          "name": "TC-AUTH — Authentication",
+          "item": [
+            {
+              "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+              "name": "TC-AUTH-01 Login as Manager (valid)",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                      "pm.collectionVariables.set('managerToken', body.access_token);"
+                    ],
+                    "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "2fd2ab9e-699e-4a91-907b-8910139007d2",
+              "name": "TC-AUTH-02 Login as Employee (valid)",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{employeeEmail}}\", \"password\": \"{{testPassword}}\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "37fbccf4-713c-4644-967d-e3a4c8860340",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                      "pm.collectionVariables.set('employeeToken', body.access_token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "aa438371-3261-408f-9bcc-0047690894cc",
+              "name": "TC-AUTH-03 Login with wrong password",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"WrongPassword!\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "051a4bcd-def1-4291-baba-2a2ea78f6788",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "4c4012cc-5da5-49d0-ac32-a18f7e49e023",
+              "name": "TC-AUTH-04 Access protected API without token",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "projects"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "X-Company-ID",
+                    "value": "{{tenantId}}"
+                  }
+                ],
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "60aa24f1-b68b-40c7-856c-2d4183dd56fc",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 401 or 403', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "24171f65-fa4b-408a-84d0-a5992cb22a17",
+              "name": "TC-AUTH-05 Get current user (/users/me)",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{managerToken}}"
+                  },
+                  {
+                    "key": "X-Company-ID",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-User-ID",
+                    "value": "{{managerId}}"
+                  }
+                ],
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "a6316d38-60ff-481c-aba3-9a49c8dd6c30",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('userId present', () => pm.expect(body.id || body.userId).to.be.a('string'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "event": []
+        },
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 30,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "d85e1d3c-116a-49cd-8d5d-31a89c561f7f",
+          "httpRequestId": "7267a415-29cc-419c-8d6a-296c18317972",
+          "scriptId": "b14c6745-d07a-456e-824b-0b767a96c77c",
+          "execution": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+        }
+      },
+      {
+        "error": {
+          "name": "AssertionError",
+          "index": 1,
+          "test": "access_token present",
+          "message": "expected undefined to be a string",
+          "stack": "AssertionError: expected undefined to be a string\n   at Object.eval sandbox-script.js:2:1)",
+          "checksum": "125c7b93ccce273bb310b6346add04dd",
+          "id": "06658e70-74d5-4aa2-a3c4-a231cb2b8812",
+          "timestamp": 1778368126996,
+          "stacktrace": [
+            {
+              "fileName": "sandbox-script.js",
+              "lineNumber": 2,
+              "functionName": "Object.eval",
+              "typeName": "Object",
+              "methodName": "eval",
+              "columnNumber": 1,
+              "native": false
+            }
+          ]
+        },
+        "at": "assertion:1 in test-script",
+        "source": {
+          "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+          "name": "TC-AUTH-01 Login as Manager (valid)",
+          "request": {
+            "url": {
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
+              "host": [
+                "{{supabaseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('managerToken', body.access_token);"
+                ],
+                "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+              }
+            }
+          ]
+        },
+        "parent": {
+          "id": "2df9904e-b96a-43b3-8678-5d38166993ac",
+          "name": "TC-AUTH — Authentication",
+          "item": [
+            {
+              "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+              "name": "TC-AUTH-01 Login as Manager (valid)",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                      "pm.collectionVariables.set('managerToken', body.access_token);"
+                    ],
+                    "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "2fd2ab9e-699e-4a91-907b-8910139007d2",
+              "name": "TC-AUTH-02 Login as Employee (valid)",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{employeeEmail}}\", \"password\": \"{{testPassword}}\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "37fbccf4-713c-4644-967d-e3a4c8860340",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                      "pm.collectionVariables.set('employeeToken', body.access_token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "aa438371-3261-408f-9bcc-0047690894cc",
+              "name": "TC-AUTH-03 Login with wrong password",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"WrongPassword!\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "051a4bcd-def1-4291-baba-2a2ea78f6788",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "4c4012cc-5da5-49d0-ac32-a18f7e49e023",
+              "name": "TC-AUTH-04 Access protected API without token",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "projects"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "X-Company-ID",
+                    "value": "{{tenantId}}"
+                  }
+                ],
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "60aa24f1-b68b-40c7-856c-2d4183dd56fc",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 401 or 403', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "24171f65-fa4b-408a-84d0-a5992cb22a17",
+              "name": "TC-AUTH-05 Get current user (/users/me)",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{managerToken}}"
+                  },
+                  {
+                    "key": "X-Company-ID",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-User-ID",
+                    "value": "{{managerId}}"
+                  }
+                ],
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "a6316d38-60ff-481c-aba3-9a49c8dd6c30",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('userId present', () => pm.expect(body.id || body.userId).to.be.a('string'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "event": []
+        },
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 30,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "d85e1d3c-116a-49cd-8d5d-31a89c561f7f",
+          "httpRequestId": "7267a415-29cc-419c-8d6a-296c18317972",
+          "scriptId": "b14c6745-d07a-456e-824b-0b767a96c77c",
+          "execution": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+        }
+      },
+      {
+        "error": {
+          "name": "AssertionFailure",
+          "message": "Status is 200, access_token present",
+          "stack": "AssertionFailure: Status is 200, access_token present\n    at postProcessContext (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js:41:17)\n    at PostmanCollectionRun.<anonymous> (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js:513:39)\n    at PostmanSandbox.<anonymous> (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-sandbox\\lib\\postman-sandbox.js:139:13)\n    at Object.onceWrapper (node:events:623:26)\n    at PostmanSandbox.emit (node:events:508:28)\n    at context.__uvm_emit (C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\uvm\\lib\\bridge.js:71:21)\n    at Object.dispatch (evalmachine.<anonymous>:20:13)\n    at Object.<anonymous> (evalmachine.<anonymous>:66:7860)\n    at t.exports.terminate (evalmachine.<anonymous>:66:22105)\n    at Immediate._onImmediate (evalmachine.<anonymous>:66:5993)\n    at process.processImmediate (node:internal/timers:506:21)",
+          "checksum": "4709524e352422dda031dbe25b31f06c",
+          "id": "0a9f88f5-19c6-4aa0-8f2c-507efaa3d090",
+          "timestamp": 1778368127000,
+          "stacktrace": [
+            {
+              "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js",
+              "lineNumber": 41,
+              "functionName": "postProcessContext",
+              "typeName": "Object",
+              "methodName": null,
+              "columnNumber": 17,
+              "native": false
+            },
+            {
+              "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-runtime\\lib\\runner\\extensions\\event.command.js",
+              "lineNumber": 513,
+              "functionName": "",
+              "typeName": "PostmanCollectionRun",
+              "methodName": null,
+              "columnNumber": 39,
+              "native": false
+            },
+            {
+              "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\postman-sandbox\\lib\\postman-sandbox.js",
+              "lineNumber": 139,
+              "functionName": "",
+              "typeName": "PostmanSandbox",
+              "methodName": null,
+              "columnNumber": 13,
+              "native": false
+            },
+            {
+              "fileName": "node:events",
+              "lineNumber": 623,
+              "functionName": "Object.onceWrapper",
+              "typeName": "Object",
+              "methodName": "onceWrapper",
+              "columnNumber": 26,
+              "native": false
+            },
+            {
+              "fileName": "node:events",
+              "lineNumber": 508,
+              "functionName": "PostmanSandbox.emit",
+              "typeName": "PostmanSandbox",
+              "methodName": "emit",
+              "columnNumber": 28,
+              "native": false
+            },
+            {
+              "fileName": "C:\\Users\\DELL\\AppData\\Roaming\\nvm\\v24.11.1\\node_modules\\newman\\node_modules\\uvm\\lib\\bridge.js",
+              "lineNumber": 71,
+              "functionName": "context.__uvm_emit",
+              "typeName": "context",
+              "methodName": "__uvm_emit",
+              "columnNumber": 21,
+              "native": false
+            },
+            {
+              "fileName": "evalmachine.<anonymous>",
+              "lineNumber": 20,
+              "functionName": "Object.dispatch",
+              "typeName": "Object",
+              "methodName": "dispatch",
+              "columnNumber": 13,
+              "native": false
+            },
+            {
+              "fileName": "evalmachine.<anonymous>",
+              "lineNumber": 66,
+              "functionName": "",
+              "typeName": "Object",
+              "methodName": null,
+              "columnNumber": 7860,
+              "native": false
+            },
+            {
+              "fileName": "evalmachine.<anonymous>",
+              "lineNumber": 66,
+              "functionName": "t.exports.terminate",
+              "typeName": "t",
+              "methodName": "exports.terminate",
+              "columnNumber": 22105,
+              "native": false
+            },
+            {
+              "fileName": "evalmachine.<anonymous>",
+              "lineNumber": 66,
+              "functionName": "Immediate._onImmediate",
+              "typeName": "Immediate",
+              "methodName": "_onImmediate",
+              "columnNumber": 5993,
+              "native": false
+            },
+            {
+              "fileName": "node:internal/timers",
+              "lineNumber": 506,
+              "functionName": "process.processImmediate",
+              "typeName": "process",
+              "methodName": "processImmediate",
+              "columnNumber": 21,
+              "native": false
+            }
+          ]
+        },
+        "at": "test-script:39:17",
+        "source": {
+          "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+          "name": "TC-AUTH-01 Login as Manager (valid)",
+          "request": {
+            "url": {
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
+              "host": [
+                "{{supabaseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('managerToken', body.access_token);"
+                ],
+                "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+              }
+            }
+          ]
+        },
+        "parent": {
+          "id": "2df9904e-b96a-43b3-8678-5d38166993ac",
+          "name": "TC-AUTH — Authentication",
+          "item": [
+            {
+              "id": "18035a33-6ded-4766-a13d-a8997c01f059",
+              "name": "TC-AUTH-01 Login as Manager (valid)",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "b14c6745-d07a-456e-824b-0b767a96c77c",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                      "pm.collectionVariables.set('managerToken', body.access_token);"
+                    ],
+                    "_lastExecutionId": "ade5af02-3ce7-4157-a1ad-5a80883b6cdd"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "2fd2ab9e-699e-4a91-907b-8910139007d2",
+              "name": "TC-AUTH-02 Login as Employee (valid)",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{employeeEmail}}\", \"password\": \"{{testPassword}}\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "37fbccf4-713c-4644-967d-e3a4c8860340",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                      "pm.collectionVariables.set('employeeToken', body.access_token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "aa438371-3261-408f-9bcc-0047690894cc",
+              "name": "TC-AUTH-03 Login with wrong password",
+              "request": {
+                "url": {
+                  "path": [
+                    "auth",
+                    "v1",
+                    "token"
+                  ],
+                  "host": [
+                    "{{supabaseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "grant_type",
+                      "value": "password"
+                    }
+                  ],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"WrongPassword!\" }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "051a4bcd-def1-4291-baba-2a2ea78f6788",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "4c4012cc-5da5-49d0-ac32-a18f7e49e023",
+              "name": "TC-AUTH-04 Access protected API without token",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "projects"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "X-Company-ID",
+                    "value": "{{tenantId}}"
+                  }
+                ],
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "60aa24f1-b68b-40c7-856c-2d4183dd56fc",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 401 or 403', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "id": "24171f65-fa4b-408a-84d0-a5992cb22a17",
+              "name": "TC-AUTH-05 Get current user (/users/me)",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{managerToken}}"
+                  },
+                  {
+                    "key": "X-Company-ID",
+                    "value": "{{tenantId}}"
+                  },
+                  {
+                    "key": "X-User-ID",
+                    "value": "{{managerId}}"
+                  }
+                ],
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "a6316d38-60ff-481c-aba3-9a49c8dd6c30",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "pm.test('userId present', () => pm.expect(body.id || body.userId).to.be.a('string'));"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "event": []
+        },
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 30,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "d85e1d3c-116a-49cd-8d5d-31a89c561f7f",
+          "httpRequestId": "7267a415-29cc-419c-8d6a-296c18317972",
+          "scriptId": "b14c6745-d07a-456e-824b-0b767a96c77c"
+        }
+      }
+    ],
+    "error": null
+  }
+}

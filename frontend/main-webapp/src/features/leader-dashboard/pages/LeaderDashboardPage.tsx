@@ -10,6 +10,7 @@ import {
   getLeaderDashboardData,
   type LeaderDashboardData,
 } from "../services/leaderDashboardService";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 const FALLBACK_DASHBOARD_DATA: LeaderDashboardData = {
   totalEmployees: 0,
@@ -48,6 +49,7 @@ function LeaderDashboardSkeleton() {
 }
 
 export default function LeaderDashboardPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { tenant } = useParams<{ tenant: string }>();
 
@@ -98,12 +100,12 @@ export default function LeaderDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">CEO Dashboard</h1>
-          <p className="text-sm text-neutral-500 mt-0.5">Enterprise overview</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t("CEO Dashboard")}</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">{t("Enterprise overview")}</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
-            title="Create Delegation"
+            title={t("Create Delegation")}
             iconLeft={<Icon name="add" size={20} color="currentColor" />}
             onClick={() => navigate(`/${tenant}/delegation`)}
             style="primary"

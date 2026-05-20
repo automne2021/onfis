@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, Suspense } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { BreadCrumb } from "../components/navigation/BreadCrumb"
+import { useLanguage } from "../../../contexts/LanguageContext";
 import { getTimeAgo } from "../../../utils/getTime"
 import { Tags } from "../components/Tags/Tags"
 
@@ -52,6 +53,7 @@ export function AnnouncementDetail() {
   const navigate = useNavigate();
   const { withTenant } = useTenantPath();
   const { dbUser: currentUser } = useAuth();
+  const { t } = useLanguage();
 
   const [detail, setDetail] = useState<AnnouncementData | null>(null)
   const [authorProfile, setAuthorProfile] = useState<FullUserProfile | null>(null);
@@ -211,12 +213,12 @@ export function AnnouncementDetail() {
     setIsDeleting(true);
     try {
       await announcementApi.deleteAnnouncement(id);
-      toast.success("Announcement deleted successfully!");
+      toast.success(t("Announcement deleted successfully!"));
       setIsDeleteModalOpen(false);
       navigate(withTenant('/announcements'));
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete announcement.");
+      toast.error(t("Failed to delete announcement."));
     } finally {
       setIsDeleting(false);
     }
@@ -227,7 +229,7 @@ export function AnnouncementDetail() {
   }
 
   if (!detail) {
-    return <div className="p-4 text-center text-neutral-500">No announcement available!</div>;
+    return <div className="p-4 text-center text-neutral-500">{t("No announcement available!")}</div>;
   }
 
   const avatarImg = detail.avatarUrl ? detail.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(detail.authName)}&background=random`;
@@ -250,7 +252,7 @@ export function AnnouncementDetail() {
     avatarUrl: userProfileImg,
   };
 
-  const displayDeptName = authorProfile?.departmentName || "My department";
+  const displayDeptName = authorProfile?.departmentName || t("My department");
 
   return (
     <>
@@ -300,7 +302,7 @@ export function AnnouncementDetail() {
                       ? "text-primary hover:bg-primary/10" 
                       : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                     }`}
-                  title={detail.isPinned ? "" : "Is Pinned"}
+                  title={detail.isPinned ? "" : t("Is Pinned")}
                 >
                   {detail.isPinned ? (
                     <PushPin
@@ -342,11 +344,11 @@ export function AnnouncementDetail() {
                 >
                   <MenuItem onClick={handleOpenEdit}>
                     <ListItemIcon><EditOutlined fontSize="small" /></ListItemIcon>
-                    <ListItemText primaryTypographyProps={{ fontSize: 14 }}>Edit</ListItemText>
+                    <ListItemText primaryTypographyProps={{ fontSize: 14 }}>{t("Edit")}</ListItemText>
                   </MenuItem>
                   <MenuItem onClick={handleOpenDelete} sx={{ color: 'error.main' }}>
                     <ListItemIcon><DeleteOutline fontSize="small" color="error" /></ListItemIcon>
-                    <ListItemText primaryTypographyProps={{ fontSize: 14 }}>Delete</ListItemText>
+                    <ListItemText primaryTypographyProps={{ fontSize: 14 }}>{t("Delete")}</ListItemText>
                   </MenuItem>
                 </Menu>
               </>
@@ -361,7 +363,7 @@ export function AnnouncementDetail() {
                   onClick={() => togglePersonalInformationCard()}
                   className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                  <img src={avatarImg} alt="User Avatar" className="w-full h-full object-cover" />
+                  <img src={avatarImg} alt={t("User Avatar")} className="w-full h-full object-cover" />
                   {/* <StatusBubble status={authorLiveStatus as "online" | "offline" | "busy"} /> */}
                 </div>
 
@@ -379,9 +381,9 @@ export function AnnouncementDetail() {
 
             {/* Tags */}
             <div className="flex items-center gap-2">
-              {detail.isPinned && <Tags label="Pinned" icon={<PushPinOutlined sx={{ fontSize: 16 }} />} />}
+              {detail.isPinned && <Tags label={t("Pinned")} icon={<PushPinOutlined sx={{ fontSize: 16 }} />} />}
               {(!detail.targetDepartmentId && detail.scope !== 'department') ? (
-                <Tags label="Global" icon={<Public sx={{ fontSize: 16 }} />} />
+                <Tags label={t("Global")} icon={<Public sx={{ fontSize: 16 }} />} />
               ) : (
                 <Tags label={displayDeptName} icon={<Groups sx={{ fontSize: 16 }} />} bgColor="bg-cyan-100" textColor="text-cyan-500" />
               )}
@@ -399,7 +401,7 @@ export function AnnouncementDetail() {
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-1 text-neutral-900 body-2-medium">
                 <span className="text-neutral-500"><AttachFileOutlined fontSize="small" /></span>
-                Attachments
+                {t("Attachments")}
                 <span className="body-2-regular text-neutral-500">({detail.attachments ? detail.attachments.length : 0})</span>
               </p>
               {detail.attachments && detail.attachments.length > 0 && (
@@ -407,7 +409,7 @@ export function AnnouncementDetail() {
                   type="button"
                   onClick={handleDownloadAll} 
                   className="text-primary hover:underline flex items-center gap-1 transition body-4-regular">
-                  <FileDownloadOutlined sx={{ fontSize: 16 }} /> Download All
+                  <FileDownloadOutlined sx={{ fontSize: 16 }} /> {t("Download All")}
                 </button>
               )}
             </div>
@@ -434,7 +436,7 @@ export function AnnouncementDetail() {
                 className={`py-2 transition hover:text-primary ${isLiked ? "text-primary" : "text-neutral-500"} flex items-center gap-2 body-3-regular`}
               >
                 {isLiked ? <ThumbUp sx={{ fontSize: 16 }} /> : <ThumbUpOutlined sx={{ fontSize: 16 }} />}
-                {likeCount === 0 && "Like"}
+                {likeCount === 0 && t("Like")}
               </button>
               {likeCount > 0 && (
                 <button type="button" className={`p-2 rounded-full transition hover:bg-neutral-200 ${isLiked ? "text-primary" : "text-neutral-500"} flex items-center gap-2 body-3-regular`}>
@@ -445,7 +447,7 @@ export function AnnouncementDetail() {
 
             <a href="#comment-section" className="p-2 rounded-full text-neutral-500 transition hover:bg-neutral-200 flex items-center gap-2 body-3-regular">
               <CommentOutlined sx={{ fontSize: 18 }} />
-              <span>{commentCount === 0 ? "Comment" : commentCount}</span>
+              <span>{commentCount === 0 ? t("Comment") : commentCount}</span>
             </a>
           </div>
         </div>
@@ -456,7 +458,7 @@ export function AnnouncementDetail() {
         <div className="pt-3 px-6 pb-6">
           <p className="flex items-center gap-2 header-h6 text-neutral-900 border-b border-neutral-300 leading-none pb-4 mt-6">
             <span className="text-neutral-500"><ModeCommentOutlined fontSize="medium" /></span>
-            Comments
+            {t("Comments")}
           </p>
           <div className="flex flex-col gap-1 mt-4">
             {detail.comments && detail.comments.map((comment) => (

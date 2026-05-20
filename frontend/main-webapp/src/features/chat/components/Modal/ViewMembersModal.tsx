@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { chatApi } from '../../services/chatApi';
 import { createPortal } from 'react-dom';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 interface MemberDTO {
   id: string;
@@ -11,6 +12,7 @@ interface MemberDTO {
 }
 
 export function ViewMembersModal({ isOpen, onClose, conversationId }: { isOpen: boolean, onClose: () => void, conversationId: string }) {
+  const { t } = useLanguage();
   const [members, setMembers] = useState<MemberDTO[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +46,7 @@ export function ViewMembersModal({ isOpen, onClose, conversationId }: { isOpen: 
       <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl p-6 animate-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-semibold text-neutral-900">
-            Channel Members {members.length > 0 && !loading ? `(${members.length})` : ''}
+            {t("Channel Members")} {members.length > 0 && !loading ? `(${members.length})` : ''}
           </h2>
           <button onClick={onClose} className="p-1 rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 transition-colors">
             <X size={20} />
@@ -78,7 +80,7 @@ export function ViewMembersModal({ isOpen, onClose, conversationId }: { isOpen: 
             })
           ) : (
             <div className="body-3-medium text-neutral-500 text-center py-4">
-              No members found.
+              {t("No members found.")}
             </div>
           )}
         </div>

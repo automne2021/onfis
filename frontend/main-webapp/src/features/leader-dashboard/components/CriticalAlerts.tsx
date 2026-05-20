@@ -1,4 +1,5 @@
 import Icon from "../../../components/common/Icon";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface Alert {
   id: string;
@@ -26,21 +27,22 @@ const severityBadge = {
 };
 
 export default function CriticalAlerts({ alerts }: CriticalAlertsProps) {
+  const { t } = useLanguage();
   const formatRelativeTime = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
-    if (hours < 1) return "Just now";
-    if (hours < 24) return `${hours} hours ago`;
+    if (hours < 1) return t("Just now");
+    if (hours < 24) return `${hours} ${t("hours ago")}`;
     const days = Math.floor(hours / 24);
-    return `${days} days ago`;
+    return `${days} ${t("days ago")}`;
   };
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200/80 p-6">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-base font-semibold text-neutral-900">Critical Alerts</h3>
-          <p className="text-xs text-neutral-400 mt-0.5">{alerts.length} issues need attention</p>
+          <h3 className="text-base font-semibold text-neutral-900">{t("Critical Alerts")}</h3>
+          <p className="text-xs text-neutral-400 mt-0.5">{alerts.length} {t("issues need attention")}</p>
         </div>
         {alerts.length > 0 && (
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-600 text-[11px] font-bold">
@@ -52,7 +54,7 @@ export default function CriticalAlerts({ alerts }: CriticalAlertsProps) {
       {alerts.length === 0 ? (
         <div className="py-8 text-center">
           <span className="text-3xl text-emerald-500 mb-2 inline-block"><Icon name="check_circle" size={48} color="currentColor" /></span>
-          <p className="text-sm text-neutral-400 mt-2">No alerts</p>
+          <p className="text-sm text-neutral-400 mt-2">{t("No alerts")}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -69,10 +71,10 @@ export default function CriticalAlerts({ alerts }: CriticalAlertsProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-[10px] font-semibold uppercase tracking-wide ${config.color}`}>
-                        {config.label}
+                        {t(config.label)}
                       </span>
                       <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${severityBadge[alert.severity]}`}>
-                        {alert.severity}
+                        {t(alert.severity)}
                       </span>
                     </div>
                     <p className="text-sm font-medium text-neutral-800 leading-snug">{alert.title}</p>

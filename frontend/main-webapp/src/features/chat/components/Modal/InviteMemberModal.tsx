@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Button } from '../../../../components/common/Buttons/Button';
 import { chatApi } from '../../services/chatApi';
 import api from '../../../../services/api';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 interface InviteMemberModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ interface UserDTO {
 }
 
 export function InviteMemberModal({ isOpen, onClose, conversationId, channelName, onSuccess }: InviteMemberModalProps) {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<UserDTO[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -59,15 +61,15 @@ export function InviteMemberModal({ isOpen, onClose, conversationId, channelName
     setToastMessage(null);
     try {
       await chatApi.addMemberToGroup(conversationId, userId);
-      setToastMessage({ type: 'success', text: 'Member added successfully!' });
+      setToastMessage({ type: 'success', text: t('Member added successfully!') });
       if (onSuccess) onSuccess();
       setTimeout(() => onClose(), 1500); 
     } catch (error: unknown) {
       const err = error as { response?: { status: number } };
       if (err.response && err.response.status === 400) {
-        setToastMessage({ type: 'error', text: 'This person is already in the group!' });
+        setToastMessage({ type: 'error', text: t('This person is already in the group!') });
       } else {
-        setToastMessage({ type: 'error', text: 'An error occurred while adding the member.' });
+        setToastMessage({ type: 'error', text: t('An error occurred while adding the member.') });
       }
     } finally {
       setIsSubmitting(false);
@@ -86,7 +88,7 @@ export function InviteMemberModal({ isOpen, onClose, conversationId, channelName
         )}
 
         <div className="flex items-center justify-between mb-4 mt-2">
-          <h2 className="text-lg font-semibold text-neutral-900">Invite to #{channelName}</h2>
+          <h2 className="text-lg font-semibold text-neutral-900">{t("Invite to")} #{channelName}</h2>
           <button onClick={onClose} className="p-2 text-neutral-400 hover:bg-neutral-100 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
@@ -96,7 +98,7 @@ export function InviteMemberModal({ isOpen, onClose, conversationId, channelName
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name or email"
+            placeholder={t("Search by name or email")}
             className="w-full h-10 pl-9 pr-3 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:border-primary transition-colors"
           />
         </div>
@@ -119,7 +121,7 @@ export function InviteMemberModal({ isOpen, onClose, conversationId, channelName
                 disabled={isSubmitting}
                 iconLeft={<UserPlus size={14}/>}
               >
-                Add
+                {t("Add")}
               </Button>
             </div>
           ))}

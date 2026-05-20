@@ -7,6 +7,7 @@ import { Button } from "../../../components/common/Buttons/Button";
 import { useRole } from "../../../hooks/useRole";
 import { useToast } from "../../../contexts/useToast";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import {
   getPositionTree,
   getDepartmentsWithEmployees,
@@ -232,6 +233,7 @@ export default function PositionTreePage() {
   const canManagePositions = isManagerLike || isAdmin;
   const canManageDepartments = isAdmin || isSuperAdmin;
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   // Position detail modal state
   const [detailModal, setDetailModal] = useState<{
@@ -329,11 +331,11 @@ export default function PositionTreePage() {
     setDisplacedDialog((prev) => ({ ...prev, isOpen: false }));
     try {
       await assignUserToPosition(targetPositionId, employeeId, action);
-      showToast(`${employeeName} assigned successfully`, "success");
+      showToast(`${employeeName} ${t("assigned successfully")}`, "success");
       await fetchTreeData();
     } catch (err) {
       console.error("Failed to assign employee:", err);
-      showToast("Failed to assign employee", "error");
+      showToast(t("Failed to assign employee"), "error");
       await fetchTreeData();
     }
   }, [displacedDialog, fetchTreeData, showToast]);
@@ -362,13 +364,13 @@ export default function PositionTreePage() {
       }
 
       setIsAddModalOpen(false);
-      showToast("Position created successfully", "success");
+      showToast(t("Position created successfully"), "success");
       // Refresh data
       await fetchTreeData();
       await fetchListData();
     } catch (err) {
       console.error("Failed to create position:", err);
-      showToast("Failed to create position", "error");
+      showToast(t("Failed to create position"), "error");
     }
   };
 
@@ -425,19 +427,19 @@ export default function PositionTreePage() {
 
     setConfirmDialog({
       isOpen: true,
-      title: "Move Position",
-      message: "Are you sure you want to move this position? All subordinates will follow.",
+      title: t("Move Position"),
+      message: t("Are you sure you want to move this position? All subordinates will follow."),
       variant: "warning",
-      confirmLabel: "Move",
+      confirmLabel: t("Move"),
       onConfirm: async () => {
         closeConfirm();
         try {
           await movePosition(resolvedDraggedId, resolvedTargetId);
-          showToast("Position moved successfully", "success");
+          showToast(t("Position moved successfully"), "success");
           await fetchTreeData();
         } catch (err) {
           console.error("Failed to move position:", err);
-          showToast("Failed to move position", "error");
+          showToast(t("Failed to move position"), "error");
           await fetchTreeData(); // refresh to revert UI
         }
       },
@@ -471,19 +473,19 @@ export default function PositionTreePage() {
           // Vacant position: simple confirm
           setConfirmDialog({
             isOpen: true,
-            title: "Assign Employee",
-            message: `Are you sure you want to assign "${employeeName}" to this position?`,
+            title: t("Assign Employee"),
+            message: `${t("Are you sure you want to assign")} "${employeeName}" ${t("to this position?")}`,
             variant: "info",
-            confirmLabel: "Assign",
+            confirmLabel: t("Assign"),
             onConfirm: async () => {
               closeConfirm();
               try {
                 await assignUserToPosition(resolvedPositionId, employeeId);
-                showToast(`${employeeName} assigned successfully`, "success");
+                showToast(`${employeeName} ${t("assigned successfully")}`, "success");
                 await fetchTreeData();
               } catch (err) {
                 console.error("Failed to assign employee:", err);
-                showToast("Failed to assign employee", "error");
+                showToast(t("Failed to assign employee"), "error");
                 await fetchTreeData();
               }
             },
@@ -493,10 +495,10 @@ export default function PositionTreePage() {
         // Subordinate: create a new child position, then assign user to it
         setConfirmDialog({
           isOpen: true,
-          title: "Add as Subordinate",
-          message: `Are you sure you want to add "${employeeName}" as a subordinate? A new position will be created under the target.`,
+          title: t("Add as Subordinate"),
+          message: `${t("Are you sure you want to add")} "${employeeName}" ${t("as a subordinate? A new position will be created under the target.")}`,
           variant: "info",
-          confirmLabel: "Confirm",
+          confirmLabel: t("Confirm"),
           onConfirm: async () => {
             closeConfirm();
             try {
@@ -509,11 +511,11 @@ export default function PositionTreePage() {
 
               // Assign the employee to the new position
               await assignUserToPosition(newPosition.id, employeeId);
-              showToast(`${employeeName} added as subordinate`, "success");
+              showToast(`${employeeName} ${t("added as subordinate")}`, "success");
               await fetchTreeData();
             } catch (err) {
               console.error("Failed to add subordinate:", err);
-              showToast("Failed to add subordinate", "error");
+              showToast(t("Failed to add subordinate"), "error");
               await fetchTreeData();
             }
           },
@@ -527,19 +529,19 @@ export default function PositionTreePage() {
     const employeeName = unassignedEmployees.find((e) => e.id === employeeId)?.name || "this person";
     setConfirmDialog({
       isOpen: true,
-      title: "Remove from Organization",
-      message: `Remove "${employeeName}" from the organization? They will no longer appear in any lists.`,
+      title: t("Remove from Organization"),
+      message: `${t("Remove")} "${employeeName}" ${t("from the organization? They will no longer appear in any lists.")}`,
       variant: "danger",
-      confirmLabel: "Remove",
+      confirmLabel: t("Remove"),
       onConfirm: async () => {
         closeConfirm();
         try {
           await removeUnassignedUser(employeeId);
-          showToast(`${employeeName} removed`, "success");
+          showToast(`${employeeName} ${t("removed")}`, "success");
           await fetchTreeData();
         } catch (err) {
           console.error("Failed to remove user:", err);
-          showToast("Failed to remove user", "error");
+          showToast(t("Failed to remove user"), "error");
         }
       },
     });
@@ -704,11 +706,11 @@ export default function PositionTreePage() {
             {/* Stats Box */}
             <div className="bg-white border border-primary rounded-[8px] px-3 py-1.5 flex items-center gap-4">
               <span className="text-xs font-semibold text-neutral-500">
-                Employees:{" "}
+                {t("Employees")}:{" "}
                 <span className="text-primary font-bold">{totalPositions}</span>
               </span>
               <span className="text-xs font-semibold text-neutral-500">
-                Vacant:{" "}
+                {t("Vacant")}:{" "}
                 <span className="text-status-off_track font-bold">{vacantPositions}</span>
               </span>
             </div>
@@ -717,7 +719,7 @@ export default function PositionTreePage() {
             <div className="flex items-center gap-2">
               {canManageDepartments && (
                 <Button
-                  title="Add Department"
+                  title={t("Add Department")}
                   iconLeft={<Icon name="domain_add" size={18} color="currentColor" />}
                   onClick={() => setIsDeptModalOpen(true)}
                   style="sub"
@@ -726,7 +728,7 @@ export default function PositionTreePage() {
               )}
               {canManagePositions && (
                 <Button
-                  title="Add Position"
+                  title={t("Add Position")}
                   iconLeft={<Add fontSize="small" />}
                   onClick={handleAddPosition}
                   style="primary"
@@ -753,18 +755,18 @@ export default function PositionTreePage() {
           <div className="bg-neutral-50 border border-neutral-200 flex items-center justify-between p-2">
             <div className="flex items-center gap-4">
               <span className="text-sm font-bold text-neutral-500">
-                Employees:{" "}
+                {t("Employees")}:{" "}
                 <span className="text-primary">{totalPositions}</span>
               </span>
               <span className="text-sm font-bold text-neutral-500">
-                Vacant:{" "}
+                {t("Vacant")}:{" "}
                 <span className="text-status-off_track">{vacantPositions}</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
               {canManageDepartments && (
                 <Button
-                  title="Add Department"
+                  title={t("Add Department")}
                   iconLeft={<Icon name="domain_add" size={18} color="currentColor" />}
                   onClick={() => setIsDeptModalOpen(true)}
                   style="sub"
@@ -773,7 +775,7 @@ export default function PositionTreePage() {
               )}
               {canManagePositions && (
                 <Button
-                  title="Add Position"
+                  title={t("Add Position")}
                   iconLeft={<Add fontSize="small" />}
                   onClick={handleAddPosition}
                   style="primary"
@@ -823,29 +825,29 @@ export default function PositionTreePage() {
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
                   <Icon name="domain_add" size={22} className="text-indigo-600" />
                 </div>
-                <h3 className="text-lg font-bold text-neutral-900">Create Department</h3>
+                <h3 className="text-lg font-bold text-neutral-900">{t("Create Department")}</h3>
               </div>
-              <p className="text-sm text-neutral-500 mt-2">Add a new department to your organization.</p>
+              <p className="text-sm text-neutral-500 mt-2">{t("Add a new department to your organization.")}</p>
             </div>
             <div className="px-6 pb-4 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Department Name *</label>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Department Name *")}</label>
                 <input
                   type="text"
                   value={deptFormName}
                   onChange={(e) => setDeptFormName(e.target.value)}
-                  placeholder="e.g. Engineering, Marketing..."
+                  placeholder={t("e.g. Engineering, Marketing...")}
                   className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm"
                   maxLength={100}
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Description <span className="text-neutral-400 font-normal">(optional)</span></label>
+                <label className="block text-sm font-semibold text-neutral-700 mb-1.5">{t("Description")} <span className="text-neutral-400 font-normal">({t("optional")})</span></label>
                 <textarea
                   value={deptFormDesc}
                   onChange={(e) => setDeptFormDesc(e.target.value)}
-                  placeholder="Brief description of this department..."
+                  placeholder={t("Brief description of this department...")}
                   className="w-full px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-sm resize-none"
                   rows={3}
                   maxLength={500}
@@ -854,28 +856,28 @@ export default function PositionTreePage() {
             </div>
             <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-neutral-100 bg-neutral-50/50">
               <Button
-                title="Cancel"
+                title={t("Cancel")}
                 onClick={() => { setIsDeptModalOpen(false); setDeptFormName(""); setDeptFormDesc(""); }}
                 style="sub"
                 textStyle="body-4-medium"
               />
               <Button
-                title={isDeptCreating ? "Creating..." : "Create Department"}
+                title={isDeptCreating ? t("Creating...") : t("Create Department")}
                 onClick={async () => {
                   if (!deptFormName.trim()) {
-                    showToast("Department name is required", "error");
+                    showToast(t("Department name is required"), "error");
                     return;
                   }
                   setIsDeptCreating(true);
                   try {
                     await createDepartment({ name: deptFormName.trim(), description: deptFormDesc.trim() || undefined });
-                    showToast("Department created successfully", "success");
+                    showToast(t("Department created successfully"), "success");
                     setIsDeptModalOpen(false);
                     setDeptFormName("");
                     setDeptFormDesc("");
                     handleRefreshAll();
                   } catch {
-                    showToast("Failed to create department", "error");
+                    showToast(t("Failed to create department"), "error");
                   } finally {
                     setIsDeptCreating(false);
                   }

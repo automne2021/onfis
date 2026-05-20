@@ -14,6 +14,7 @@ import { uploadProjectAttachment } from "../../../services/attachmentService";
 import { formatVNDate } from "../../../utils/getTime";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { useToast } from "../../../contexts/useToast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 type ViewMode = "kanban" | "list" | "timeline" | "calendar";
 
@@ -68,6 +69,7 @@ export default function ProjectsPage() {
   const navigate = useNavigate();
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [projects, setProjects] = useState<Project[]>([]);
   const [managerOptions, setManagerOptions] = useState<ApiUserSummary[]>([]);
   const [companyTags, setCompanyTags] = useState<string[]>([]);
@@ -96,7 +98,7 @@ export default function ProjectsPage() {
         setManagerOptions(users);
         setCompanyTags(sharedTags.map((tag) => tag.name));
       } catch {
-        setError("Failed to load projects.");
+        setError(t("Failed to load projects."));
       } finally {
         setLoading(false);
       }
@@ -200,10 +202,10 @@ export default function ProjectsPage() {
           "warning",
         );
       } else {
-        showToast("Project created successfully", "success");
+        showToast(t("Project created successfully"), "success");
       }
     } catch {
-      showToast("Unable to create project", "error");
+      showToast(t("Unable to create project"), "error");
     }
   };
 

@@ -38,5 +38,6 @@ public record UserProfileResponseDTO(
   Map<String, Object> contractInfo,
   Map<String, Object> educationInfo,
   Map<String, Object> compensationInfo,
-  Boolean isFirstLogin
+  Boolean isFirstLogin,
+  String language
 ) {}

@@ -1,4 +1,5 @@
 import Icon from "../../../components/common/Icon";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface KPICardsProps {
   totalEmployees: number;
@@ -48,11 +49,12 @@ const kpiConfig = [
 ];
 
 export default function KPICards({ totalEmployees, activeProjects, totalProjects, onTimeRate, pendingApprovals }: KPICardsProps) {
+  const { t } = useLanguage();
   const values: Record<string, { value: string; sub?: string }> = {
-    employees: { value: totalEmployees.toString(), sub: "active people" },
-    projects: { value: `${activeProjects}`, sub: `out of ${totalProjects} total projects` },
-    ontime: { value: `${onTimeRate}%`, sub: onTimeRate >= 80 ? "Good" : onTimeRate >= 60 ? "Needs Improvement" : "Warning" },
-    approvals: { value: pendingApprovals.toString(), sub: "pending requests" },
+    employees: { value: totalEmployees.toString(), sub: t("active people") },
+    projects: { value: `${activeProjects}`, sub: `${t("out of")} ${totalProjects} ${t("total projects")}` },
+    ontime: { value: `${onTimeRate}%`, sub: onTimeRate >= 80 ? t("Good") : onTimeRate >= 60 ? t("Needs Improvement") : t("Warning") },
+    approvals: { value: pendingApprovals.toString(), sub: t("pending requests") },
   };
 
   return (
@@ -82,7 +84,7 @@ export default function KPICards({ totalEmployees, activeProjects, totalProjects
             <div className="text-3xl font-bold text-neutral-900 mb-1">
               {v.value}
             </div>
-            <div className="text-xs text-neutral-500 font-medium">{kpi.label}</div>
+            <div className="text-xs text-neutral-500 font-medium">{t(kpi.label)}</div>
             {v.sub && (
               <div className="text-[11px] text-neutral-400 mt-0.5">{v.sub}</div>
             )}

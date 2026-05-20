@@ -1,18 +1,20 @@
 import type { OverviewProps } from "../../types/userProfileTypes";
 import { TitleHeader } from "../TitleHeader";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export function PayrollAndCompensation({ icon, userInfo }: OverviewProps) {
+  const { t } = useLanguage();
 
   const payrollInfo = [
-    { label: 'Base salary', content: userInfo.compensationInfo?.baseSalary, subcontent: 'per annum' },
-    { label: 'Pay frequency', content: userInfo.compensationInfo?.payFrequency },
-    { label: 'Bonus target', content: userInfo.compensationInfo?.bonusTarget },
-    { label: 'Next review', content: userInfo.compensationInfo?.nextReview },
+    { label: t('Base salary'), content: userInfo.compensationInfo?.baseSalary, subcontent: t('per annum') },
+    { label: t('Pay frequency'), content: userInfo.compensationInfo?.payFrequency },
+    { label: t('Bonus target'), content: userInfo.compensationInfo?.bonusTarget },
+    { label: t('Next review'), content: userInfo.compensationInfo?.nextReview },
   ]
 
   return (
     <div className="profile-section">
-      <TitleHeader icon={icon} title="Payroll & Compensation" />
+      <TitleHeader icon={icon} title={t("Payroll & Compensation")} />
 
       <div className="flex flex-wrap items-stretch justify-between gap-3">
         {payrollInfo.map((item, index) => (

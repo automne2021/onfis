@@ -11,6 +11,7 @@ import type {
   TicketCategory,
   TicketComment,
 } from "../types/adminTypes";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<TicketCategory, string> = {
@@ -74,24 +75,26 @@ function formatDate(iso: string) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: TicketStatus }) {
+  const { t } = useLanguage();
   const m = STATUS_META[status];
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${m.bg} ${m.text}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
-      {m.label}
+      {t(m.label)}
     </span>
   );
 }
 
 function PriorityBadge({ priority }: { priority: TicketPriority }) {
+  const { t } = useLanguage();
   const m = PRIORITY_META[priority];
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${m.bg} ${m.text}`}
     >
-      {m.label}
+      {t(m.label)}
     </span>
   );
 }
@@ -122,6 +125,7 @@ function TicketDetailModal({
   const [commentText, setCommentText] = useState("");
   const [acting, setActing] = useState(false);
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!isOpen) {
@@ -140,9 +144,9 @@ function TicketDetailModal({
     setActing(true);
     try {
       await onAccept(ticket.id);
-      showToast("Task accepted.", "success");
+      showToast(t("Task accepted."), "success");
     } catch {
-      showToast("Unable to accept this task.", "error");
+      showToast(t("Unable to accept this task."), "error");
     } finally {
       setActing(false);
     }
@@ -152,10 +156,10 @@ function TicketDetailModal({
     setActing(true);
     try {
       await onApprove(ticket.id);
-      showToast("Task marked as complete.", "success");
+      showToast(t("Task marked as complete."), "success");
       onClose();
     } catch {
-      showToast("Unable to complete this task.", "error");
+      showToast(t("Unable to complete this task."), "error");
     } finally {
       setActing(false);
     }
@@ -163,16 +167,16 @@ function TicketDetailModal({
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
-      showToast("Please enter a rejection reason.", "error");
+      showToast(t("Please enter a rejection reason."), "error");
       return;
     }
     setActing(true);
     try {
       await onReject(ticket.id, rejectReason);
-      showToast("Ticket rejected.", "success");
+      showToast(t("Ticket rejected."), "success");
       onClose();
     } catch {
-      showToast("Unable to reject this ticket.", "error");
+      showToast(t("Unable to reject this ticket."), "error");
     } finally {
       setActing(false);
     }
@@ -183,9 +187,9 @@ function TicketDetailModal({
     try {
       await onComment(ticket.id, commentText);
       setCommentText("");
-      showToast("Note added.", "success");
+      showToast(t("Note added."), "success");
     } catch {
-      showToast("Unable to add note.", "error");
+      showToast(t("Unable to add note."), "error");
     }
   };
 
@@ -197,7 +201,7 @@ function TicketDetailModal({
           <StatusBadge status={ticket.status} />
           <PriorityBadge priority={ticket.priority} />
           <span className="text-xs text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
-            {CATEGORY_LABELS[ticket.category]}
+            {t(CATEGORY_LABELS[ticket.category])}
           </span>
         </div>
 
@@ -212,22 +216,22 @@ function TicketDetailModal({
 
         <div className="grid grid-cols-2 gap-3 text-sm bg-neutral-50 rounded-xl p-4 border border-neutral-100">
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Requester</p>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Requester")}</p>
             <p className="font-medium text-neutral-800">{ticket.requesterName}</p>
           </div>
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Created At</p>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Created At")}</p>
             <p className="font-medium text-neutral-800">{formatDate(ticket.createdAt)}</p>
           </div>
           {ticket.assigneeName && (
             <div>
-              <p className="text-neutral-400 text-xs mb-0.5">Assignee</p>
+              <p className="text-neutral-400 text-xs mb-0.5">{t("Assignee")}</p>
               <p className="font-medium text-neutral-800">{ticket.assigneeName}</p>
             </div>
           )}
           {ticket.resolvedAt && (
             <div>
-              <p className="text-neutral-400 text-xs mb-0.5">Resolved At</p>
+              <p className="text-neutral-400 text-xs mb-0.5">{t("Resolved At")}</p>
               <p className="font-medium text-neutral-800">{formatDate(ticket.resolvedAt)}</p>
             </div>
           )}
@@ -236,11 +240,11 @@ function TicketDetailModal({
         {/* Comments */}
         <div>
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-            Internal Notes ({ticket.comments.length})
+            {t("Internal Notes")} ({ticket.comments.length})
           </p>
           <div className="space-y-2 mb-3">
             {ticket.comments.length === 0 && (
-              <p className="text-sm text-neutral-400 italic">No notes yet.</p>
+              <p className="text-sm text-neutral-400 italic">{t("No notes yet.")}</p>
             )}
             {ticket.comments.map((c: TicketComment) => (
               <div
@@ -263,7 +267,7 @@ function TicketDetailModal({
             <input
               type="text"
               className="flex-1 border border-neutral-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder="Add internal note..."
+              placeholder={t("Add internal note...")}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => {
@@ -272,7 +276,7 @@ function TicketDetailModal({
             />
             <Button
               style="primary"
-              title="Send"
+              title={t("Send")}
               onClick={() => void handleComment()}
             />
           </div>
@@ -282,7 +286,7 @@ function TicketDetailModal({
         {canAct && (
           <div className="border-t border-neutral-100 pt-4">
             <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              Action Panel
+              {t("Action Panel")}
             </p>
             {!rejectMode ? (
               <div className="flex gap-3 justify-end">
@@ -290,7 +294,7 @@ function TicketDetailModal({
                   <Button
                     style="primary"
                     iconLeft={<Icon name="assignment_turned_in" size={16} color="#0014A8" />}
-                    title="Accept Task"
+                    title={t("Accept Task")}
                     onClick={() => void handleAccept()}
                     loading={acting}
                   />
@@ -299,7 +303,7 @@ function TicketDetailModal({
                   <Button
                     style="primary"
                     iconLeft={<Icon name="check_circle" size={16} color="#0014A8" />}
-                    title="Mark Complete"
+                    title={t("Mark Complete")}
                     onClick={() => void handleApprove()}
                     loading={acting}
                   />
@@ -307,7 +311,7 @@ function TicketDetailModal({
                 <Button
                   style="danger"
                   iconLeft={<Icon name="cancel" size={16} color="#ef4444" />}
-                  title="Reject"
+                  title={t("Reject")}
                   onClick={() => setRejectMode(true)}
                 />
               </div>
@@ -316,19 +320,19 @@ function TicketDetailModal({
                 <textarea
                   className="w-full border border-red-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-200 resize-none"
                   rows={3}
-                  placeholder="Rejection reason (required)..."
+                  placeholder={t("Rejection reason (required)...")}
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                 />
                 <div className="flex gap-2 justify-end">
                   <Button
                     style="sub"
-                    title="Cancel"
+                    title={t("Cancel")}
                     onClick={() => setRejectMode(false)}
                   />
                   <Button
                     style="danger"
-                    title="Confirm Reject"
+                    title={t("Confirm Reject")}
                     onClick={() => void handleReject()}
                     loading={acting}
                   />
@@ -366,6 +370,7 @@ export default function RequestCenterPage() {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   const upsertTicket = useCallback((updatedTicket: Ticket) => {
     setTickets((prev) => {
@@ -395,7 +400,7 @@ export default function RequestCenterPage() {
           setTickets([]);
         }
         if (showLoading) {
-          showToast("Unable to refresh tickets.", "error");
+          showToast(t("Unable to refresh tickets."), "error");
         }
       } finally {
         setIsLoading(false);
@@ -471,22 +476,22 @@ export default function RequestCenterPage() {
           <Icon name="support_agent" size={22} color="#0014A8" />
           <div>
             <h1 className="text-base font-bold text-neutral-900">
-              Request Center
+              {t("Request Center")}
             </h1>
             <p className="text-xs text-neutral-500">
-              Manage tickets from leadership / CEO
+              {t("Manage tickets from leadership / CEO")}
             </p>
           </div>
           {pendingCount > 0 && (
             <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              {pendingCount} pending
+              {pendingCount} {t("pending")}
             </span>
           )}
         </div>
         <Button
           style="sub"
           iconLeft={<Icon name="refresh" size={16} color="#62748E" />}
-          title="Refresh"
+          title={t("Refresh")}
           onClick={() => void load(true, true)}
         />
       </div>
@@ -502,7 +507,7 @@ export default function RequestCenterPage() {
           />
           <input
             type="text"
-            placeholder="Search ticket code, title, requester..."
+            placeholder={t("Search ticket code, title, requester...")}
             className="w-full pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -520,7 +525,7 @@ export default function RequestCenterPage() {
                   : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
               }`}
             >
-              {opt.label}
+              {opt.label === "All" || opt.label === "Pending" || opt.label === "In Progress" || opt.label === "Resolved" || opt.label === "Rejected" ? t(opt.label) : opt.label}
             </button>
           ))}
         </div>
@@ -537,7 +542,7 @@ export default function RequestCenterPage() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-neutral-400">
             <Icon name="inbox" size={40} color="#D1D5DB" />
-            <p className="mt-2 text-sm">No matching tickets found.</p>
+            <p className="mt-2 text-sm">{t("No matching tickets found.")}</p>
           </div>
         ) : (
           <div className="section-card overflow-hidden">
@@ -545,25 +550,25 @@ export default function RequestCenterPage() {
               <thead>
                 <tr className="border-b border-neutral-100 bg-neutral-50">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Code
+                    {t("Code")}
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Title
+                    {t("Title")}
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">
-                    Requester
+                    {t("Requester")}
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">
-                    Category
+                    {t("Category")}
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">
-                    Priority
+                    {t("Priority")}
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">
-                    Created At
+                    {t("Created At")}
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                    Status
+                    {t("Status")}
                   </th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -588,7 +593,7 @@ export default function RequestCenterPage() {
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded">
-                        {CATEGORY_LABELS[ticket.category]}
+                        {t(CATEGORY_LABELS[ticket.category])}
                       </span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">

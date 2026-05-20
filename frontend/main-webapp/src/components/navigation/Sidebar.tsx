@@ -5,6 +5,7 @@ import { useSidebar } from "../../contexts/SidebarContext";
 import { useRole } from "../../hooks/useRole";
 import { useTenantPath } from "../../hooks/useTenantPath";
 import { useTenantSettings } from "../../contexts/TenantSettingsContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import Icon from "../common/Icon";
 import { CollapseIcon } from "../common/Icons";
 
@@ -232,6 +233,7 @@ export default function Sidebar() {
   const { withTenant } = useTenantPath();
   const { isSuperAdmin, isAdmin } = useRole();
   const { features } = useTenantSettings();
+  const { t } = useLanguage();
 
   // Scroll state for the nav area
   const navRef = useRef<HTMLDivElement>(null);
@@ -262,17 +264,17 @@ export default function Sidebar() {
   const scrollUp = () => navRef.current?.scrollBy({ top: -100, behavior: "smooth" });
 
   const projectSubItems: SubItem[] = [
-    { to: withTenant("/projects"), label: "All Projects", icon: "view_kanban" },
-    { to: withTenant("/my-tasks"), label: "My Tasks", icon: "task_alt" },
-    { to: withTenant("/projects/reviews"), label: "Review Queue", icon: "rate_review", managerOnly: true },
-    { to: withTenant("/projects/reviews"), label: "My Reviews", icon: "send", employeeOnly: true },
+    { to: withTenant("/projects"), label: t("All Projects"), icon: "view_kanban" },
+    { to: withTenant("/my-tasks"), label: t("My Tasks"), icon: "task_alt" },
+    { to: withTenant("/projects/reviews"), label: t("Review Queue"), icon: "rate_review", managerOnly: true },
+    { to: withTenant("/projects/reviews"), label: t("My Reviews"), icon: "send", employeeOnly: true },
   ];
 
   const adminNavItems: SubItem[] = [
-    { to: withTenant("/admin/requests"), icon: "support_agent", label: "Requests" },
-    { to: withTenant("/admin/users"), icon: "group", label: "Users" },
-    { to: withTenant("/admin/system"), icon: "tune", label: "System Settings" },
-    { to: withTenant("/admin/audit"), icon: "manage_search", label: "Audit Log" },
+    { to: withTenant("/admin/requests"), icon: "support_agent", label: t("Requests") },
+    { to: withTenant("/admin/users"), icon: "group", label: t("Users") },
+    { to: withTenant("/admin/system"), icon: "tune", label: t("System Settings") },
+    { to: withTenant("/admin/audit"), icon: "manage_search", label: t("Audit Log") },
   ];
 
   const dashboardPath = isSuperAdmin
@@ -282,11 +284,11 @@ export default function Sidebar() {
       : withTenant("/dashboard");
 
   const navItems: Omit<NavItemProps, "isCollapsed">[] = [
-    { to: dashboardPath, icon: "dashboard", label: "Dashboard" },
-    ...(isSuperAdmin ? [{ to: withTenant("/delegation"), icon: "assignment_ind", label: "Delegate" }] : []),
-    ...(features.announcementsEnabled ? [{ to: withTenant("/announcements"), icon: "campaign", label: "Announce" }] : []),
-    ...(features.chatEnabled ? [{ to: withTenant("/discuss"), icon: "forum", label: "Discuss" }] : []),
-    { to: withTenant("/positions"), icon: "account_tree", label: "Position" },
+    { to: dashboardPath, icon: "dashboard", label: t("Dashboard") },
+    ...(isSuperAdmin ? [{ to: withTenant("/delegation"), icon: "assignment_ind", label: t("Delegate") }] : []),
+    ...(features.announcementsEnabled ? [{ to: withTenant("/announcements"), icon: "campaign", label: t("Announce") }] : []),
+    ...(features.chatEnabled ? [{ to: withTenant("/discuss"), icon: "forum", label: t("Discuss") }] : []),
+    { to: withTenant("/positions"), icon: "account_tree", label: t("Position") },
   ];
 
   return (
@@ -331,7 +333,7 @@ export default function Sidebar() {
               <NavItemWithFlyout
                 to={withTenant("/projects")}
                 icon="view_kanban"
-                label="Project"
+                label={t("Project")}
                 isCollapsed={isCollapsed}
                 subItems={projectSubItems}
               />
@@ -344,11 +346,11 @@ export default function Sidebar() {
                 <NavItemWithFlyout
                   to={withTenant("/admin/dashboard")}
                   icon="admin_panel_settings"
-                  label="Admin"
+                  label={t("Admin")}
                   isCollapsed={isCollapsed}
                   subItems={adminNavItems}
                   activePathMatch={["/admin"]}
-                  flyoutTitle="Admin"
+                  flyoutTitle={t("Admin")}
                 />
               </>
             )}
@@ -366,7 +368,7 @@ export default function Sidebar() {
       <NavItem
         to={withTenant("/settings")}
         icon="settings"
-        label="Settings"
+        label={t("Settings")}
         isCollapsed={isCollapsed}
       />
     </aside>

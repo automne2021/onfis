@@ -5,6 +5,7 @@ import Modal from "../../../components/common/Modal";
 import { useToast } from "../../../contexts/useToast";
 import { adminService } from "../services/adminService";
 import type { AdminUser, AccountStatus, OnboardingForm } from "../types/adminTypes";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -43,10 +44,11 @@ function getInitials(name: string) {
 // ─── Role badge ───────────────────────────────────────────────────────────────
 
 function RoleBadge({ role }: { role: AdminUser["role"] }) {
+  const { t } = useLanguage();
   const m = ROLE_META[role];
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${m.bg} ${m.text}`}>
-      {m.label}
+      {t(m.label)}
     </span>
   );
 }
@@ -60,6 +62,7 @@ interface OnboardModalProps {
 }
 
 function OnboardModal({ isOpen, onClose, onSubmit }: OnboardModalProps) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
@@ -70,31 +73,31 @@ function OnboardModal({ isOpen, onClose, onSubmit }: OnboardModalProps) {
 
   const handleSubmit = async () => {
     if (!email.trim()) {
-      showToast("Email is required.", "error");
+      showToast(t("Email is required."), "error");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      showToast("Invalid email address.", "error");
+      showToast(t("Invalid email address."), "error");
       return;
     }
     setSubmitting(true);
     try {
       await onSubmit({ email: email.trim() });
-      showToast("Account created successfully.", "success");
+      showToast(t("Account created successfully."), "success");
       onClose();
     } catch {
-      showToast("Unable to create account.", "error");
+      showToast(t("Unable to create account."), "error");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add New Employee" maxWidth="sm"
+    <Modal isOpen={isOpen} onClose={onClose} title={t("Add New Employee")} maxWidth="sm"
       footer={
         <div className="flex justify-end gap-3 px-8 py-4 border-t border-neutral-100">
-          <Button style="sub" title="Cancel" onClick={onClose} />
-          <Button style="primary" title="Create Account" loading={submitting} onClick={() => void handleSubmit()} />
+          <Button style="sub" title={t("Cancel")} onClick={onClose} />
+          <Button style="primary" title={t("Create Account")} loading={submitting} onClick={() => void handleSubmit()} />
         </div>
       }
     >
@@ -106,12 +109,12 @@ function OnboardModal({ isOpen, onClose, onSubmit }: OnboardModalProps) {
           </p>
         </div>
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 mb-1">Email *</label>
+          <label className="block text-xs font-semibold text-neutral-600 mb-1">{t("Email *")}</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@company.vn"
+            placeholder={t("email@company.vn")}
             className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             onKeyDown={(e) => { if (e.key === "Enter") void handleSubmit(); }}
           />
@@ -138,6 +141,7 @@ function UserActionModal({
   user, isOpen, onClose,
   onRoleChange, onDisable, onEnable, onResetPassword, onForceLogout,
 }: UserActionModalProps) {
+  const { t } = useLanguage();
   const [newRole, setNewRole] = useState<AdminUser["role"]>("EMPLOYEE");
   const [acting, setActing] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -155,14 +159,14 @@ function UserActionModal({
       showToast(msg, "success");
       onClose();
     } catch {
-      showToast("Action failed.", "error");
+      showToast(t("Action failed."), "error");
     } finally {
       setActing(null);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Account Details & Management" maxWidth="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("Account Details & Management")} maxWidth="md">
       <div className="px-8 py-5 space-y-5 overflow-y-auto max-h-[70vh]">
         {/* Avatar + info */}
         <div className="flex items-center gap-4">
@@ -181,19 +185,19 @@ function UserActionModal({
             <p className="text-neutral-400 text-xs mb-0.5">Status</p>
             <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${STATUS_META[user.status].text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[user.status].dot}`} />
-              {STATUS_META[user.status].label}
+              {t(STATUS_META[user.status].label)}
             </span>
           </div>
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Current Role</p>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Current Role")}</p>
             <RoleBadge role={user.role} />
           </div>
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Created Date</p>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Created Date")}</p>
             <p className="font-medium">{formatDate(user.createdAt)}</p>
           </div>
           <div>
-            <p className="text-neutral-400 text-xs mb-0.5">Last Login</p>
+            <p className="text-neutral-400 text-xs mb-0.5">{t("Last Login")}</p>
             <p className="font-medium">{formatDateTime(user.lastLogin)}</p>
           </div>
         </div>
@@ -279,6 +283,7 @@ const PAGE_SIZE = 10;
 let userManagementSnapshot: AdminUser[] | null = null;
 
 export default function UserManagementPage() {
+  const { t } = useLanguage();
   const [initialUsers] = useState<{ users: AdminUser[]; total: number } | null>(() => {
     const cachedUsers = adminService.getCachedUsers();
     if (cachedUsers) {
@@ -355,29 +360,29 @@ export default function UserManagementPage() {
       await adminService.updateUserRole(userId, role);
     } catch { /* mock */ }
     mutateUser(userId, { role });
-    showToast("Role updated.", "success");
+            showToast(t("Role updated."), "success");
   };
 
   const handleDisable = async (userId: string) => {
     try { await adminService.disableUser(userId); } catch { /* mock */ }
     mutateUser(userId, { status: "INACTIVE" });
-    showToast("Account deactivated.", "success");
+    showToast(t("Account deactivated."), "success");
   };
 
   const handleEnable = async (userId: string) => {
     try { await adminService.enableUser(userId); } catch { /* mock */ }
     mutateUser(userId, { status: "ACTIVE" });
-    showToast("Account reactivated.", "success");
+    showToast(t("Account reactivated."), "success");
   };
 
   const handleResetPassword = async (userId: string) => {
     try { await adminService.resetPassword(userId); } catch { /* mock */ }
-    showToast("Password reset email sent.", "success");
+    showToast(t("Password reset email sent."), "success");
   };
 
   const handleForceLogout = async (userId: string) => {
     try { await adminService.forceLogout(userId); } catch { /* mock */ }
-    showToast("User has been logged out.", "success");
+    showToast(t("User has been logged out."), "success");
   };
 
   const handleOnboard = async (form: OnboardingForm) => {
@@ -410,14 +415,14 @@ export default function UserManagementPage() {
         <div className="flex items-center gap-3">
           <Icon name="group" size={22} color="#0014A8" />
           <div>
-            <h1 className="text-base font-bold text-neutral-900">User & Access Management</h1>
-            <p className="text-xs text-neutral-500">{totalCount} accounts in tenant</p>
+            <h1 className="text-base font-bold text-neutral-900">{t("User & Access Management")}</h1>
+            <p className="text-xs text-neutral-500">{totalCount} {t("accounts in tenant")}</p>
           </div>
         </div>
         <Button
           style="primary"
           iconLeft={<Icon name="person_add" size={16} color="#0014A8" />}
-          title="Add Employee"
+          title={t("Add Employee")}
           onClick={() => setOnboardOpen(true)}
         />
       </div>
@@ -428,7 +433,7 @@ export default function UserManagementPage() {
           <Icon name="search" size={16} color="#9CA3AF" className="absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search name, email..."
+            placeholder={t("Search name, email...")}
             className="w-full pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
@@ -439,7 +444,7 @@ export default function UserManagementPage() {
           onChange={(e) => { setFilterDept(e.target.value); setPage(0); }}
           className="border border-neutral-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 text-neutral-600"
         >
-          <option value="">All departments</option>
+          <option value="">{t("All departments")}</option>
           {departments.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
         <select
@@ -447,7 +452,7 @@ export default function UserManagementPage() {
           onChange={(e) => { setFilterRole(e.target.value); setPage(0); }}
           className="border border-neutral-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 text-neutral-600"
         >
-          <option value="">All roles</option>
+          <option value="">{t("All roles")}</option>
           <option value="SUPER_ADMIN">Super Admin</option>
           <option value="ADMIN">Admin</option>
           <option value="MANAGER">Manager</option>
@@ -458,14 +463,14 @@ export default function UserManagementPage() {
           onChange={(e) => { setFilterStatus(e.target.value); setPage(0); }}
           className="border border-neutral-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 text-neutral-600"
         >
-          <option value="">All statuses</option>
+          <option value="">{t("All statuses")}</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
           <option value="SUSPENDED">Suspended</option>
         </select>
         <button type="button" onClick={() => { setFilterDept(""); setFilterRole(""); setFilterStatus(""); setSearchQuery(""); setPage(0); }}
           className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors px-2 py-1.5">
-          Clear filters
+          {t("Clear filters")}
         </button>
       </div>
 
@@ -483,12 +488,12 @@ export default function UserManagementPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-100 bg-neutral-50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Name</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">Email</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Role</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Last Login</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{t("Name")}</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden md:table-cell">{t("Email")}</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden lg:table-cell">{t("Department")}</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{t("Role")}</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">{t("Status")}</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider hidden xl:table-cell">{t("Last Login")}</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -510,7 +515,7 @@ export default function UserManagementPage() {
                       <td className="px-4 py-3">
                         <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${STATUS_META[user.status].text}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[user.status].dot}`} />
-                          {STATUS_META[user.status].label}
+                          {t(STATUS_META[user.status].label)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-neutral-500 text-xs hidden xl:table-cell">{formatDateTime(user.lastLogin)}</td>
@@ -530,17 +535,17 @@ export default function UserManagementPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 text-sm text-neutral-500">
-                <p>{filtered.length} results · Page {page + 1}/{totalPages}</p>
+                <p>{filtered.length} {t("results")} · {t("Page")} {page + 1}/{totalPages}</p>
                 <div className="flex gap-1">
                   <button type="button" disabled={page === 0}
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
                     className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-white disabled:opacity-40 hover:bg-neutral-50 transition-colors">
-                    ← Previous
+                    ← {t("Previous")}
                   </button>
                   <button type="button" disabled={page >= totalPages - 1}
                     onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                     className="px-3 py-1.5 rounded-lg border border-neutral-200 bg-white disabled:opacity-40 hover:bg-neutral-50 transition-colors">
-                    Next →
+                    {t("Next")} →
                   </button>
                 </div>
               </div>

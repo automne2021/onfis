@@ -12,6 +12,7 @@ export interface AuthUser {
     permissions: string[];
     email?: string;
     departmentId?: string;
+    language?: string;
 }
 
 export interface AuthContextType {

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type { Assignee } from "../../types";
 import { ChevronDownIcon } from "../../../../components/common/Icons";
 import InitialsAvatar from "../../../../components/common/InitialsAvatar";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface AssigneeSelectorProps {
   value: Assignee | null;
@@ -10,6 +11,7 @@ interface AssigneeSelectorProps {
 }
 
 export default function AssigneeSelector({ value, options, onChange }: AssigneeSelectorProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +29,7 @@ export default function AssigneeSelector({ value, options, onChange }: AssigneeS
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-neutral-500">Assignee</label>
+      <label className="text-sm font-medium text-neutral-500">{t("Assignee")}</label>
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -42,7 +44,7 @@ export default function AssigneeSelector({ value, options, onChange }: AssigneeS
                 </span>
               </>
             ) : (
-              <span className="text-sm text-neutral-400">Select assignee</span>
+              <span className="text-sm text-neutral-400">{t("Select assignee")}</span>
             )}
           </div>
           <ChevronDownIcon />
@@ -66,7 +68,7 @@ export default function AssigneeSelector({ value, options, onChange }: AssigneeS
               </button>
             ))}
             {options.length === 0 && (
-              <p className="text-sm text-neutral-400 px-4 py-3">No team members available</p>
+              <p className="text-sm text-neutral-400 px-4 py-3">{t("No team members available")}</p>
             )}
           </div>
         )}

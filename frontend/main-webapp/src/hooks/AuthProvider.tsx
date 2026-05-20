@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         permissions: Array.isArray(me.permissions) ? me.permissions : [],
                         departmentId: me.departmentId,
                         email: me.email,
+                        language: me.language ?? "en",
                     });
                 }
             } catch (error) {

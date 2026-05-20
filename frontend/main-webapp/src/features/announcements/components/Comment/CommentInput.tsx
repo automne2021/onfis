@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { SendOutlined, CloseOutlined } from '@mui/icons-material';
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
 import { useAuth } from "../../../../hooks/useAuth";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export interface CommentInputProps {
   currentUserAvatar?: string;
@@ -18,6 +19,7 @@ export function CommentInput({
 }: CommentInputProps) {
   
   const { dbUser: currentUser } = useAuth();
+  const { t } = useLanguage();
   
   const [content, setContent] = useState("");
   const inputRef = useRef<HTMLInputElement>(null); 
@@ -50,7 +52,7 @@ export function CommentInput({
       <div className="w-10 h-10 rounded-full overflow-hidden shrink-0">
         <img 
           src={avatarImg} 
-          alt="Current User" 
+          alt={t("Current User")} 
           className="w-full h-full object-cover" 
         />
       </div>
@@ -61,7 +63,7 @@ export function CommentInput({
         {/* Hiển thị trạng thái đang Reply ai đó (Chỉ hiện khi có replyingToName) */}
         {replyingToName && (
           <div className="flex items-center gap-2 text-neutral-500 body-4-regular ml-2">
-            <span>Replying to <span className="font-semibold text-neutral-700">@{replyingToName}</span></span>
+            <span>{t("Replying to")} <span className="font-semibold text-neutral-700">@{replyingToName}</span></span>
             <button 
               onClick={onCancelReply} 
               className="hover:text-neutral-700 transition p-0.5 rounded-full hover:bg-neutral-200"
@@ -79,7 +81,7 @@ export function CommentInput({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Write a comment..."
+            placeholder={t("Write a comment...")}
             className="w-full bg-transparent outline-none body-3-regular text-neutral-900 placeholder:text-neutral-400"
           />
 

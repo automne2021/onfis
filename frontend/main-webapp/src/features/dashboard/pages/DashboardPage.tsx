@@ -11,10 +11,12 @@ import { useTenantPath } from "../../../hooks/useTenantPath";
 import { listProjects, getProjectMembers, type ApiProject } from "../../../services/projectService";
 import { listMyTasks, type ApiTask } from "../../../services/taskService";
 import { getTimeAgo, formatVNDate } from "../../../utils/getTime";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 const WORKLOAD_COLORS = ["#0B68F7", "#00A63E", "#FF6900", "#8B5CF6", "#EC4899", "#F59E0B", "#14B8A6"];
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const { dbUser: currentUser, isLoading: isAuthLoading } = useAuth();
   const { isManager, isSuperAdmin } = useRole();
   const { withTenant } = useTenantPath();
@@ -143,12 +145,12 @@ export default function DashboardPage() {
       .filter(t => t.updatedAt)
       .sort((a, b) => new Date(b.updatedAt!).getTime() - new Date(a.updatedAt!).getTime())
       .slice(0, 5)
-      .map(t => ({
-        id: t.id,
-        user: currentUser?.name ?? "You",
-        action: t.status === "DONE" ? "completed" : "updated",
-        target: t.title,
-        time: getTimeAgo(t.updatedAt!),
+      .map(task => ({
+        id: task.id,
+        user: currentUser?.name ?? t("You"),
+        action: task.status === "DONE" ? t("completed") : t("updated"),
+        target: task.title,
+        time: getTimeAgo(task.updatedAt!),
       }));
   }, [assignedTasks, createdTasks, currentUser?.name]);
 
@@ -210,7 +212,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-3 w-full bg-white rounded-[12px] shadow-md border-2 border-neutral-200 p-4 ">
       {/* Greeting */}
       <h1 className="font-bold text-lg leading-[22px] text-neutral-900">
-        Good morning, {currentUser?.name ?? ""}
+        {t("Good morning,")} {currentUser?.name ?? ""}
       </h1>
 
       {/* Stats Cards Row */}
@@ -218,29 +220,29 @@ export default function DashboardPage() {
         {isManager && (
           <StatCard
             icon={<FolderIcon />}
-            label="Total Projects"
-            value={`${activeProjectCount} Active`}
+            label={t("Total Projects")}
+            value={`${activeProjectCount} ${t("Active")}`}
             subtitle={`/ ${projects.length} Total`}
           />
         )}
         <StatCard
           icon={<TaskIcon />}
-          label="Pending Tasks"
-          value={`${pendingCount} Pending`}
+          label={t("Pending Tasks")}
+          value={`${pendingCount} ${t("Pending")}`}
           badge={overdueCount > 0 ? { text: `${overdueCount} Overdue`, variant: "error" } : undefined}
         />
         <StatCard
           icon={<CalendarIcon />}
-          label="Upcoming Deadline"
-          value={upcomingTask ? upcomingTask.title : "None"}
+          label={t("Upcoming Deadline")}
+          value={upcomingTask ? upcomingTask.title : t("None")}
           subtitle={
             upcomingTask?.dueDate
               ? `Due ${formatVNDate(upcomingTask.dueDate)}`
               : upcomingTask
-              ? "No due date"
-              : "No upcoming deadlines"
+              ? t("No due date")
+              : t("No upcoming deadlines")
           }
-          badge={upcomingTask?.priority === "urgent" ? { text: "Urgent", variant: "error" } : undefined}
+          badge={upcomingTask?.priority === "urgent" ? { text: t("Urgent"), variant: "error" } : undefined}
         />
       </div>
 
@@ -250,18 +252,18 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             <PieChart
               data={taskStatusChartData}
-              title="Task Status Overview"
+              title={t("Task Status Overview")}
             />
             <LineChart
               data={weeklyTasksChartData}
-              title="Tasks Completed This Week"
+              title={t("Tasks Completed This Week")}
               color="#0014A8"
             />
           </div>
           {teamWorkloadData.length > 0 && (
             <BarChart
               data={teamWorkloadData}
-              title="Team Workload"
+              title={t("Team Workload")}
             />
           )}
         </>
@@ -273,7 +275,7 @@ export default function DashboardPage() {
         <div className="w-[70%] flex flex-col min-w-0">
           <div className="flex items-center justify-between py-2">
             <h2 className="font-bold text-lg leading-[22px] text-neutral-900">
-              Enrolled Projects
+              {t("Enrolled Projects")}
             </h2>
           </div>
           <ProjectTable projects={projectTableData} />
@@ -282,7 +284,7 @@ export default function DashboardPage() {
         {/* Recent Activities Section - 30% width */}
         <div className="w-[30%] flex flex-col min-w-[200px]">
           <h2 className="font-bold text-lg leading-[22px] text-neutral-900 py-2">
-            Recent Activities
+            {t("Recent Activities")}
           </h2>
           <RecentActivities activities={recentActivities} />
         </div>

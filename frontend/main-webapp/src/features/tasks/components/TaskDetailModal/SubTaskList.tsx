@@ -3,6 +3,7 @@ import type { SubTask } from "./types";
 import { CheckboxIconModal as CheckboxIcon, PlusIcon } from "../../../../components/common/Icons";
 import { createSubtask, updateSubtask, deleteSubtask } from "../../../../services/taskService";
 import ConfirmDialog from "../../../../components/common/ConfirmDialog";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface SubTaskItemProps {
   subTask: SubTask;
@@ -73,6 +74,7 @@ interface SubTaskListProps {
 }
 
 export default function SubTaskList({ taskId, subTasks, onChange }: SubTaskListProps) {
+  const { t } = useLanguage();
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -142,7 +144,7 @@ export default function SubTaskList({ taskId, subTasks, onChange }: SubTaskListP
 
   return (
     <div className="flex flex-col gap-1">
-      <h3 className="body-3-medium text-neutral-900 mb-2">Sub-tasks</h3>
+      <h3 className="body-3-medium text-neutral-900 mb-2">{t("Sub-tasks")}</h3>
 
       <div className="flex flex-col">
         {subTasks.map((subTask) => (
@@ -162,16 +164,16 @@ export default function SubTaskList({ taskId, subTasks, onChange }: SubTaskListP
         className="flex items-center gap-2 py-2 text-primary hover:text-primary-hover transition-colors disabled:opacity-50"
       >
         <PlusIcon />
-        <span className="text-sm font-medium">{isAdding ? "Adding..." : "Add item"}</span>
+        <span className="text-sm font-medium">{isAdding ? t("Adding...") : t("Add item")}</span>
       </button>
 
       {/* Confirmation dialog for deleting a subtask */}
       <ConfirmDialog
         isOpen={!!deleteTarget}
-        title="Delete Sub-task"
-        message="Are you sure you want to delete this sub-task? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t("Delete Sub-task")}
+        message={t("Are you sure you want to delete this sub-task? This action cannot be undone.")}
+        confirmLabel={t("Delete")}
+        cancelLabel={t("Cancel")}
         variant="danger"
         onConfirm={() => void handleDeleteConfirmed()}
         onCancel={() => setDeleteTarget(null)}

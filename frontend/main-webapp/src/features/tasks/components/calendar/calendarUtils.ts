@@ -69,13 +69,15 @@ export function formatMonthYear(year: number, month: number): string {
 /**
  * Get short day names for calendar header
  */
-export function getDayNames(): string[] {
+export function getDayNames(language?: string): string[] {
+  if (language === "vi") return ["CN", "Th2", "Th3", "Th4", "Th5", "Th6", "Th7"];
   return ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 }
 
 /**
  * Get full day names for calendar header
  */
-export function getFullDayNames(): string[] {
+export function getFullDayNames(language?: string): string[] {
+  if (language === "vi") return ["CN", "T.Hai", "T.Ba", "T.Tư", "T.Năm", "T.Sáu", "T.Bảy"];
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 }
