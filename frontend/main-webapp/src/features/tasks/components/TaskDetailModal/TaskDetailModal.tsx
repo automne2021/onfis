@@ -167,50 +167,6 @@ const EffortFields = ({
   );
 };
 
-// Rejection reason prompt
-const RejectionPrompt = ({
-  isOpen,
-  onReject,
-  onCancel,
-}: {
-  isOpen: boolean;
-  onReject: (reason: string) => void;
-  onCancel: () => void;
-}) => {
-  const { t } = useLanguage();
-  const [reason, setReason] = useState("");
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 flex flex-col gap-3">
-      <p className="text-sm font-medium text-amber-800">
-        {t("Please provide a reason for rejecting this task:")}
-      </p>
-      <textarea
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder={t("Explain what needs to be revised...")}
-        className="w-full min-h-[80px] p-3 text-sm text-neutral-900 border border-amber-200 rounded-lg resize-none outline-none focus:border-amber-400 bg-white"
-      />
-      <div className="flex items-center gap-2 justify-end">
-        <Button variant="ghost" onClick={onCancel}>
-          {t("Cancel")}
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            if (reason.trim()) onReject(reason.trim());
-          }}
-          disabled={!reason.trim()}
-        >
-          {t("Submit Rejection")}
-        </Button>
-      </div>
-    </div>
-  );
-};
-
 function apiDetailToTaskDetail(api: ApiTaskDetail): TaskDetail {
   return {
     id: api.id,
@@ -276,7 +232,6 @@ export default function TaskDetailModal({
   const [taskFiles, setTaskFiles] = useState<AttachmentFile[]>([]);
   const [submissions, setSubmissions] = useState<AttachmentFile[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
   const [showBlockedPrompt, setShowBlockedPrompt] = useState(false);
   const [blockedReasonDraft, setBlockedReasonDraft] = useState("");
   const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
@@ -301,7 +256,6 @@ export default function TaskDetailModal({
     if (!isOpen) return;
     setTask(initialTask);
     setTaskReviews(initialTask.reviews ?? []);
-    setShowRejectionPrompt(false);
     setShowBlockedPrompt(false);
 
     // Fetch full detail including activities, comments, subtasks
@@ -603,30 +557,6 @@ export default function TaskDetailModal({
                         </>
                       );
                     })()}
-                  </div>
-                )}
-
-                {/* Reviewer Approve/Reject Controls */}
-                {canReview && (
-                  <div className="flex flex-col gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                    <p className="text-sm font-medium text-blue-800">
-                      {t("This task is awaiting your review.")}
-                    </p>
-                    {!showRejectionPrompt && (
-                      <div className="flex items-center gap-3">
-                        <Button variant="primary" onClick={handleApprove}>
-                          {t("✓ Approve → DONE")}
-                        </Button>
-                        <Button variant="ghost" onClick={() => setShowRejectionPrompt(true)}>
-                          {t("✕ Request Changes")}
-                        </Button>
-                      </div>
-                    )}
-                    <RejectionPrompt
-                      isOpen={showRejectionPrompt}
-                      onReject={handleReject}
-                      onCancel={() => setShowRejectionPrompt(false)}
-                    />
                   </div>
                 )}
 
