@@ -3,6 +3,7 @@ import { StatusBubble } from '../../../../../components/common/StatusBubble';
 import { FileAttachment } from './FileAttachments';
 import { MeetingCard } from './MeetingCard';
 import { usePresence } from '../../../context/PresenceContext';
+import { Bot } from 'lucide-react';
 
 interface MessageBubbleProps {
   msg: ChatMessage;
@@ -25,7 +26,32 @@ export function MessageBubble({ msg, isOwn, channelStatus }: MessageBubbleProps)
     );
   }
 
+  const isBot = msg.sender.name === 'Onfis Assistant';
   const liveStatus = statuses[msg.sender.id] || (!isOwn ? channelStatus : undefined) || msg.sender.status;
+
+  // Tin nhắn từ Onfis Assistant — luôn căn trái, màu tím
+  if (isBot) {
+    return (
+      <div className="flex gap-2.5 w-full flex-row">
+        {/* Bot Avatar */}
+        <div className="relative w-10 h-10 rounded-full flex-shrink-0 bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+          <Bot size={20} className="text-white" />
+        </div>
+
+        <div className="flex flex-col items-start max-w-[75%]">
+          <div className="flex items-baseline gap-2 mb-1.5 flex-row">
+            <span className="body-3-medium text-violet-700">Onfis Assistant</span>
+            <span className="body-4-regular text-neutral-400">{msg.timestamp}</span>
+          </div>
+          {msg.type !== 'meeting' && msg.content && (
+            <div className="body-3-regular text-neutral-900 px-3 py-2 shadow-sm rounded-e-lg rounded-bl-lg bg-violet-50 border border-violet-100 whitespace-pre-wrap">
+              {msg.content}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex gap-2.5 w-full ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>

@@ -141,7 +141,8 @@ function ChatWindowContent({ activeChannelId, currentChannel, user, dbUser, onTo
       <MessageArea channel={currentChannel} messages={messages} />
 
       <ChatInput 
-        label={cleanHeaderName} 
+        label={cleanHeaderName}
+        channelType={currentChannel?.type}
         onSendMessage={sendMessage}
         disabled={!isConnected}
       />

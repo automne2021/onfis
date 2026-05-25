@@ -1,4 +1,4 @@
-import { Hash, Lock, Search, X, User } from 'lucide-react'; 
+import { Hash, Lock, Search, X, User, Bot } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "../../../../components/common/Buttons/Button";
 import type { ActionModalState, ChatChannel } from "../../types/chatTypes";
@@ -55,8 +55,9 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
 
   const { t } = useLanguage();
-  const pinnedChannels = channels.filter(c => c.isPinned);
-  const unpinned = channels.filter(c => !c.isPinned);
+  const assistantChannels = channels.filter(c => c.type === 'assistant');
+  const pinnedChannels = channels.filter(c => c.isPinned && c.type !== 'assistant');
+  const unpinned = channels.filter(c => !c.isPinned && c.type !== 'assistant');
   const projectGroups = unpinned.filter(c => c.type === 'public_group' || c.type === 'private_group');
   const directMessages = unpinned.filter(c => c.type === 'direct').slice(0, 10);
   const selfChats = unpinned.filter(channel => channel.type === 'self');
@@ -295,6 +296,21 @@ export function ChatSidebar({
             <SidebarSkeleton />
           ) : (
             <>
+              {/* AI Assistant section — always at the top */}
+              {assistantChannels.length > 0 && (
+                <ChatGroup title="AI Assistant">
+                  {assistantChannels.map((channel) => (
+                    <ChatItem
+                      key={channel.id}
+                      name={channel.name}
+                      isActive={activeChannelId === channel.id}
+                      onClick={() => onChannelSelect(channel.id)}
+                      icon={<Bot size={16} />}
+                    />
+                  ))}
+                </ChatGroup>
+              )}
+
               {pinnedChannels.length > 0 && (
                 <ChatGroup title="Pinned">
                   {pinnedChannels.map((channel) => {
