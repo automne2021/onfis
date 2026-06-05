@@ -130,6 +130,25 @@ public class ChatController {
             conversations.add(selfChat);
         }
 
+        // Khởi tạo Onfis Assistant conversation (type = "assistant") per user
+        boolean hasAssistantChat = conversations.stream()
+                .anyMatch(c -> "assistant".equalsIgnoreCase(c.getType()));
+        if (!hasAssistantChat) {
+            Conversation assistantChat = conversationRepository.save(Conversation.builder()
+                    .tenantId(finalTenantId)
+                    .type("assistant")
+                    .name("Onfis Assistant")
+                    .build());
+            memberRepository.save(ConversationMember.builder()
+                    .conversationId(assistantChat.getId())
+                    .userId(userId)
+                    .role("MEMBER")
+                    .joinedAt(ZonedDateTime.now())
+                    .readAt(ZonedDateTime.now())
+                    .build());
+            conversations.add(assistantChat);
+        }
+
         String randomName = "random";
         Conversation randomChannel = conversationRepository.findFirstByTenantIdAndName(finalTenantId, randomName)
             .orElseGet(() -> conversationRepository.save(Conversation.builder()
@@ -197,23 +216,33 @@ public class ChatController {
         
         List<ChatMessage> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
         Map<UUID, UserResponseDTO> userCache = new HashMap<>();
+        final UUID botUserId = UUID.fromString("00000000-0000-0000-0000-000000000b07");
 
         List<ChatMessageResponseDTO> responseList = messages.stream().map(msg -> {
             UUID senderId = msg.getUserId();
-            
-            if (!userCache.containsKey(senderId)) {
-                try {
-                    UserResponseDTO userInfo = userClient.getUserProfile(token, companyIdStr, senderId);
-                    userCache.put(senderId, userInfo);
-                } catch (Exception e) {
-                    userCache.put(senderId, null);
+
+            // Bot messages: trả về tên hardcode, không gọi UserClient
+            String fullName;
+            String avatar;
+            String status;
+            if (botUserId.equals(senderId)) {
+                fullName = "Onfis Assistant";
+                avatar = null;
+                status = "online";
+            } else {
+                if (!userCache.containsKey(senderId)) {
+                    try {
+                        UserResponseDTO userInfo = userClient.getUserProfile(token, companyIdStr, senderId);
+                        userCache.put(senderId, userInfo);
+                    } catch (Exception e) {
+                        userCache.put(senderId, null);
+                    }
                 }
+                UserResponseDTO sender = userCache.get(senderId);
+                fullName = formatFullName(sender, "Unknown User");
+                avatar = sender != null ? sender.avatarUrl() : null;
+                status = (sender != null && sender.status() != null) ? sender.status() : "offline";
             }
-            
-            UserResponseDTO sender = userCache.get(senderId);
-            String fullName = formatFullName(sender, "Unknown User");
-            String avatar = sender != null ? sender.avatarUrl() : null;
-            String status = (sender != null && sender.status() != null) ? sender.status() : "offline"; 
 
             ChatMessageResponseDTO dto = ChatMessageResponseDTO.builder()
                 .id(msg.getId())

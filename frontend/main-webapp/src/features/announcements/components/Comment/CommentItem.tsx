@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ThumbUp, ThumbUpOutlined, ReplyOutlined } from '@mui/icons-material';
+import { useLanguage } from "../../../../contexts/LanguageContext";
 import { getTimeAgo } from "../../../../utils/getTime";
 import userProfileImg from "../../../../assets/images/user-profile-img.png";
 import { CommentInput } from "./CommentInput"; 
@@ -44,6 +45,7 @@ export function CommentItem({
   onSubmitReply
 }: CommentItemProps) {
 
+  const { t } = useLanguage();
   const safeLikes = likes || [];
   const safeReplies = replies || [];
   
@@ -105,7 +107,7 @@ export function CommentItem({
             onClick={togglePersonalInformationCard}
             className="w-10 h-10 rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity shrink-0 mt-1"
           >
-            <img src={avatarImg} alt="User Avatar" className="w-full h-full object-cover"/>
+            <img src={avatarImg} alt={t("User Avatar")} className="w-full h-full object-cover"/>
           </div>
 
           {isProfileOpen && (
@@ -143,7 +145,7 @@ export function CommentItem({
                   ${isLiked ? "text-primary" : "text-neutral-500 hover:text-primary"}`}
               >
                 {isLiked ? <ThumbUp sx={{ fontSize: 16 }} /> : <ThumbUpOutlined sx={{ fontSize: 16 }} />}
-                {likeCount === 0 && "Like"}
+                {likeCount === 0 && t("Like")}
               </button>
               {likeCount > 0 && (
                 <button type="button" className={`flex items-center gap-1.5 body-4-medium transition py-1 px-1.5 rounded-full hover:bg-neutral-200 ${isLiked ? "text-primary" : "text-neutral-500 hover:text-primary"}`}>
@@ -162,7 +164,7 @@ export function CommentItem({
               className="flex items-center gap-1.5 body-4-medium text-neutral-500 hover:text-primary transition"
             >
               <ReplyOutlined sx={{ fontSize: 16 }} />
-              Reply
+              {t("Reply")}
             </button>
           </div>
         </div>
@@ -183,7 +185,7 @@ export function CommentItem({
           {!isRepliesExpanded ? (
             <button onClick={handleViewReplies} className="ml-12 mt-2 flex items-center gap-2 text-neutral-500 body-4-medium hover:underline w-fit">
               <ReplyOutlined sx={{ fontSize: 16, transform: "scaleX(-1)" }} /> 
-              View {safeReplies.length} replies
+              {t("View")} {safeReplies.length} {t("replies")}
             </button>
           ) : (
             <>
@@ -210,7 +212,7 @@ export function CommentItem({
               {visibleRepliesCount < safeReplies.length && (
                 <button onClick={handleViewMoreReplies} className="ml-12 mt-4 flex items-center gap-2 text-neutral-500 body-4-medium hover:underline w-fit">
                   <ReplyOutlined sx={{ fontSize: 16, transform: "scaleX(-1)" }} /> 
-                  View {safeReplies.length - visibleRepliesCount} more replies
+                  {t("View")} {safeReplies.length - visibleRepliesCount} {t("more replies")}
                 </button>
               )}
             </>

@@ -13,6 +13,7 @@ import {
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 import { Button } from "../../../components/common/Buttons/Button";
 import { ViewToggle } from "../../../components/common/ViewToggle";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface TaskToolbarProps {
   projectTitle: string;
@@ -40,32 +41,33 @@ export default function TaskToolbar({
   onViewModeChange,
 }: TaskToolbarProps) {
   const { withTenant } = useTenantPath();
+  const { t } = useLanguage();
 
   const filterCategories: FilterCategory[] = [
     {
       key: "status",
-      label: "Status",
+      label: t("Status"),
       options: [
-        { value: "TODO", label: "To Do", color: "bg-neutral-400" },
-        { value: "IN_PROGRESS", label: "In Progress", color: "bg-primary" },
-        { value: "BLOCKED", label: "Blocked", color: "bg-status-off_track" },
-        { value: "IN_REVIEW", label: "In Review", color: "bg-status-on_track" },
-        { value: "DONE", label: "Done", color: "bg-status-done" },
+        { value: "TODO", label: t("To Do"), color: "bg-neutral-400" },
+        { value: "IN_PROGRESS", label: t("In Progress"), color: "bg-primary" },
+        { value: "BLOCKED", label: t("Blocked"), color: "bg-status-off_track" },
+        { value: "IN_REVIEW", label: t("In Review"), color: "bg-status-on_track" },
+        { value: "DONE", label: t("Done"), color: "bg-status-done" },
       ],
     },
     {
       key: "priority",
-      label: "Priority",
+      label: t("Priority"),
       options: [
-        { value: "urgent", label: "Urgent", color: "bg-[#E7000B]" },
-        { value: "high", label: "High", color: "bg-[#FF6900]" },
-        { value: "medium", label: "Medium", color: "bg-[#FFD230]" },
-        { value: "low", label: "Low", color: "bg-neutral-400" },
+        { value: "urgent", label: t("Urgent"), color: "bg-[#E7000B]" },
+        { value: "high", label: t("High"), color: "bg-[#FF6900]" },
+        { value: "medium", label: t("Medium"), color: "bg-[#FFD230]" },
+        { value: "low", label: t("Low"), color: "bg-neutral-400" },
       ],
     },
     {
       key: "assignee",
-      label: "Assignee",
+      label: t("Assignee"),
       options: assigneeOptions,
     },
   ];
@@ -82,7 +84,7 @@ export default function TaskToolbar({
       {/* Left: Breadcrumb */}
       <div className="flex items-center gap-1 body-3-regular flex-shrink-0">
         <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">
-          Project
+          {t("Project")}
         </Link>
         <span className="mx-1">/</span>
         <Link
@@ -98,7 +100,7 @@ export default function TaskToolbar({
         <SearchIcon />
         <input
           type="text"
-          placeholder={`Search...`}
+          placeholder={t("Search...")}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="outline-none w-full body-4-regular"
@@ -110,7 +112,7 @@ export default function TaskToolbar({
       <div className="flex items-center gap-2 flex-shrink-0">
         <Link to={projectId ? withTenant(`/projects/${projectId}`) : withTenant("/projects")}>
           <Button
-            title="View Project Detail"
+            title={t("View Project Detail")}
             iconLeft={<EyeIcon />}
             style="sub"
             textStyle='body-4-medium'

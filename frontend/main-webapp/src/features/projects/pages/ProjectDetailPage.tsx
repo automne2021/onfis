@@ -5,6 +5,7 @@ import { ArrowRightAltOutlined } from '@mui/icons-material';
 import { useRole } from "../../../hooks/useRole";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { RichTextEditor } from "../../../components/common/RichTextEditor/RichTextEditor";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import {
   createMilestone,
   deleteMilestone,
@@ -36,6 +37,7 @@ type TeamMember = ApiUserSummary;
 
 // Status Badge Component
 const StatusBadge = ({ status }: { status: ProjectStatus }) => {
+  const { t } = useLanguage();
   const styles: Record<ProjectStatus, string> = {
     planning: "bg-status-on_hold/15 text-status-on_hold",
     in_progress: "bg-status-on_track/15 text-status-on_track",
@@ -43,10 +45,10 @@ const StatusBadge = ({ status }: { status: ProjectStatus }) => {
     completed: "bg-status-done/15 text-status-done",
   };
   const labels: Record<ProjectStatus, string> = {
-    planning: "Planning",
-    in_progress: "In Progress",
-    on_hold: "On Hold",
-    completed: "Completed",
+    planning: t("Planning"),
+    in_progress: t("In Progress"),
+    on_hold: t("On Hold"),
+    completed: t("Completed"),
   };
   return (
     <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full font-medium text-xs leading-4 ${styles[status]}`}>
@@ -108,6 +110,7 @@ const TagBadge = ({ label, type }: { label: string; type: "department" | "scope"
 
 // Priority Badge Component
 const PriorityBadge = ({ priority }: { priority: Priority }) => {
+  const { t } = useLanguage();
   const styles: Record<Priority, string> = {
     urgent: "bg-status-off_track/15 text-status-off_track",
     high: "bg-status-off_track/15 text-status-off_track",
@@ -115,10 +118,10 @@ const PriorityBadge = ({ priority }: { priority: Priority }) => {
     low: "bg-neutral-500/15 text-neutral-500",
   };
   const labels: Record<Priority, string> = {
-    urgent: "Urgent",
-    high: "High",
-    medium: "Medium",
-    low: "Low",
+    urgent: t("Urgent"),
+    high: t("High"),
+    medium: t("Medium"),
+    low: t("Low"),
   };
 
   return (
@@ -131,6 +134,7 @@ const PriorityBadge = ({ priority }: { priority: Priority }) => {
 // Project Files Card
 const ProjectFilesSection = ({ projectId, canManage }: { projectId: string; canManage: boolean }) => {
   const [files, setFiles] = useState<AttachmentFile[]>([]);
+  const { t } = useLanguage();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -160,7 +164,7 @@ const ProjectFilesSection = ({ projectId, canManage }: { projectId: string; canM
         })
         .catch(() => {
           setFiles((prev) => prev.filter((f) => f.id !== tempId));
-          showToast("Failed to upload file.", "error");
+          showToast(t("Failed to upload file."), "error");
         });
     });
   };
@@ -168,13 +172,13 @@ const ProjectFilesSection = ({ projectId, canManage }: { projectId: string; canM
   const handleDelete = (id: string) => {
     deleteAttachment(id)
       .then(() => setFiles((prev) => prev.filter((f) => f.id !== id)))
-      .catch(() => showToast("Failed to delete file.", "error"));
+      .catch(() => showToast(t("Failed to delete file."), "error"));
   };
 
   return (
     <div className="bg-white py-3 px-6 rounded-lg shadow-md mt-3">
       <FileAttachmentSection
-        title="Project Files"
+        title={t("Project Files")}
         attachments={files}
         onUpload={handleUpload}
         onDelete={handleDelete}
@@ -187,6 +191,7 @@ const ProjectFilesSection = ({ projectId, canManage }: { projectId: string; canM
 
 // Milestone Status Badge
 const MilestoneStatusBadge = ({ status }: { status: ApiMilestone['status'] }) => {
+  const { t } = useLanguage();
   const styles: Record<string, string> = {
     completed: "bg-status-done/15 text-status-done",
     late: "bg-status-off_track/15 text-status-off_track",
@@ -196,16 +201,16 @@ const MilestoneStatusBadge = ({ status }: { status: ApiMilestone['status'] }) =>
   };
 
   const labels: Record<string, string> = {
-    completed: "Completed",
-    late: "Late",
-    at_risk: "At Risk",
-    upcoming: "Upcoming",
-    in_progress: "In Progress",
+    completed: t("Completed"),
+    late: t("Late"),
+    at_risk: t("At Risk"),
+    upcoming: t("Upcoming"),
+    in_progress: t("In Progress"),
   };
 
   return (
     <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full font-medium text-xs leading-4 ${styles[status] ?? styles.upcoming}`}>
-      {labels[status] ?? "Upcoming"}
+      {labels[status] ?? t("Upcoming")}
     </span>
   );
 };
@@ -242,6 +247,7 @@ const AvatarStack = ({ members, maxDisplay = 3 }: { members: TeamMember[]; maxDi
 
 // Milestone Item Component
 const MilestoneItem = ({ milestone }: { milestone: ApiMilestone }) => {
+  const { t } = useLanguage();
   const iconMap: Record<string, ReactElement> = {
     completed: <CompletedMilestoneIcon />,
     late: <LateMilestoneIcon />,
@@ -269,7 +275,7 @@ const MilestoneItem = ({ milestone }: { milestone: ApiMilestone }) => {
           />
         </div>
         <p className="text-[10px] text-neutral-500 mt-1 text-center">
-          {milestone.progress}% {milestone.progressOverridden ? "(manual)" : "(auto)"}
+          {milestone.progress}% {milestone.progressOverridden ? t("(manual)") : t("(auto)")}
         </p>
       </div>
     </div>
@@ -332,6 +338,7 @@ export default function ProjectDetailPage() {
   const location = useLocation();
   const { isManagerLike, isAdmin } = useRole();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [project, setProject] = useState<ApiProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [isStarred, setIsStarred] = useState(false);
@@ -403,10 +410,10 @@ export default function ProjectDetailPage() {
         managerId: updated.managerId ?? undefined,
         customer: updated.customer ?? undefined,
       });
-      showToast('Project updated', 'success');
+      showToast(t('Project updated'), 'success');
     } catch {
       setProject(prev);
-      showToast('Failed to update project', 'error');
+      showToast(t('Failed to update project'), 'error');
     }
   };
 
@@ -435,10 +442,10 @@ export default function ProjectDetailPage() {
         managerId: updated.managerId ?? undefined,
         customer: updated.customer ?? undefined,
       });
-      showToast('Project updated', 'success');
+      showToast(t('Project updated'), 'success');
     } catch {
       setProject(prev);
-      showToast('Failed to update project', 'error');
+      showToast(t('Failed to update project'), 'error');
     }
   };
 
@@ -462,10 +469,10 @@ export default function ProjectDetailPage() {
         managerId: project.managerId ?? undefined,
         customer: project.customer ?? undefined,
       });
-      showToast('Project updated', 'success');
+      showToast(t('Project updated'), 'success');
     } catch {
       setProject(prev);
-      showToast('Failed to update project', 'error');
+      showToast(t('Failed to update project'), 'error');
     }
   };
 
@@ -479,7 +486,7 @@ export default function ProjectDetailPage() {
         setStatus(detail.status);
         setIsStarred(detail.isStarred);
       } catch {
-        showToast('Failed to load project details', 'error');
+        showToast(t('Failed to load project details'), 'error');
       } finally {
         setLoading(false);
       }
@@ -493,7 +500,7 @@ export default function ProjectDetailPage() {
       const res = await toggleProjectFavorite(projectIdentifier);
       setIsStarred(res.isStarred);
     } catch {
-      showToast('Failed to update favorite', 'error');
+      showToast(t('Failed to update favorite'), 'error');
     }
   };
 
@@ -515,10 +522,10 @@ export default function ProjectDetailPage() {
         managerId: project.managerId ?? undefined,
         customer: project.customer ?? undefined,
       });
-      showToast('Project status updated', 'success');
+      showToast(t('Project status updated'), 'success');
     } catch {
       setStatus(prevStatus);
-      showToast('Failed to update status', 'error');
+      showToast(t('Failed to update status'), 'error');
     }
   };
 
@@ -527,10 +534,10 @@ export default function ProjectDetailPage() {
     setShowDeleteConfirm(false);
     try {
       await deleteProject(projectIdentifier);
-      showToast('Project deleted', 'success');
+      showToast(t('Project deleted'), 'success');
       navigate(withTenant('/projects'));
     } catch {
-      showToast('Failed to delete project', 'error');
+      showToast(t('Failed to delete project'), 'error');
     }
   };
 
@@ -576,7 +583,7 @@ export default function ProjectDetailPage() {
 
     const title = milestoneDraft.title.trim();
     if (!title) {
-      showToast("Milestone title is required", "error");
+      showToast(t("Milestone title is required"), "error");
       return;
     }
 
@@ -584,11 +591,11 @@ export default function ProjectDetailPage() {
       ? undefined
       : Number(milestoneDraft.progress);
     if (progressOverride !== undefined && Number.isNaN(progressOverride)) {
-      showToast("Progress override must be a number", "error");
+      showToast(t("Progress override must be a number"), "error");
       return;
     }
     if (progressOverride !== undefined && (progressOverride < 0 || progressOverride > 100)) {
-      showToast("Progress override must be between 0 and 100", "error");
+      showToast(t("Progress override must be between 0 and 100"), "error");
       return;
     }
 
@@ -600,7 +607,7 @@ export default function ProjectDetailPage() {
           status: milestoneDraft.status,
           progress: progressOverride,
         });
-        showToast("Milestone updated", "success");
+        showToast(t("Milestone updated"), "success");
       } else {
         await createMilestone(projectIdentifier, {
           title,
@@ -608,13 +615,13 @@ export default function ProjectDetailPage() {
           status: milestoneDraft.status,
           progress: progressOverride,
         });
-        showToast("Milestone created", "success");
+        showToast(t("Milestone created"), "success");
       }
 
       await refreshMilestones();
       resetMilestoneDraft();
     } catch {
-      showToast("Unable to save milestone", "error");
+      showToast(t("Unable to save milestone"), "error");
     }
   };
 
@@ -629,19 +636,19 @@ export default function ProjectDetailPage() {
     try {
       await deleteMilestone(projectIdentifier, deletingId);
       await refreshMilestones();
-      showToast("Milestone deleted", "success");
+      showToast(t("Milestone deleted"), "success");
     } catch {
-      showToast("Unable to delete milestone", "error");
+      showToast(t("Unable to delete milestone"), "error");
     }
   };
 
   const id = project?.slug || projectIdentifier || '';
 
   const tabs = [
-    { to: withTenant(`/projects/${id}`), label: "Overview", icon: "dashboard" },
-    { to: withTenant(`/projects/${id}/tasks`), label: "Tasks", icon: "task_alt" },
-    { to: withTenant(`/projects/${id}/members`), label: "Team", icon: "group" },
-    ...(canManageProject ? [{ to: withTenant(`/projects/${id}/reviews`), label: "Reviews", icon: "rate_review" }] : []),
+    { to: withTenant(`/projects/${id}`), label: t("Overview"), icon: "dashboard" },
+    { to: withTenant(`/projects/${id}/tasks`), label: t("Tasks"), icon: "task_alt" },
+    { to: withTenant(`/projects/${id}/members`), label: t("Team"), icon: "group" },
+    ...(canManageProject ? [{ to: withTenant(`/projects/${id}/reviews`), label: t("Reviews"), icon: "rate_review" }] : []),
   ];
 
   const isTabActive = (path: string) => location.pathname === path;
@@ -654,7 +661,7 @@ export default function ProjectDetailPage() {
   ];
 
   if (loading) return <ProjectDetailLoadingSkeleton />;
-  if (!project) return <div className="onfis-section"><div className="p-6 text-sm text-red-500">Project not found.</div></div>;
+  if (!project) return <div className="onfis-section"><div className="p-6 text-sm text-red-500">{t("Project not found.")}</div></div>;
 
   const parseTagJson = (raw: string) => {
     try { return JSON.parse(raw) as { label: string; type: 'department' | 'scope' }[]; } catch { return []; }
@@ -669,7 +676,7 @@ export default function ProjectDetailPage() {
       <nav className="navbar-style">
         <div className="flex items-center gap-1 body-3-regular">
           <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">
-            Project
+            {t("Project")}
           </Link>
           <span className="mx-1">/</span>
           <span className="text-primary font-normal">{project.title}</span>
@@ -680,7 +687,7 @@ export default function ProjectDetailPage() {
           <SearchIcon />
           <input
             type="text"
-            placeholder={`Search...`}
+            placeholder={t("Search...")}
             className="outline-none w-full body-4-regular"
             maxLength={250}
           />
@@ -712,7 +719,7 @@ export default function ProjectDetailPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
           >
             <KanbanIcon />
-            Manage Tasks
+            {t("Manage Tasks")}
           </Link>
           {canManageProject && (
             <button
@@ -762,7 +769,7 @@ export default function ProjectDetailPage() {
           <div className="flex flex-col gap-0.5 flex-1 max-w-[600px]">
             <div className="flex items-center justify-between">
               <span className="body-4-regular text-neutral-500">
-                {project.daysRemaining} days remaining
+                {project.daysRemaining} {t("days remaining")}
               </span>
               <span className="body-4-regular text-neutral-900">
                 {project.progress}%
@@ -782,7 +789,7 @@ export default function ProjectDetailPage() {
           {/* Left Column */}
           <div className="grid grid-cols-[100px_1fr] lg:grid-cols-[120px_1fr] gap-x-4 lg:gap-x-8 gap-y-3 items-center">
             {/* Project Manager */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Project Manager</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Project Manager")}</span>
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-status-on_track flex items-center justify-center text-xs font-medium text-neutral-900">
                 {project.managerAvatar ? (
@@ -795,7 +802,7 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* Customer */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Customer</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Customer")}</span>
             {editingField === 'customer' ? (
               <input
                 ref={customerInputRef}
@@ -818,7 +825,7 @@ export default function ProjectDetailPage() {
             )}
 
             {/* Tags */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Tags</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Tags")}</span>
             <div className="flex flex-wrap gap-1">
               {tags.map((tag, index) => (
                 <TagBadge key={index} label={tag.label} type={tag.type} />
@@ -830,11 +837,11 @@ export default function ProjectDetailPage() {
           {/* Right Column */}
           <div className="grid grid-cols-[100px_1fr] lg:grid-cols-[120px_1fr] gap-x-4 lg:gap-x-8 gap-y-3 items-center">
             {/* Team Members */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Team Members</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Team Members")}</span>
             <AvatarStack members={project.members} maxDisplay={3} />
 
             {/* Planned Date */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Planned Date</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Planned Date")}</span>
             <div className="flex items-center gap-3">
               {canManageProject ? (
                 <input
@@ -860,7 +867,7 @@ export default function ProjectDetailPage() {
             </div>
 
             {/* Priority */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Priority</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Priority")}</span>
             {canManageProject ? (
               <div className="relative">
                 <button
@@ -891,7 +898,7 @@ export default function ProjectDetailPage() {
             )}
 
             {/* Status */}
-            <span className="font-medium text-xs leading-4 text-neutral-900">Status</span>
+            <span className="font-medium text-xs leading-4 text-neutral-900">{t("Status")}</span>
             <div className="relative">
               {canManageProject ? (
                 <>
@@ -939,7 +946,7 @@ export default function ProjectDetailPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
-            Project Milestones
+            {t("Project Milestones")}
           </h2>
           {canManageProject && (
             <button
@@ -947,7 +954,7 @@ export default function ProjectDetailPage() {
               onClick={handleStartCreateMilestone}
               className="body-4-regular text-primary hover:underline"
             >
-              Add Milestone
+              {t("Add Milestone")}
             </button>
           )}
         </div>
@@ -958,7 +965,7 @@ export default function ProjectDetailPage() {
           <div className="hidden lg:block absolute left-[60px] right-[60px] top-[24px] h-[2px] bg-neutral-200" style={{ zIndex: 0 }} />
           <div className="flex flex-wrap justify-center lg:justify-between gap-4 lg:gap-6 relative z-10">
           {project.milestones.length === 0 ? (
-            <div className="text-xs text-neutral-400 py-3 text-center">No milestones yet</div>
+            <div className="text-xs text-neutral-400 py-3 text-center">{t("No milestones yet")}</div>
           ) : project.milestones.map((milestone) => (
             <div key={milestone.id} className="flex flex-col items-center gap-2">
               <MilestoneItem milestone={milestone} />
@@ -989,7 +996,7 @@ export default function ProjectDetailPage() {
         {canManageProject && showMilestoneForm && (
           <div className="border border-neutral-200 rounded-lg p-3 bg-neutral-50">
             <h3 className="text-sm font-semibold text-neutral-900 mb-3">
-              {milestoneEditingId ? "Edit Milestone" : "New Milestone"}
+              {milestoneEditingId ? t("Edit Milestone") : t("New Milestone")}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
@@ -997,7 +1004,7 @@ export default function ProjectDetailPage() {
                 type="text"
                 value={milestoneDraft.title}
                 onChange={(event) => setMilestoneDraft((prev) => ({ ...prev, title: event.target.value }))}
-                placeholder="Milestone title"
+                placeholder={t("Milestone title")}
                 className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary"
                 maxLength={120}
               />
@@ -1014,11 +1021,11 @@ export default function ProjectDetailPage() {
                 onChange={(event) => setMilestoneDraft((prev) => ({ ...prev, status: event.target.value as ApiMilestone["status"] }))}
                 className="px-3 py-2 text-sm border border-neutral-200 rounded-lg outline-none focus:border-primary bg-white"
               >
-                <option value="upcoming">Upcoming</option>
-                <option value="in_progress">In Progress</option>
-                <option value="at_risk">At Risk</option>
-                <option value="completed">Completed</option>
-                <option value="late">Late</option>
+                <option value="upcoming">{t("Upcoming")}</option>
+                <option value="in_progress">{t("In Progress")}</option>
+                <option value="at_risk">{t("At Risk")}</option>
+                <option value="completed">{t("Completed")}</option>
+                <option value="late">{t("Late")}</option>
               </select>
 
               <input
@@ -1033,7 +1040,7 @@ export default function ProjectDetailPage() {
             </div>
 
             <p className="text-[11px] text-neutral-500 mt-2">
-              Leave progress override empty to use automatic progress from linked tasks.
+              {t("Leave progress override empty to use automatic progress from linked tasks.")}
             </p>
 
             <div className="flex items-center justify-end gap-2 mt-3">
@@ -1049,7 +1056,7 @@ export default function ProjectDetailPage() {
                 onClick={() => void handleSaveMilestone()}
                 className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
               >
-                {milestoneEditingId ? "Save Milestone" : "Create Milestone"}
+                {milestoneEditingId ? t("Save Milestone") : t("Create Milestone")}
               </button>
             </div>
           </div>
@@ -1060,13 +1067,13 @@ export default function ProjectDetailPage() {
       <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-3">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
-            Recent Tasks
+            {t("Recent Tasks")}
           </h2>
           <Link
             to={withTenant(`/projects/${id}/tasks`)}
             className="body-4-regular text-primary hover:underline inline-flex items-center gap-1"
           >
-            View All Tasks
+            {t("View All Tasks")}
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4.5 3L7.5 6L4.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -1074,7 +1081,7 @@ export default function ProjectDetailPage() {
         </div>
         <div className="flex flex-col divide-y divide-neutral-200">
           {project.recentTasks.length === 0 ? (
-            <div className="text-xs text-neutral-400 py-3 text-center">No recent tasks</div>
+            <div className="text-xs text-neutral-400 py-3 text-center">{t("No recent tasks")}</div>
           ) : project.recentTasks.map((task) => (
             <RecentTaskItem key={task.id} task={task} />
           ))}
@@ -1085,7 +1092,7 @@ export default function ProjectDetailPage() {
       <div className="bg-white flex flex-col gap-4 py-3 px-6 rounded-lg shadow-md mt-3">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-sm leading-5 text-neutral-900">
-            Description
+            {t("Description")}
           </h2>
           {canManageProject && editingField !== 'description' && (
             <button
@@ -1129,7 +1136,7 @@ export default function ProjectDetailPage() {
           >
             {project.description
               ? <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: project.description }} />
-              : <span className="text-neutral-400">No description provided.</span>}
+              : <span className="text-neutral-400">{t("No description provided.")}</span>}
           </div>
         )}
       </div>
@@ -1140,14 +1147,14 @@ export default function ProjectDetailPage() {
       {/* Delete project confirmation dialog */}
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        title="Delete Project"
+        title={t("Delete Project")}
         message={
           <>
             Are you sure you want to delete <strong>{project.title}</strong>? All tasks, milestones, and associated data will be permanently removed. This action cannot be undone.
           </>
         }
-        confirmLabel="Delete Project"
-        cancelLabel="Cancel"
+        confirmLabel={t("Delete Project")}
+        cancelLabel={t("Cancel")}
         variant="danger"
         onConfirm={() => void handleDeleteProject()}
         onCancel={() => setShowDeleteConfirm(false)}
@@ -1155,10 +1162,10 @@ export default function ProjectDetailPage() {
 
       <ConfirmDialog
         isOpen={!!milestoneDeleteId}
-        title="Delete Milestone"
-        message="Are you sure you want to delete this milestone?"
-        confirmLabel="Delete Milestone"
-        cancelLabel="Cancel"
+        title={t("Delete Milestone")}
+        message={t("Are you sure you want to delete this milestone?")}
+        confirmLabel={t("Delete Milestone")}
+        cancelLabel={t("Cancel")}
         variant="danger"
         onConfirm={() => void handleDeleteMilestone()}
         onCancel={() => setMilestoneDeleteId(null)}

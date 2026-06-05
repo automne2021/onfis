@@ -31,10 +31,11 @@ public class MessageService {
     private final ChatMessageRepository messageRepository;
     private final ConversationMemberRepository memberRepository;
     private final RedisPublisher redisPublisher;
-    private final UserClient userClient; 
+    private final UserClient userClient;
     private final AttachmentClient attachmentClient;
     private final ConversationRepository conversationRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final AiAssistantService aiAssistantService;
 
     @Transactional
     public void processAndSendMessage(ChatMessageRequestDTO request, UUID authenticatedUserId, UUID tenantId, String token) {
@@ -122,13 +123,32 @@ public class MessageService {
                 // Không bắn thông báo cho chính người gửi
                 if (!member.getUserId().equals(authenticatedUserId)) {
                     messagingTemplate.convertAndSend(
-                        "/topic/user." + member.getUserId() + ".chat_notifications", 
+                        "/topic/user." + member.getUserId() + ".chat_notifications",
                         response
                     );
                 }
             }
         } catch (Exception e) {
             log.error("Lỗi khi bắn WebSocket notification cho chat: ", e);
+        }
+
+        // Nếu đây là conversation Onfis Assistant và tin nhắn bắt đầu bằng '@', route sang AI
+        String msgContent = request.getContent();
+        if (msgContent != null && msgContent.trim().startsWith("@")) {
+            try {
+                Conversation conv = conversationRepository.findById(request.getConversationId()).orElse(null);
+                if (conv != null && "assistant".equalsIgnoreCase(conv.getType())) {
+                    aiAssistantService.processCommand(
+                            msgContent.trim(),
+                            request.getConversationId(),
+                            authenticatedUserId,
+                            tenantId,
+                            token
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Lỗi khi khởi động xử lý lệnh AI: {}", e.getMessage());
+            }
         }
     }
 

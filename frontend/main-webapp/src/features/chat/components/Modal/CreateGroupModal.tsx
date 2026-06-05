@@ -3,6 +3,7 @@ import { X, Hash, Lock, Search, Check, Loader2, AlertCircle } from 'lucide-react
 import { Button } from '../../../../components/common/Buttons/Button';
 import api from '../../../../services/api'; 
 import { useAuth } from '../../../../hooks/useAuth';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ interface UserDTO {
 
 export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModalProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [name, setName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -87,7 +89,7 @@ export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModal
     if (!name.trim() || isSubmitting) return;
 
     if (isPrivate && selectedMembers.length < 2) {
-      setToastMessage({ type: 'error', text: 'A private group must have at least 3 members (including you). Please select at least 2 people.' });
+      setToastMessage({ type: 'error', text: t('A private group must have at least 3 members (including you). Please select at least 2 people.') });
       return;
     }
 
@@ -107,9 +109,9 @@ export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModal
     } catch (error) {
       const err = error as { response?: { status: number, data: string } };
       if (err.response && err.response.status === 400) {
-        setToastMessage({ type: 'error', text: err.response.data || 'A group must have at least 3 members.' });
+        setToastMessage({ type: 'error', text: err.response.data || t('A group must have at least 3 members.') });
       } else {
-        setToastMessage({ type: 'error', text: 'An error occurred while creating the channel.' });
+        setToastMessage({ type: 'error', text: t('An error occurred while creating the channel.') });
       }
     } finally {
       setIsSubmitting(false);
@@ -129,7 +131,7 @@ export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModal
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
-          <h2 className="header-h6 leading-none text-neutral-900">Create a channel</h2>
+          <h2 className="header-h6 leading-none text-neutral-900">{t("Create a channel")}</h2>
           <button onClick={onClose} className="p-2 text-neutral-400 hover:bg-neutral-100 rounded-full transition-colors">
             <X size={20} />
           </button>
@@ -139,7 +141,7 @@ export function CreateGroupModal({ isOpen, onClose, onSubmit }: CreateGroupModal
         <form id="create-group-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6 custom-scrollbar">
 
           <div className="flex flex-col gap-2">
-            <label className="body-3-medium text-neutral-900">Name</label>
+            <label className="body-3-medium text-neutral-900">{t("Name")}</label>
             <div className="relative flex items-center">
               <div className="absolute left-3 text-neutral-400">
                 {isPrivate ? <Lock size={18} /> : <Hash size={18} />}

@@ -4,6 +4,7 @@ import Dropdown from "../../../../components/common/Dropdown/Dropdown";
 import { SearchBar, type SearchResult } from "../../../../components/common/SearchBar";
 import { Button } from "../../../../components/common/Buttons/Button";
 import { UploadFileOutlined } from '@mui/icons-material';
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface NavBarProps {
   onUploadClick?: () => void;
@@ -11,6 +12,7 @@ interface NavBarProps {
 
 export function NavBar({ onUploadClick }: NavBarProps) {
 
+  const { t } = useLanguage();
   // States management
   const [activeMenu, setActiveMenu] = useState<string|null>(null) // Dành riêng cho dropdown/search
   const [activeFilter, setActiveFilter] = useState<string>("all") // Dành riêng cho bộ lọc, mặc định là 'all'
@@ -18,9 +20,9 @@ export function NavBar({ onUploadClick }: NavBarProps) {
 
   // Data
   const filterButtons = [
-    {id: "all", label: "All Files"},
-    {id: "contracts", label: "Contracts"},
-    {id: "identification", label: "Identifications"},
+    {id: "all", label: t("All Files")},
+    {id: "contracts", label: t("Contracts")},
+    {id: "identification", label: t("Identifications")},
   ]
 
   // Functions
@@ -64,7 +66,7 @@ export function NavBar({ onUploadClick }: NavBarProps) {
           children={
             <ContentList 
               data={searchContentItem}
-              emptyLabel="No result available"
+              emptyLabel={t("No result available")}
               onItemClick={closeMenu}
             />
           }
@@ -95,7 +97,7 @@ export function NavBar({ onUploadClick }: NavBarProps) {
       {/* Right */}
       <Button
         id="upload"
-        title="Upload New Document"
+        title={t("Upload New Document")}
         iconLeft={<UploadFileOutlined />}
         onClick={() => onUploadClick?.()}
         style='primary'

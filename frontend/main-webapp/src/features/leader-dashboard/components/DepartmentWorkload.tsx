@@ -2,7 +2,10 @@ interface DepartmentWorkloadProps {
   departments: { name: string; load: number; maxLoad: number }[];
 }
 
+import { useLanguage } from "../../../contexts/LanguageContext";
+
 export default function DepartmentWorkload({ departments }: DepartmentWorkloadProps) {
+  const { t } = useLanguage();
   const getColor = (load: number) => {
     if (load >= 90) return { bar: "bg-red-500", text: "text-red-600", bg: "bg-red-50", label: "Overloaded" };
     if (load >= 70) return { bar: "bg-amber-500", text: "text-amber-600", bg: "bg-amber-50", label: "High" };
@@ -15,8 +18,8 @@ export default function DepartmentWorkload({ departments }: DepartmentWorkloadPr
     <div className="bg-white rounded-2xl border border-neutral-200/80 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-base font-semibold text-neutral-900">Resource Allocation</h3>
-          <p className="text-xs text-neutral-400 mt-0.5">Workload distribution by department</p>
+          <h3 className="text-base font-semibold text-neutral-900">{t("Resource Allocation")}</h3>
+          <p className="text-xs text-neutral-400 mt-0.5">{t("Workload distribution by department")}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
@@ -45,7 +48,7 @@ export default function DepartmentWorkload({ departments }: DepartmentWorkloadPr
                 </span>
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${color.bg} ${color.text}`}>
-                    {color.label}
+                    {t(color.label)}
                   </span>
                   <span className="text-sm font-bold text-neutral-900 min-w-[40px] text-right">
                     {dept.load}%

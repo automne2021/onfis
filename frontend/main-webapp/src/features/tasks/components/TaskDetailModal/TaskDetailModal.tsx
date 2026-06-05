@@ -16,6 +16,7 @@ import Button from "../../../../components/common/Button";
 import { useAuth } from "../../../../hooks/useAuth";
 import { useToast } from "../../../../contexts/useToast";
 import { useRole } from "../../../../hooks/useRole";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 import { RichTextEditor } from "../../../../components/common";
 import ReviewPanel from "../ReviewPanel";
 import InitialsAvatar from "../../../../components/common/InitialsAvatar";
@@ -37,6 +38,7 @@ import { getSubmitForReviewError } from "../../workflowUtils";
 
 // Interactive Progress bar with slider
 const ProgressBar = ({ progress, onChange, disabled }: { progress: number; onChange?: (value: number) => void; disabled?: boolean }) => {
+  const { t } = useLanguage();
   const getProgressColor = (progress: number) => {
     if (progress >= 75) return "bg-green-500";
     if (progress >= 50) return "bg-blue-500";
@@ -52,7 +54,7 @@ const ProgressBar = ({ progress, onChange, disabled }: { progress: number; onCha
   return (
     <div className={`flex flex-col gap-2 ${disabled ? "opacity-60" : ""}`}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-neutral-500">Progress</span>
+        <span className="text-sm font-medium text-neutral-500">{t("Progress")}</span>
         <div className="flex items-center gap-1">
           <input
             type="number"
@@ -116,16 +118,17 @@ const EffortFields = ({
   onActualChange: (v: number) => void;
   disabled?: boolean;
 }) => {
+  const { t } = useLanguage();
   const est = estimatedEffort ?? 0;
   const act = actualEffort ?? 0;
   const isOverBudget = act > est && est > 0;
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-neutral-500">Effort (hours)</label>
+      <label className="text-sm font-medium text-neutral-500">{t("Effort (hours)")}</label>
       <div className="flex gap-3">
         <div className="flex-1">
-          <span className="text-xs text-neutral-400 mb-1 block">Estimated</span>
+          <span className="text-xs text-neutral-400 mb-1 block">{t("Estimated")}</span>
           <input
             type="number"
             min="0"
@@ -138,7 +141,7 @@ const EffortFields = ({
           />
         </div>
         <div className="flex-1">
-          <span className="text-xs text-neutral-400 mb-1 block">Actual</span>
+          <span className="text-xs text-neutral-400 mb-1 block">{t("Actual")}</span>
           <input
             type="number"
             min="0"
@@ -157,52 +160,9 @@ const EffortFields = ({
       {isOverBudget && (
         <div className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
           <span>⚠</span>
-          <span>Actual effort exceeds estimate by {(act - est).toFixed(1)}h</span>
+          <span>{t("Actual effort exceeds estimate by")} {(act - est).toFixed(1)}h</span>
         </div>
       )}
-    </div>
-  );
-};
-
-// Rejection reason prompt
-const RejectionPrompt = ({
-  isOpen,
-  onReject,
-  onCancel,
-}: {
-  isOpen: boolean;
-  onReject: (reason: string) => void;
-  onCancel: () => void;
-}) => {
-  const [reason, setReason] = useState("");
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 flex flex-col gap-3">
-      <p className="text-sm font-medium text-amber-800">
-        Please provide a reason for rejecting this task:
-      </p>
-      <textarea
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Explain what needs to be revised..."
-        className="w-full min-h-[80px] p-3 text-sm text-neutral-900 border border-amber-200 rounded-lg resize-none outline-none focus:border-amber-400 bg-white"
-      />
-      <div className="flex items-center gap-2 justify-end">
-        <Button variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            if (reason.trim()) onReject(reason.trim());
-          }}
-          disabled={!reason.trim()}
-        >
-          Submit Rejection
-        </Button>
-      </div>
     </div>
   );
 };
@@ -272,13 +232,13 @@ export default function TaskDetailModal({
   const [taskFiles, setTaskFiles] = useState<AttachmentFile[]>([]);
   const [submissions, setSubmissions] = useState<AttachmentFile[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showRejectionPrompt, setShowRejectionPrompt] = useState(false);
   const [showBlockedPrompt, setShowBlockedPrompt] = useState(false);
   const [blockedReasonDraft, setBlockedReasonDraft] = useState("");
   const [taskReviews, setTaskReviews] = useState<ReviewComment[]>(initialTask.reviews ?? []);
   const { dbUser: currentUser } = useAuth();
   const { showToast } = useToast();
   const { isManagerLike: isManager, isEmployee } = useRole();
+  const { t } = useLanguage();
 
   // Determine role-based permissions
   const isAssignee = task.assignees.some((a) => a.id === currentUser?.id);
@@ -296,7 +256,6 @@ export default function TaskDetailModal({
     if (!isOpen) return;
     setTask(initialTask);
     setTaskReviews(initialTask.reviews ?? []);
-    setShowRejectionPrompt(false);
     setShowBlockedPrompt(false);
 
     // Fetch full detail including activities, comments, subtasks
@@ -387,7 +346,7 @@ export default function TaskDetailModal({
         })
         .catch(() => {
           setTaskFiles((prev) => prev.filter((f) => f.id !== tempId));
-          showToast("Failed to upload file.", "error");
+          showToast(t("Failed to upload file."), "error");
         });
     });
   };
@@ -402,7 +361,7 @@ export default function TaskDetailModal({
         })
         .catch(() => {
           setSubmissions((prev) => prev.filter((f) => f.id !== tempId));
-          showToast("Failed to upload submission.", "error");
+          showToast(t("Failed to upload submission."), "error");
         });
     });
   };
@@ -410,13 +369,13 @@ export default function TaskDetailModal({
   const handleDeleteTaskFile = (id: string) => {
     deleteAttachment(id)
       .then(() => setTaskFiles((prev) => prev.filter((f) => f.id !== id)))
-      .catch(() => showToast("Failed to delete file.", "error"));
+      .catch(() => showToast(t("Failed to delete file."), "error"));
   };
 
   const handleDeleteSubmission = (id: string) => {
     deleteAttachment(id)
       .then(() => setSubmissions((prev) => prev.filter((f) => f.id !== id)))
-      .catch(() => showToast("Failed to delete file.", "error"));
+      .catch(() => showToast(t("Failed to delete file."), "error"));
   };
 
   const handleApprove = useCallback(() => {
@@ -432,7 +391,7 @@ export default function TaskDetailModal({
     const updated = { ...task, status: "DONE" as const, reviews: [...taskReviews, newReview] };
     setTaskReviews((prev) => [...prev, newReview]);
     onSave(updated);
-    showToast("Task approved and marked as DONE.", "success");
+    showToast(t("Task approved and marked as DONE."), "success");
     onClose();
   }, [task, taskReviews, currentUser, onSave, onClose, showToast]);
 
@@ -454,7 +413,7 @@ export default function TaskDetailModal({
       };
       setTaskReviews((prev) => [...prev, newReview]);
       onSave(updated);
-      showToast("Changes requested — task returned to In Progress.", "warning");
+      showToast(t("Changes requested — task returned to In Progress."), "warning");
       onClose();
     },
     [task, taskReviews, currentUser, onSave, onClose, showToast]
@@ -490,7 +449,7 @@ export default function TaskDetailModal({
             <button
               onClick={onClose}
               className="p-2 hover:bg-neutral-100 rounded-lg transition-colors shrink-0"
-              aria-label="Close modal"
+              aria-label={t("Close modal")}
             >
               <CloseIcon />
             </button>
@@ -501,7 +460,7 @@ export default function TaskDetailModal({
             <div className="px-6 lg:px-8 py-3 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
               <span className="text-amber-600 text-sm">🔒</span>
               <p className="text-sm font-medium text-amber-800">
-                This task is under review. Editing is locked until the reviewer takes action.
+                {t("This task is under review. Editing is locked until the reviewer takes action.")}
               </p>
             </div>
           )}
@@ -511,7 +470,7 @@ export default function TaskDetailModal({
             <div className="px-6 lg:px-8 py-3 bg-amber-50 border-b border-amber-200 flex items-start gap-3">
               <span className="material-symbols-rounded text-amber-600 mt-0.5" style={{ fontSize: 18 }}>undo</span>
               <div>
-                <p className="text-sm font-semibold text-amber-800">Changes requested by reviewer</p>
+                <p className="text-sm font-semibold text-amber-800">{t("Changes requested by reviewer")}</p>
                 <p className="text-sm text-amber-700 mt-0.5">{lastRejectionReason}</p>
               </div>
             </div>
@@ -527,7 +486,7 @@ export default function TaskDetailModal({
                 {/* Description Section */}
                 <div className="flex flex-col gap-2">
                   <label className="body-3-medium text-neutral-900">
-                    Description
+                    {t("Description")}
                   </label>
                   <RichTextEditor
                     key={task.id}
@@ -547,7 +506,7 @@ export default function TaskDetailModal({
 
                 {/* Task Reference Files */}
                 <FileAttachmentSection
-                  title="Task Files"
+                  title={t("Task Files")}
                   attachments={taskFiles}
                   onUpload={handleUploadTaskFile}
                   onDelete={handleDeleteTaskFile}
@@ -557,19 +516,19 @@ export default function TaskDetailModal({
 
                 {/* Work Submission Files */}
                 <FileAttachmentSection
-                  title="Work Submission"
+                  title={t("Work Submission")}
                   attachments={submissions}
                   onUpload={handleUploadSubmission}
                   onDelete={handleDeleteSubmission}
                   canUpload={isAssignee || isManager}
-                  canDelete={false}
+                  canDelete={isAssignee || isManager}
                 />
 
                 {/* Employee: Submit for Review */}
                 {isEmployee && isAssignee && task.status === "IN_PROGRESS" && (
                   <div className="flex flex-col gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                     <p className="text-sm font-medium text-blue-800">
-                      Ready to submit? Your manager will review and approve this task.
+                      {t("Ready to submit? Your manager will review and approve this task.")}
                     </p>
                     {(() => {
                       const submitError = getSubmitForReviewError(task);
@@ -584,41 +543,20 @@ export default function TaskDetailModal({
                             type="button"
                             disabled={!!submitError}
                             onClick={() => {
-                              setTask({ ...task, status: "IN_REVIEW" as const });
-                              showToast("Task submitted for review.", "info");
+                              const updated = { ...task, status: "IN_REVIEW" as const };
+                              setTask(updated);
+                              onSave(updated);
+                              showToast(t("Task submitted for review."), "info");
+                              onClose();
                             }}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors w-fit"
                           >
                             <span className="material-symbols-rounded" style={{ fontSize: 16 }}>upload</span>
-                            Submit for Review
+                            {t("Submit for Review")}
                           </button>
                         </>
                       );
                     })()}
-                  </div>
-                )}
-
-                {/* Reviewer Approve/Reject Controls */}
-                {canReview && (
-                  <div className="flex flex-col gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                    <p className="text-sm font-medium text-blue-800">
-                      This task is awaiting your review.
-                    </p>
-                    {!showRejectionPrompt && (
-                      <div className="flex items-center gap-3">
-                        <Button variant="primary" onClick={handleApprove}>
-                          ✓ Approve → DONE
-                        </Button>
-                        <Button variant="ghost" onClick={() => setShowRejectionPrompt(true)}>
-                          ✕ Request Changes
-                        </Button>
-                      </div>
-                    )}
-                    <RejectionPrompt
-                      isOpen={showRejectionPrompt}
-                      onReject={handleReject}
-                      onCancel={() => setShowRejectionPrompt(false)}
-                    />
                   </div>
                 )}
 
@@ -651,7 +589,7 @@ export default function TaskDetailModal({
                           comments: [...prev.comments, newComment],
                         }));
                       } catch {
-                        showToast("Unable to add comment", "error");
+                        showToast(t("Unable to add comment"), "error");
                       }
                     };
                     void run();
@@ -672,7 +610,7 @@ export default function TaskDetailModal({
 
                 {/* Reporter (read-only display) */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-neutral-500">Reporter / Reviewer</label>
+                  <label className="text-sm font-medium text-neutral-500">{t("Reporter / Reviewer")}</label>
                   {reporterAssignee ? (
                     <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl">
                       <InitialsAvatar name={reporterAssignee.name} size={32} />
@@ -680,7 +618,7 @@ export default function TaskDetailModal({
                     </div>
                   ) : (
                     <div className="px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-400">
-                      No reviewer assigned
+                      {t("No reviewer assigned")}
                     </div>
                   )}
                 </div>
@@ -704,17 +642,17 @@ export default function TaskDetailModal({
                 {showBlockedPrompt && (
                   <div className="border border-red-200 bg-red-50 rounded-xl p-4 flex flex-col gap-3">
                     <p className="text-sm font-medium text-red-800">
-                      Why is this task blocked?
+                      {t("Why is this task blocked?")}
                     </p>
                     <textarea
                       value={blockedReasonDraft}
                       onChange={(e) => setBlockedReasonDraft(e.target.value)}
-                      placeholder="Describe what is blocking this task..."
+                      placeholder={t("Describe what is blocking this task...")}
                       className="w-full min-h-[80px] p-3 text-sm text-neutral-900 border border-red-200 rounded-lg resize-none outline-none focus:border-red-400 bg-white"
                     />
                     <div className="flex items-center gap-2 justify-end">
                       <Button variant="ghost" onClick={() => setShowBlockedPrompt(false)}>
-                        Cancel
+                        {t("Cancel")}
                       </Button>
                       <Button
                         variant="primary"
@@ -726,7 +664,7 @@ export default function TaskDetailModal({
                         }}
                         disabled={!blockedReasonDraft.trim()}
                       >
-                        Confirm Block
+                        {t("Confirm Block")}
                       </Button>
                     </div>
                   </div>
@@ -735,7 +673,7 @@ export default function TaskDetailModal({
                 {/* Blocked Reason Display */}
                 {task.status === "BLOCKED" && task.blockedReason && !showBlockedPrompt && (
                   <div className="border border-red-200 bg-red-50 rounded-xl p-3">
-                    <p className="text-xs font-medium text-red-600 mb-1">Blocked Reason</p>
+                    <p className="text-xs font-medium text-red-600 mb-1">{t("Blocked Reason")}</p>
                     <p className="text-sm text-red-800">{task.blockedReason}</p>
                   </div>
                 )}
@@ -743,7 +681,7 @@ export default function TaskDetailModal({
                 {/* Start Date */}
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium text-neutral-500">
-                    Start Date
+                    {t("Start Date")}
                   </label>
                   <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl">
                     <CalendarSmallIcon />
@@ -756,7 +694,7 @@ export default function TaskDetailModal({
                 {/* Due Date */}
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium text-neutral-500">
-                    Due Date
+                    {t("Due Date")}
                   </label>
                   <div className="flex items-center gap-3 px-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl">
                     <CalendarSmallIcon />
@@ -798,19 +736,19 @@ export default function TaskDetailModal({
                 {/* Metadata */}
                 <div className="flex flex-col gap-3 pt-4 border-t border-neutral-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-400">Created</span>
+                    <span className="text-sm text-neutral-400">{t("Created")}</span>
                     <span className="text-sm text-neutral-500">
                       {task.createdAt ? formatVNDateTime(task.createdAt) : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-400">Updated</span>
+                    <span className="text-sm text-neutral-400">{t("Updated")}</span>
                     <span className="text-sm text-neutral-500">
                       {task.updatedAt ? formatVNDateTime(task.updatedAt) : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-neutral-400">Key</span>
+                    <span className="text-sm text-neutral-400">{t("Key")}</span>
                     <span className="text-sm text-neutral-500">{task.key}</span>
                   </div>
                 </div>
@@ -826,17 +764,17 @@ export default function TaskDetailModal({
                   variant="ghost"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
-                  <span className="text-red-600">Delete Task</span>
+                  <span className="text-red-600">{t("Delete Task")}</span>
                 </Button>
               )}
             </div>
             <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={onClose}>
-                Cancel
+                {t("Cancel")}
               </Button>
               {!isLockedForAssignee && (
                 <Button variant="primary" onClick={handleSave}>
-                  Save Task
+                  {t("Save Task")}
                 </Button>
               )}
             </div>
@@ -847,10 +785,10 @@ export default function TaskDetailModal({
       {onDelete && (
         <ConfirmDialog
           isOpen={showDeleteConfirm}
-          title="Delete Task"
-          message="Are you sure you want to delete this task? This action cannot be undone."
-          confirmLabel="Delete Task"
-          cancelLabel="Cancel"
+          title={t("Delete Task")}
+          message={t("Are you sure you want to delete this task? This action cannot be undone.")}
+          confirmLabel={t("Delete Task")}
+          cancelLabel={t("Cancel")}
           variant="danger"
           onConfirm={() => { setShowDeleteConfirm(false); onDelete(task.id); }}
           onCancel={() => setShowDeleteConfirm(false)}

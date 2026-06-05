@@ -3,6 +3,7 @@ import type { TaskStatus, Task } from "../../types";
 import { ChevronDownIcon } from "../../../../components/common/Icons";
 import { getTransitionError, ALLOWED_TRANSITIONS, STATUS_CONFIG } from "../../workflowUtils";
 import { useToast } from "../../../../contexts/useToast";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface StatusSelectorProps {
   value: TaskStatus;
@@ -17,6 +18,7 @@ export default function StatusSelector({ value, task, onChange, disabled }: Stat
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   const selectedStatus = STATUS_CONFIG[value];
 
@@ -57,7 +59,7 @@ export default function StatusSelector({ value, task, onChange, disabled }: Stat
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-neutral-500">Status</label>
+      <label className="text-sm font-medium text-neutral-500">{t("Status")}</label>
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -99,7 +101,7 @@ export default function StatusSelector({ value, task, onChange, disabled }: Stat
                   <div className={`w-2.5 h-2.5 rounded-full ${config.color}`} />
                   <span className="text-sm text-neutral-900">{config.label}</span>
                   {!isAllowed && (
-                    <span className="ml-auto text-xs text-neutral-400">Blocked</span>
+                    <span className="ml-auto text-xs text-neutral-400">{t("Blocked")}</span>
                   )}
                 </button>
               );

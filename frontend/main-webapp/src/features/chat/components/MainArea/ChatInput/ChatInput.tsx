@@ -6,22 +6,42 @@ import { announcementApi } from '../../../services/announcementApi';
 
 interface ChatInputProps {
   label?: string;
+  channelType?: string;
   onSendMessage?: (content: string, type: 'TEXT' | 'FILE', attachmentId?: string) => void;
   disabled?: boolean;
 }
 
-export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
+const AI_COMMANDS = [
+  { command: '@tasks',         description: 'Xem danh sách công việc hôm nay' },
+  { command: '@summarize',     description: 'Tóm tắt tin nhắn một kênh' },
+  { command: '@announcements', description: 'Tóm tắt thông báo 7 ngày gần nhất' },
+];
+
+export function ChatInput({ label, channelType, onSendMessage, disabled }: ChatInputProps) {
 
   // useState
   const [message, setMessage] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [activeCommandIdx, setActiveCommandIdx] = useState(0);
 
   // useRef
-  const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Derive command suggestions from current message
+  const commandMatch = channelType === 'assistant' ? message.match(/^@(\w*)$/) : null;
+  const filteredCommands = commandMatch
+    ? AI_COMMANDS.filter(c => c.command.startsWith('@' + commandMatch[1].toLowerCase()))
+    : [];
+  const showCommands = filteredCommands.length > 0;
+
+  // Reset active index when suggestion list changes
+  useEffect(() => {
+    setActiveCommandIdx(0);
+  }, [filteredCommands.length]);
 
   // Close emoji panel 
   useEffect(() => {
@@ -57,6 +77,29 @@ export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
   const handleRemoveFile = (indexToRemove: number) => {
     setAttachedFiles((prev) => prev.filter((_, index) => index !== indexToRemove))
   }
+
+  const handleSelectCommand = (cmd: string) => {
+    setMessage(cmd + ' ');
+    setActiveCommandIdx(0);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showCommands) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveCommandIdx(i => (i + 1) % filteredCommands.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveCommandIdx(i => (i - 1 + filteredCommands.length) % filteredCommands.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSelectCommand(filteredCommands[activeCommandIdx].command);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setMessage('');
+    }
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
   if (e) e.preventDefault();
@@ -105,6 +148,28 @@ export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
         accept="image/*, .pdf, .doc, .docx, .xls, .xlsx, .ppt, .pptx, .psd"
       />
 
+      {/* @ Command suggestions */}
+      {showCommands && (
+        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden z-50">
+          <div className="px-3 py-1.5 text-xs text-neutral-400 border-b border-neutral-100 font-medium select-none">
+            Lệnh AI — ↑↓ để chọn, Enter để xác nhận
+          </div>
+          {filteredCommands.map((item, idx) => (
+            <button
+              key={item.command}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); handleSelectCommand(item.command); }}
+              className={`w-full text-left px-3 py-2 flex items-center gap-3 transition-colors ${
+                idx === activeCommandIdx ? 'bg-violet-50' : 'hover:bg-neutral-50'
+              }`}
+            >
+              <span className="font-mono text-sm font-semibold text-violet-600">{item.command}</span>
+              <span className="text-xs text-neutral-500">{item.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Emoji */}
       {showEmojiPicker && (
         <div
@@ -137,10 +202,18 @@ export function ChatInput({ label, onSendMessage, disabled }: ChatInputProps) {
         </button>
 
         <input
+          ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder={isUploading ? "Uploading file..." : `Type a message to ${label ? `# ${label}` : '...'}`}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            isUploading
+              ? 'Uploading file...'
+              : channelType === 'assistant'
+              ? 'Nhập: @summarize <tên kênh>, @tasks, @announcements...'
+              : `Type a message to ${label ? `# ${label}` : '...'}`
+          }
           className="flex-1 h-full bg-transparent border-none focus:outline-none text-neutral-900 placeholder:text-neutral-400 px-2 py-2 body-3-regular"
           disabled={disabled || isUploading} 
         />

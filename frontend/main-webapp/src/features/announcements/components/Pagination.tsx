@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import {
   KeyboardDoubleArrowLeft,
   KeyboardArrowLeft,
@@ -13,6 +14,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  const { t } = useLanguage();
   const [inputValue, setInputValue] = useState((currentPage + 1).toString());
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       </button>
 
       <div className="flex items-center gap-1 mx-2 body-3-regular text-neutral-500">
-        <span className='mb-[2px]'>Page</span>
+        <span className='mb-[2px]'>{t("Page")}</span>
         <input
           type="text"
           value={inputValue}

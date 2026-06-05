@@ -3,6 +3,7 @@ import type { GanttTask, GanttViewMode } from "./types";
 import GanttToolbar from "./GanttToolbar";
 import GanttTimeline from "./GanttTimeline";
 import { generateTimelineConfig } from "./ganttUtils";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface GanttViewProps {
   tasks: GanttTask[];
@@ -12,6 +13,7 @@ interface GanttViewProps {
 }
 
 export default function GanttView({ tasks, onTaskClick, currentDate, onCurrentDateChange }: GanttViewProps) {
+  const { t } = useLanguage();
   const [internalCurrentDate, setInternalCurrentDate] = useState<Date>(() => {
     const firstTaskDate = tasks[0]?.startDate;
     return firstTaskDate ?? new Date();
@@ -43,7 +45,7 @@ export default function GanttView({ tasks, onTaskClick, currentDate, onCurrentDa
   if (tasks.length === 0) {
     return (
       <div className="flex items-center justify-center h-full bg-white border border-neutral-200 rounded-lg text-sm text-neutral-500 mt-2">
-        No tasks with valid dates to render timeline.
+        {t("No tasks with valid dates to render timeline.")}
       </div>
     );
   }

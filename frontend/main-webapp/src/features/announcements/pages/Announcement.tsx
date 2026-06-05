@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useLanguage } from '../../../contexts/LanguageContext';
 
 import { Navbar } from "../components/Navbar";
 import { Button } from '../../../components/common/Buttons/Button';
@@ -27,6 +28,7 @@ const tabItems = [
 ]
 
 export function Announcement() {
+  const { t } = useLanguage();
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [openAddForm, setOpenAddForm] = useState(false);
@@ -141,17 +143,17 @@ export function Announcement() {
         />
         <div className="w-full md:px-6 lg:px-8 flex-1 flex flex-col">
           <p className="header-h6 text-neutral-900 mt-5 mb-2 leading-none">
-            Announcements & News
+            {t("Announcements & News")}
           </p>
           <p className="body-4-regular text-neutral-500">
-            Stay updated with the latest company-wide and department-specific news.
+            {t("Stay updated with the latest company-wide and department-specific news.")}
           </p>
 
           <div className="flex items-center justify-between border-b border-neutral-300 px-3 py-1.5 mt-3">
-            <TabGroup tabItems={tabItems} defaultTab='all' />
+            <TabGroup tabItems={tabItems.map(item => ({ ...item, label: t(item.label) }))} defaultTab='all' />
             {(isManager || isAdmin || isSuperAdmin) && (
               <Button
-                title='Post Announcement'
+                title={t('Post Announcement')}
                 iconLeft={<Add sx={{ fontSize: 18 }} />}
                 onClick={handleToggleAddForm}
                 style='primary'

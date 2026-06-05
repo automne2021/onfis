@@ -3,6 +3,7 @@ import { FlagIcon, CalendarIcon } from "../../../components/common/Icons";
 import Icon from "../../../components/common/Icon";
 import { STATUS_CONFIG } from "../workflowUtils";
 import InitialsAvatar from "../../../components/common/InitialsAvatar";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 /** Strip HTML tags to get plain text for card previews */
 const stripHtml = (html: string): string => {
@@ -12,6 +13,7 @@ const stripHtml = (html: string): string => {
 
 // Effort badge component
 const EffortBadge = ({ estimated, actual }: { estimated?: number; actual?: number }) => {
+  const { t } = useLanguage();
   if (estimated == null && actual == null) return null;
 
   const est = estimated ?? 0;
@@ -24,7 +26,7 @@ const EffortBadge = ({ estimated, actual }: { estimated?: number; actual?: numbe
           ? "bg-red-50 text-red-600"
           : "bg-neutral-50 text-neutral-500"
         }`}
-      title={isOverBudget ? `Over budget: ${act}h logged vs ${est}h estimated` : `Effort: ${act}h / ${est}h`}
+      title={isOverBudget ? `${t("Over budget:")} ${act}h logged vs ${est}h estimated` : `${t("Effort:")} ${act}h / ${est}h`}
     >
       {isOverBudget && <Icon name="warning" size={12} color="#DC2626" />}
       <Icon name="schedule" size={12} />
@@ -100,13 +102,14 @@ const CardTagBadge = ({ label, type }: { label: string; type: string }) => {
 
 // Blocked indicator
 const BlockedIndicator = ({ blockedBy }: { blockedBy?: string[] }) => {
+  const { t } = useLanguage();
   if (!blockedBy || blockedBy.length === 0) return null;
   return (
     <div
       className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-600"
-      title={`Blocked by: ${blockedBy.join(", ")}`}
+      title={`${t("Blocked by:")} ${blockedBy.join(", ")}`}
     >
-      <Icon name="block" size={12} color="#DC2626" /> Blocked
+      <Icon name="block" size={12} color="#DC2626" /> {t("Blocked")}
     </div>
   );
 };

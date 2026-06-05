@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { StatusBubble } from '../../../../components/common/StatusBubble';
 import { MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 interface ChatItemProps {
   name: string;
@@ -15,6 +16,7 @@ interface ChatItemProps {
 }
 
 export function ChatItem({ name, isActive, onClick, icon, avatarUrl, status, onRename, onDelete }: ChatItemProps) {
+  const { t } = useLanguage();
   const [showMenu, setShowMenu] = useState(false);
   const [menuCoords, setMenuCoords] = useState({ x: 0, y: 0 });
   
@@ -93,12 +95,12 @@ export function ChatItem({ name, isActive, onClick, icon, avatarUrl, status, onR
             >
               {onRename && (
                 <button onClick={() => { setShowMenu(false); onRename(); }} className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2">
-                  <Edit2 size={14} /> Rename
+                  <Edit2 size={14} /> {t("Rename")}
                 </button>
               )}
               {onDelete && (
                 <button onClick={() => { setShowMenu(false); onDelete(); }} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                  <Trash2 size={14} /> Delete
+                  <Trash2 size={14} /> {t("Delete")}
                 </button>
               )}
             </div>,

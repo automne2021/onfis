@@ -13,6 +13,7 @@ import { createTask, createSubtask, deleteTask, listProjectTasks, reviewTask, up
 import { uploadTaskAttachment } from "../../../services/attachmentService";
 import { formatVNDate } from "../../../utils/getTime";
 import { useToast } from "../../../contexts/useToast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import ConfirmDialog from "../../../components/common/ConfirmDialog";
 
 const UNASSIGNED_STAGE_ID = "__unassigned__";
@@ -214,6 +215,7 @@ function TasksLoadingSkeleton() {
 export default function ProjectTasksPage() {
   const { projectId: projectIdentifier } = useParams<{ projectId: string }>();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -300,7 +302,7 @@ export default function ProjectTasksPage() {
         setProjectName(project.title || "Project Tasks");
         setCompanyTags(sharedTags.map((tag) => tag.name));
       } catch {
-        showToast("Failed to load tasks", "error");
+        showToast(t("Failed to load tasks"), "error");
       } finally {
         setLoading(false);
       }
@@ -357,7 +359,7 @@ export default function ProjectTasksPage() {
           key: task.key || "TASK-000",
         });
         setIsModalOpen(true);
-        showToast("Could not load full task details", "warning");
+        showToast(t("Could not load full task details"), "warning");
       }
     };
     void loadDetail();
@@ -396,9 +398,9 @@ export default function ProjectTasksPage() {
         if (projectIdentifier) {
           await refreshTaskBoard(projectIdentifier);
         }
-        showToast("Task updated", "success");
+        showToast(t("Task updated"), "success");
       } catch {
-        showToast("Unable to update task", "error");
+        showToast(t("Unable to update task"), "error");
       }
     };
 
@@ -410,9 +412,9 @@ export default function ProjectTasksPage() {
     try {
       await createProjectStage(projectIdentifier, { name: name.trim() });
       await refreshTaskBoard(projectIdentifier);
-      showToast("Stage created", "success");
+      showToast(t("Stage created"), "success");
     } catch {
-      showToast("Unable to create stage", "error");
+      showToast(t("Unable to create stage"), "error");
     }
   };
 
@@ -421,9 +423,9 @@ export default function ProjectTasksPage() {
     try {
       await updateProjectStage(projectIdentifier, stageId, { name: newName.trim() });
       await refreshTaskBoard(projectIdentifier);
-      showToast("Stage renamed", "success");
+      showToast(t("Stage renamed"), "success");
     } catch {
-      showToast("Unable to rename stage", "error");
+      showToast(t("Unable to rename stage"), "error");
     }
   };
 
@@ -433,9 +435,9 @@ export default function ProjectTasksPage() {
     try {
       await deleteProjectStage(projectIdentifier, stageDeleteId);
       await refreshTaskBoard(projectIdentifier);
-      showToast("Stage deleted", "success");
+      showToast(t("Stage deleted"), "success");
     } catch {
-      showToast("Unable to delete stage. Move tasks out of this stage first.", "error");
+      showToast(t("Unable to delete stage. Move tasks out of this stage first."), "error");
     }
   };
 
@@ -499,7 +501,7 @@ export default function ProjectTasksPage() {
               currentDate={currentViewDate}
               onCurrentDateChange={setCurrentViewDate}
               onTaskClick={(taskId) => {
-                const task = filteredTasks.find((t) => t.id === taskId);
+                const task = filteredTasks.find((tk) => tk.id === taskId);
                 if (task) handleTaskClick(task);
               }}
             />
@@ -511,7 +513,7 @@ export default function ProjectTasksPage() {
               currentDate={currentViewDate}
               onCurrentDateChange={setCurrentViewDate}
               onTaskClick={(taskId) => {
-                const task = filteredTasks.find((t) => t.id === taskId);
+                const task = filteredTasks.find((tk) => tk.id === taskId);
                 if (task) handleTaskClick(task);
               }}
             />
@@ -534,9 +536,9 @@ export default function ProjectTasksPage() {
               await deleteTask(taskId);
               setIsModalOpen(false);
               if (projectIdentifier) await refreshTaskBoard(projectIdentifier);
-              showToast("Task deleted", "success");
+              showToast(t("Task deleted"), "success");
             } catch {
-              showToast("Unable to delete task", "error");
+              showToast(t("Unable to delete task"), "error");
             }
           }}
         />
@@ -578,14 +580,18 @@ export default function ProjectTasksPage() {
               }
 
               // Upload any pending files
+              let filesFailed = 0;
               for (const file of formData.pendingFiles ?? []) {
-                await uploadTaskAttachment(created.id, file).catch(() => {});
+                await uploadTaskAttachment(created.id, file).catch(() => { filesFailed++; });
+              }
+              if (filesFailed > 0) {
+                showToast(`${filesFailed} file(s) failed to upload. Please try again from the task details.`, "warning");
               }
 
               await refreshTaskBoard(projectIdentifier);
-              showToast("Task created", "success");
+              showToast(t("Task created"), "success");
             } catch {
-              showToast("Unable to create task", "error");
+              showToast(t("Unable to create task"), "error");
             }
           };
 
@@ -598,10 +604,10 @@ export default function ProjectTasksPage() {
       {/* Confirm dialog for stage deletion */}
       <ConfirmDialog
         isOpen={!!stageDeleteId}
-        title="Delete Workflow Stage"
-        message="Are you sure you want to delete this workflow stage? You cannot delete a stage that still has tasks."
-        confirmLabel="Delete Stage"
-        cancelLabel="Cancel"
+        title={t("Delete Workflow Stage")}
+        message={t("Are you sure you want to delete this workflow stage? You cannot delete a stage that still has tasks.")}
+        confirmLabel={t("Delete Stage")}
+        cancelLabel={t("Cancel")}
         variant="danger"
         onConfirm={() => void handleDeleteStageConfirmed()}
         onCancel={() => setStageDeleteId(null)}

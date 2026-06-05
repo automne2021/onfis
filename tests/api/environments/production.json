@@ -1,0 +1,20 @@
+{
+  "id": "onfis-production-env",
+  "name": "ONFIS — Production",
+  "_postman_variable_scope": "environment",
+  "_comment": "WARNING: Do NOT run performance/load tests against production. Use this environment only for smoke-testing the API gateway after deployments.",
+  "values": [
+    { "key": "baseUrl",        "value": "https://onfis.me",                                                                                                                                                                                                                                                               "enabled": true },
+    { "key": "supabaseUrl",    "value": "https://jtoibkbaomzqmseveplp.supabase.co",                                                                                                                                                                                                                                           "enabled": true },
+    { "key": "supabaseAnonKey","value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0b2lia2Jhb216cW1zZXZlcGxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MTM5ODgsImV4cCI6MjA4ODM4OTk4OH0.QEXvX2e4nP7z76qpi-HOM2tSDug4gx1_nhVXXnUAeEI","enabled": true },
+    { "key": "tenantId",       "value": "00000000-0000-0000-0000-000000000099",                                                                                                                                                                                                                                                "enabled": true },
+    { "key": "tenantSlug",   "value": "test-corp",                                         "enabled": true },
+    { "key": "managerId",    "value": "00000000-0000-0000-0000-000000000101",              "enabled": true },
+    { "key": "employeeId",   "value": "00000000-0000-0000-0000-000000000102",              "enabled": true },
+    { "key": "managerEmail", "value": "manager@test-corp.local",                           "enabled": true },
+    { "key": "employeeEmail","value": "employee@test-corp.local",                          "enabled": true },
+    { "key": "testPassword", "value": "Test@12345",                                        "enabled": true },
+    { "key": "seedProjectId","value": "00000000-0000-0000-0000-000000000401",              "enabled": true },
+    { "key": "conversationId","value": "00000000-0000-0000-0000-000000000501",             "enabled": true }
+  ]
+}

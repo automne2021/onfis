@@ -10,7 +10,7 @@ import { useCall } from '../../context/CallContext';
 
 interface ChatHeaderProps {
   name: string;
-  type: 'public_group' | 'private_group' | 'direct' | 'self';
+  type: 'public_group' | 'private_group' | 'direct' | 'self' | 'assistant';
   memberCount?: number;
   isPinned?: boolean;
   avatarUrl?: string;

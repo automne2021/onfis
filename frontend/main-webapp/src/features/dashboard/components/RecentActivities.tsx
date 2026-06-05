@@ -11,10 +11,12 @@ interface RecentActivitiesProps {
 }
 
 import { HistoryIcon } from "../../../components/common/Icons";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 export default function RecentActivities({
   activities,
 }: RecentActivitiesProps) {
+  const { t } = useLanguage();
   return (
     <div className="bg-white rounded-[16px] shadow-sm border border-neutral-100 p-3 lg:p-4 flex flex-col relative min-h-[200px]">
       {/* Activity Items */}
@@ -53,7 +55,7 @@ export default function RecentActivities({
         <button className="w-full flex items-center justify-center gap-2 bg-neutral-50 border border-neutral-200 rounded-[12px] px-4 py-1.5 hover:bg-neutral-100 transition-colors">
           <HistoryIcon />
           <span className="font-medium text-xs leading-4 text-neutral-500">
-            View all history
+            {t("View all history")}
           </span>
         </button>
       </div>

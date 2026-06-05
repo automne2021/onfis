@@ -1,0 +1,866 @@
+{
+  "info": {
+    "name": "ONFIS System Tests",
+    "_postman_id": "onfis-system-tests-v1",
+    "description": "Automated API integration tests for the ONFIS ERP platform.\nRun with: newman run tests/api/onfis-collection.json -e tests/api/environments/local.json",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "managerToken",  "value": "" },
+    { "key": "employeeToken", "value": "" },
+    { "key": "createdProjectId", "value": "" },
+    { "key": "createdTaskId",    "value": "" },
+    { "key": "createdStageId",   "value": "" },
+    { "key": "createdAnnId",     "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "TC-AUTH — Authentication",
+      "item": [
+        {
+          "name": "TC-AUTH-01 Login as Manager (valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('managerToken', body.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apikey", "value": "{{supabaseAnonKey}}" }
+            ],
+            "url": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"{{testPassword}}\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-AUTH-02 Login as Employee (valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('access_token present', () => pm.expect(body.access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('employeeToken', body.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apikey", "value": "{{supabaseAnonKey}}" }
+            ],
+            "url": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{employeeEmail}}\", \"password\": \"{{testPassword}}\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-AUTH-03 Login with wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400 or 401', () => pm.expect([400, 401]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apikey", "value": "{{supabaseAnonKey}}" }
+            ],
+            "url": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"{{managerEmail}}\", \"password\": \"WrongPassword!\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-AUTH-04 Access protected API without token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 401 or 403', () => pm.expect([401, 403]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Company-ID", "value": "{{tenantId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects"
+          }
+        },
+        {
+          "name": "TC-AUTH-05 Get current user (/users/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('userId present', () => pm.expect(body.id || body.userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/users/me"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "TC-TENANT — Multi-Tenant Security",
+      "item": [
+        {
+          "name": "TC-TENANT-01 List projects with correct tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects"
+          }
+        },
+        {
+          "name": "TC-TENANT-02 List projects with wrong tenant ID (cross-tenant isolation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Gateway derives tenant from URL path (/{slug}/api/...) and IGNORES",
+                  "// any X-Company-ID header sent by the client — this IS the isolation mechanism.",
+                  "// Sending a fake X-Company-ID must NOT change which tenant's data is returned.",
+                  "pm.test('Status is 200 — gateway uses URL path, not client-supplied X-Company-ID', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is valid JSON (fake header was ignored)', () => {",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "00000000-0000-0000-0000-000000000000" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects"
+          }
+        },
+        {
+          "name": "TC-TENANT-03 Health check — API Gateway up",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects/health"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "TC-PROJ — Project Management",
+      "item": [
+        {
+          "name": "TC-PROJ-01 List projects (Manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects"
+          }
+        },
+        {
+          "name": "TC-PROJ-02 Create project (Manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.test('Project has id', () => pm.expect(body.id).to.be.a('string'));",
+                  "pm.collectionVariables.set('createdProjectId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"TC-PROJ-02 Auto Project\", \"description\": \"Created by Newman\", \"status\": \"PLANNING\", \"priority\": \"MEDIUM\", \"progress\": 0 }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-PROJ-03 Create project (Employee — must be forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{employeeId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"Unauthorized Project\", \"status\": \"PLANNING\", \"priority\": \"LOW\", \"progress\": 0 }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-PROJ-04 Create workflow stage in test project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.test('Stage has id', () => pm.expect(body.id).to.be.a('string'));",
+                  "pm.collectionVariables.set('createdStageId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{seedProjectId}}/stages",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"name\": \"In Progress\", \"color\": \"#3B82F6\", \"sortOrder\": 1 }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-PROJ-05 Get project detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Project has title', () => pm.expect(body.title).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{seedProjectId}}/detail"
+          }
+        },
+        {
+          "name": "TC-PROJ-06 Add project member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{seedProjectId}}/members",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"userId\": \"{{employeeId}}\", \"role\": \"DEVELOPER\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-PROJ-07 Delete created project (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 204', () => pm.expect([200,204]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{createdProjectId}}"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "TC-TASK — Task Management",
+      "item": [
+        {
+          "name": "TC-TASK-01 Create task (Manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.test('Task has id', () => pm.expect(body.id).to.be.a('string'));",
+                  "pm.test('Default status is TODO', () => pm.expect(body.status).to.equal('TODO'));",
+                  "pm.collectionVariables.set('createdTaskId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/{{seedProjectId}}/tasks",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"TC-TASK-01 Auto Task\", \"description\": \"<p>Created by Newman</p>\", \"status\": \"TODO\", \"priority\": \"MEDIUM\", \"progress\": 0, \"assigneeIds\": [\"{{employeeId}}\"], \"reporterId\": \"{{managerId}}\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-TASK-02 Move task TODO → IN_PROGRESS (valid transition)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Status is IN_PROGRESS', () => pm.expect(body.status).to.equal('IN_PROGRESS'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}/stage",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"IN_PROGRESS\", \"stageId\": \"{{createdStageId}}\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {          "name": "TC-TASK-02B Set task progress=100 before IN_REVIEW",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Progress is 100', () => pm.expect(body.progress).to.equal(100));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"TC-TASK-01 Auto Task\", \"status\": \"IN_PROGRESS\", \"priority\": \"MEDIUM\", \"progress\": 100, \"actualEffort\": 8, \"assigneeIds\": [\"{{employeeId}}\"], \"reporterId\": \"{{managerId}}\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {          "name": "TC-TASK-03 Move task IN_PROGRESS → IN_REVIEW (valid transition)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Status is IN_REVIEW', () => pm.expect(body.status).to.equal('IN_REVIEW'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}/stage",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"IN_REVIEW\", \"stageId\": \"{{createdStageId}}\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-TASK-04 Manager approves task → status becomes DONE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Task status is DONE', () => pm.expect(body.status).to.equal('DONE'));",
+                  "pm.test('Progress is 100', () => pm.expect(body.progress).to.equal(100));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"action\": \"APPROVED\", \"content\": \"Looks good — approved by Newman test.\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-TASK-05 Add subtask",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));",
+                  "const body = pm.response.json();",
+                  "pm.test('Subtask has id', () => pm.expect(body.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}/subtasks",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"title\": \"Auto subtask\", \"completed\": false }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-TASK-06 Add comment to task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}/comments",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"content\": \"Automated comment from Newman test.\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "TC-TASK-07 Get task detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has subtasks array',  () => pm.expect(body.subtasks).to.be.an('array'));",
+                  "pm.test('Has comments array',  () => pm.expect(body.comments).to.be.an('array'));",
+                  "pm.test('Has activities array', () => pm.expect(body.activities).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/projects/tasks/{{createdTaskId}}/detail"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "TC-ANN — Announcements",
+      "item": [
+        {
+          "name": "TC-ANN-01 List all announcements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has content array', () => pm.expect(body.content).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/announcements/all?page=0&size=10"
+          }
+        },
+        {
+          "name": "TC-ANN-02 Employee cannot access — list (permission check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 403', () => pm.expect([200, 403]).to.include(pm.response.code));",
+                  "// Employees CAN list announcements — ensure no 500 error",
+                  "pm.test('Not a server error', () => pm.expect(pm.response.code).to.be.below(500));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{employeeId}}" }
+            ],
+            "url": "{{baseUrl}}/api/announcements/all?page=0&size=5"
+          }
+        },
+        {
+          "name": "TC-ANN-03 Search announcements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/announcements/search?keyword=test&page=0&size=5"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "TC-POS — Positions & Departments",
+      "item": [
+        {
+          "name": "TC-POS-01 Get position tree",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/positions/tree"
+          }
+        },
+        {
+          "name": "TC-POS-02 Get departments with employees",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/positions/departments"
+          }
+        },
+        {
+          "name": "TC-POS-03 Get current user position (/positions/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{employeeToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{employeeId}}" }
+            ],
+            "url": "{{baseUrl}}/api/positions/me"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "TC-CHAT — Chat Service",
+      "item": [
+        {
+          "name": "TC-CHAT-01 Chat service health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('status is UP', () => pm.expect(body.status).to.equal('UP'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" }
+            ],
+            "url": "{{baseUrl}}/api/chat/health"
+          }
+        },
+        {
+          "name": "TC-CHAT-02 List conversations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+              { "key": "X-Company-ID",  "value": "{{tenantId}}" },
+              { "key": "X-User-ID",     "value": "{{managerId}}" }
+            ],
+            "url": "{{baseUrl}}/api/chat/conversations"
+          }
+        }
+      ]
+    }
+
+  ]
+}

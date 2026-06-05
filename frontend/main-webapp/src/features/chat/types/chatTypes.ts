@@ -1,6 +1,6 @@
 // Các loại tin nhắn hỗ trợ trong hệ thống
 export type MessageType = 'text' | 'file' | 'meeting' | 'system';
-export type ChannelType = 'public_group' | 'private_group' | 'direct' | 'self';
+export type ChannelType = 'public_group' | 'private_group' | 'direct' | 'self' | 'assistant';
 
 export interface ChatUser {
   id: string; // Đổi thành string vì ID Supabase là UUID

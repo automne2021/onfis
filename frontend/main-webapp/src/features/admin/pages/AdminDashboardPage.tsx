@@ -4,6 +4,7 @@ import Icon from "../../../components/common/Icon";
 import { useTenantPath } from "../../../hooks/useTenantPath";
 import { adminService } from "../services/adminService";
 import type { AdminDashboardData } from "../types/adminTypes";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,13 +66,13 @@ const AUDIT_ACTION_META: Record<string, { icon: string; label: string; color: st
   UPDATE_EXECUTIVE_REQUESTS: { icon: "assignment_turned_in", label: "Update Request", color: "#3B82F6" },
 };
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, t: (k: string) => string) {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins} minutes ago`;
+  if (mins < 60) return `${mins} ${t("minutes ago")}`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hours ago`;
-  return `${Math.floor(hrs / 24)} days ago`;
+  if (hrs < 24) return `${hrs} ${t("hours ago")}`;
+  return `${Math.floor(hrs / 24)} ${t("days ago")}`;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ function StatCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
+  const { t } = useLanguage();
   const { withTenant } = useTenantPath();
   const navigate = useNavigate();
   const [_tab, _setTab] = useState("overview");
@@ -145,8 +147,8 @@ export default function AdminDashboardPage() {
             <Icon name="admin_panel_settings" size={20} color="#0014A8" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-neutral-900">Admin Dashboard</h1>
-            <p className="text-xs text-neutral-500">System overview and administration</p>
+            <h1 className="text-base font-bold text-neutral-900">{t("Admin Dashboard")}</h1>
+            <p className="text-xs text-neutral-500">{t("System overview and administration")}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -156,7 +158,7 @@ export default function AdminDashboardPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors"
           >
             <Icon name="person_add" size={14} color="#fff" />
-            Add Employee
+            {t("Add Employee")}
           </button>
           <button
             type="button"
@@ -164,7 +166,7 @@ export default function AdminDashboardPage() {
             className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition-colors"
           >
             <Icon name="support_agent" size={14} color="#62748E" />
-            Requests
+            {t("Requests")}
             {stats.pendingTickets > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {stats.pendingTickets}
@@ -178,7 +180,7 @@ export default function AdminDashboardPage() {
         {/* Loading / Error states */}
         {loading && (
           <div className="flex items-center justify-center h-32 text-neutral-400 text-sm">
-            Loading dashboard...
+            {t("Loading dashboard...")}
           </div>
         )}
         {error && !loading && (
@@ -188,22 +190,22 @@ export default function AdminDashboardPage() {
         {/* Stat cards */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
-            icon="group" label="Total Accounts" value={stats.totalUsers}
-            sub={`+${stats.newThisMonth} this month`} color="#0014A8"
+            icon="group" label={t("Total Accounts")} value={stats.totalUsers}
+            sub={`+${stats.newThisMonth} ${t("this month")}`} color="#0014A8"
             onClick={() => navigate(withTenant("/admin/users"))}
           />
           <StatCard
-            icon="check_circle" label="Active Accounts" value={stats.activeUsers}
-            sub={stats.totalUsers > 0 ? `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% of total` : ""}
+            icon="check_circle" label={t("Active Accounts")} value={stats.activeUsers}
+            sub={stats.totalUsers > 0 ? `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% ${t("of total")}` : ""}
             color="#00A63E"
           />
           <StatCard
-            icon="pending_actions" label="Pending Requests" value={stats.pendingTickets}
-            sub={`${stats.resolvedToday} resolved today`} color="#F59E0B"
+            icon="pending_actions" label={t("Pending Requests")} value={stats.pendingTickets}
+            sub={`${stats.resolvedToday} ${t("resolved today")}`} color="#F59E0B"
             onClick={() => navigate(withTenant("/admin/requests"))}
           />
           <StatCard
-            icon="account_tree" label="Departments" value={stats.totalDepts}
+            icon="account_tree" label={t("Departments")} value={stats.totalDepts}
             color="#7C3AED"
             onClick={() => navigate(withTenant("/admin/users"))}
           />
@@ -216,14 +218,14 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100">
               <div className="flex items-center gap-2">
                 <Icon name="support_agent" size={16} color="#0014A8" />
-                <h2 className="text-sm font-semibold text-neutral-800">Recent Requests</h2>
+                <h2 className="text-sm font-semibold text-neutral-800">{t("Recent Requests")}</h2>
               </div>
               <button
                 type="button"
                 onClick={() => navigate(withTenant("/admin/requests"))}
                 className="text-xs text-primary hover:underline font-medium"
               >
-                View all
+                {t("View all")}
               </button>
             </div>
             <div className="divide-y divide-neutral-50">
@@ -236,16 +238,16 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[11px] font-mono text-neutral-400">{ticket.code}</span>
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${pMeta.bg} ${pMeta.text}`}>
-                          {pMeta.label}
+                          {t(pMeta.label)}
                         </span>
                       </div>
                       <p className="text-sm font-medium text-neutral-800 truncate max-w-sm">{ticket.title}</p>
-                      <p className="text-[11px] text-neutral-400">From {ticket.requester} - {timeAgo(ticket.createdAt)}</p>
+                      <p className="text-[11px] text-neutral-400">{t("From")} {ticket.requester} - {timeAgo(ticket.createdAt, t)}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${sMeta.dot}`} />
                       <span className={`text-[11px] font-medium ${sMeta.text}`}>
-                        {sMeta.label}
+                        {t(sMeta.label)}
                       </span>
                     </div>
                   </div>
@@ -258,7 +260,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3.5 border-b border-neutral-100">
               <Icon name="pie_chart" size={16} color="#0014A8" />
-              <h2 className="text-sm font-semibold text-neutral-800">Role Distribution</h2>
+                <h2 className="text-sm font-semibold text-neutral-800">{t("Role Distribution")}</h2>
             </div>
             <div className="px-5 py-4 space-y-3">
               {roleDistribution.map((item) => {
@@ -280,18 +282,18 @@ export default function AdminDashboardPage() {
                 );
               })}
               <div className="pt-2 border-t border-neutral-100">
-                <p className="text-[11px] text-neutral-400 text-center">{totalRoles} accounts - {stats.totalDepts} departments</p>
+                <p className="text-[11px] text-neutral-400 text-center">{totalRoles} {t("accounts")} - {stats.totalDepts} {t("departments")}</p>
               </div>
             </div>
 
             {/* Quick actions */}
             <div className="px-5 pb-4">
-              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2">Quick Actions</p>
+              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2">{t("Quick Actions")}</p>
               <div className="space-y-1.5">
                 {[
-                  { icon: "group", label: "Manage users", path: "/admin/users" },
-                  { icon: "tune", label: "System settings", path: "/admin/system" },
-                  { icon: "manage_search", label: "View audit logs", path: "/admin/audit" },
+                  { icon: "group", label: t("Manage users"), path: "/admin/users" },
+                  { icon: "tune", label: t("System settings"), path: "/admin/system" },
+                  { icon: "manage_search", label: t("View audit logs"), path: "/admin/audit" },
                 ].map((item) => (
                   <button
                     key={item.path}
@@ -313,14 +315,14 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100">
             <div className="flex items-center gap-2">
               <Icon name="manage_search" size={16} color="#0014A8" />
-              <h2 className="text-sm font-semibold text-neutral-800">Recent System Activity</h2>
+                <h2 className="text-sm font-semibold text-neutral-800">{t("Recent System Activity")}</h2>
             </div>
             <button
               type="button"
               onClick={() => navigate(withTenant("/admin/audit"))}
               className="text-xs text-primary hover:underline font-medium"
             >
-              View full log
+              {t("View full log")}
             </button>
           </div>
           <div className="divide-y divide-neutral-50">
@@ -332,11 +334,11 @@ export default function AdminDashboardPage() {
                     <Icon name={meta.icon} size={15} color={meta.color} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-neutral-800">{meta.label}</p>
+                    <p className="text-sm font-medium text-neutral-800">{t(meta.label)}</p>
                     <p className="text-xs text-neutral-500 truncate">{log.target}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-[11px] text-neutral-400">{timeAgo(log.ts)}</p>
+                    <p className="text-[11px] text-neutral-400">{timeAgo(log.ts, t)}</p>
                     <p className="text-[11px] text-neutral-500 font-medium">{log.actor || "System"}</p>
                   </div>
                 </div>

@@ -10,6 +10,7 @@ import { ContentList, type ContentItem } from './Dropdown/ContentList';
 import { useAuth } from '../../hooks/useAuth';
 import { signOut } from '../../services/auth';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface HeaderProps {
   companyName: string;
@@ -22,6 +23,7 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
   const { dbUser: authUser } = useAuth();
   const { tenant } = useParams<{ tenant: string }>();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { 
     chatNotifs, 
     announcementNotifs, 
@@ -54,7 +56,7 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
           </div>
         ),
         content: (
-          <ContentList data={chatNotifs} emptyLabel="No new messages" onItemClick={closeMenu} />
+          <ContentList data={chatNotifs} emptyLabel={t("No new messages")} onItemClick={closeMenu} />
         ),
       },
       {
@@ -72,7 +74,7 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
         content: (
           <ContentList
             data={announcementNotifs}
-            emptyLabel="No new announcements"
+            emptyLabel={t("No new announcements")}
             onItemClick={closeMenu}
           />
         ),
@@ -84,7 +86,7 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
   const profileContents: ContentItem[] = useMemo(
     () => [
       {
-        content: 'User Profile',
+        content: t('User Profile'),
         onClick: () => {
           closeMenu();
           if (tenant && authUser?.id) {
@@ -93,14 +95,14 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
         },
       },
       {
-        content: 'Settings',
+        content: t('Settings'),
         onClick: () => {
           closeMenu();
           console.log('Settings');
         },
       },
       {
-        content: 'Log out',
+        content: t('Log out'),
         onClick: async () => {
           try {
             await signOut();
@@ -115,7 +117,7 @@ export function Header({ companyName, logoUrl }: HeaderProps) {
         },
       },
     ],
-    [tenant, authUser?.id, navigate, closeMenu]
+    [tenant, authUser?.id, navigate, closeMenu, t]
   );
 
   return (

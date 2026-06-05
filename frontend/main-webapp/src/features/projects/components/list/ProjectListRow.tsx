@@ -1,6 +1,7 @@
 import type { Project } from "../../types";
 import { CheckboxIconList as CheckboxIcon, CalendarIcon, FlagIconColored as FlagIcon, MoreIcon } from "../../../../components/common/Icons";
-import { statusLabels, statusColors } from "./types";
+import { statusColors } from "./types";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface ProjectListRowProps {
   project: Project;
@@ -67,10 +68,17 @@ const ProgressBar = ({ progress }: { progress: number }) => (
 
 // Status badge
 const StatusBadge = ({ status }: { status: Project["status"] }) => {
+  const { t } = useLanguage();
   const { bg, text } = statusColors[status];
+  const labels: Record<Project["status"], string> = {
+    planning: t("Planning"),
+    in_progress: t("In Progress"),
+    on_hold: t("On Hold"),
+    completed: t("Completed"),
+  };
   return (
     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${bg} ${text}`}>
-      {statusLabels[status]}
+      {labels[status]}
     </span>
   );
 };
@@ -81,6 +89,7 @@ export default function ProjectListRow({
   onSelect,
   onClick,
 }: ProjectListRowProps) {
+  //const { t } = useLanguage();
   return (
     <div
       className={`px-3 py-2 grid grid-cols-[32px_2fr_1fr_1fr_1fr_100px_90px_48px] gap-3 items-center border-b border-neutral-100 hover:bg-neutral-50 transition-colors cursor-pointer ${isSelected ? "bg-primary/5" : ""

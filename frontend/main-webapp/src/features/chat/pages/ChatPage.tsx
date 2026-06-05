@@ -4,6 +4,7 @@ import { ChatSidebar } from "../components/Sidebar/ChatSidebar";
 import { SquarePen, Hash } from 'lucide-react';
 import { ChatWindow } from "../components/MainArea/ChatWindow";
 import { useConversations } from "../hooks/useConversations";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 import { chatApi } from "../services/chatApi";
 import { CreateGroupModal } from "../components/Modal/CreateGroupModal";
@@ -12,6 +13,7 @@ import { useSearchParams } from "react-router-dom";
 
 export function ChatPage() {
 
+  const { t } = useLanguage();
   const { channels, fetchChannels, isLoading } = useConversations();
   const [searchParams, setSearchParams] = useSearchParams();
   const channelFromUrl = searchParams.get('channel');
@@ -67,7 +69,7 @@ export function ChatPage() {
       }
     } catch (error) {
       console.error("Lỗi khi tạo nhóm", error);
-      alert("Đã xảy ra lỗi khi tạo nhóm!");
+      alert(t("Failed to create group!"));
     }
   };
 

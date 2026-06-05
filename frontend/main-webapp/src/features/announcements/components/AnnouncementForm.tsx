@@ -1,6 +1,7 @@
 import { Close, Groups, Business, PushPinOutlined, PushPin, AttachFile } from '@mui/icons-material';
 import { Button } from '../../../components/common/Buttons/Button';
 import { useCallback, useEffect, useState } from 'react';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { OptionCard } from './Card/OptionCard';
 import { RichTextEditor } from '../../../components/common/RichTextEditor/RichTextEditor';
 import { AttachmentSection } from '../../../components/common/Attachment/AttachmentSection';
@@ -23,6 +24,7 @@ interface AnnouncementFormProps {
 export function AnnouncementForm({ onClose, onSuccess, announcementId, initialData }: AnnouncementFormProps) {
   const isEditMode = !!announcementId;
   const { dbUser: user } = useAuth();
+  const { t } = useLanguage();
   
   // State Managements
   const [isAdmin, setIsAdmin] = useState(false);
@@ -140,8 +142,8 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
 
     if (status === 'PUBLISHED') {
       const newErrors: { title?: string; content?: string } = {};
-      if (!title.trim()) newErrors.title = "Subject is required when publishing.";
-      if (!cleanContent || cleanContent.trim().length === 0) newErrors.content = "Message content is required when publishing.";
+      if (!title.trim()) newErrors.title = t("Subject is required when publishing.");
+      if (!cleanContent || cleanContent.trim().length === 0) newErrors.content = t("Message content is required when publishing.");
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
         return;
@@ -178,13 +180,13 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
           formData.append('newAttachments', file);
         });
         await announcementApi.updateAnnouncement(announcementId!, formData);
-        toast.success("Announcement updated successfully!", { position: "top-right", autoClose: 1500 });
+        toast.success(t("Announcement updated successfully!"), { position: "top-right", autoClose: 1500 });
       } else {
         attachmentFile.forEach((file) => {
           formData.append('attachments', file);
         });
         await announcementApi.createAnnouncement(formData);
-        toast.success(status === 'PUBLISHED' ? "Announcement published successfully!" : "Draft saved successfully!", {
+        toast.success(status === 'PUBLISHED' ? t("Announcement published successfully!") : t("Draft saved successfully!"), {
           position: "top-right",
           autoClose: 1500,
         });
@@ -195,7 +197,7 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
       onClose();
     } catch (error: unknown) {
       console.error(error);
-      setFormError("An error occurred while saving. Please try again.");
+      setFormError(t("An error occurred while saving. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -205,15 +207,15 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
   const optionItems = [
     {
       id: 'department',
-      title: 'My Department',
-      description: 'Visible to your department',
+      title: t('My Department'),
+      description: t('Visible to your department'),
       icon: <Groups />,
       permission: true,
     },
     {
       id: 'company',
-      title: 'Whole Company',
-      description: isAdmin ? 'Visible to the entire company' : 'Require Admin Approval',
+      title: t('Whole Company'),
+      description: isAdmin ? t('Visible to the entire company') : t('Require Admin Approval'),
       icon: <Business />,
       permission: isAdmin 
     },
@@ -225,7 +227,7 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
       <div className="border-b border-neutral-200 flex justify-between items-center px-4 py-2">
         <div className='flex items-center gap-1'>
           <p className="text-base font-bold text-neutral-900 leading-snug">
-            {isEditMode ? 'Edit Announcement' : 'New Announcement'}
+            {isEditMode ? t('Edit Announcement') : t('New Announcement')}
           </p>
           <button
             type='button'
@@ -259,7 +261,7 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
         {/* Audience Scope */}
         <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
-            Audience Scope
+            {t("Audience Scope")}
           </p>
           <div className='flex flex-wrap items-center justify-between gap-4'>
             {optionItems.map((item) => (
@@ -278,7 +280,7 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
           {selectedOption === "department" && myDepartment && (
             <div className="mt-1 pl-1">
               <p className="body-4-regular text-neutral-500">
-                Targeting: <span className="body-4-regular text-primary bg-secondary px-2 py-0.5 rounded-md border border-primary">{myDepartment.name}</span>
+                {t("Targeting:")} <span className="body-4-regular text-primary bg-secondary px-2 py-0.5 rounded-md border border-primary">{myDepartment.name}</span>
               </p>
             </div>
           )}
@@ -287,12 +289,12 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
         {/* Subject */}
         <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
-            Subject <span className='text-red-500'>*</span>
+            {t("Subject")} <span className='text-red-500'>*</span>
           </p>
           <input
             name='subject'
             type="text"
-            placeholder='Enter announcement title...'
+            placeholder={t('Enter announcement title...')}
             minLength={1}
             maxLength={256}
             onChange={(e) => {
@@ -314,7 +316,7 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
         {/* Message Content */}
         <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
-            Message Content <span className='text-red-500'>*</span>
+            {t("Message Content")} <span className='text-red-500'>*</span>
           </p>
 
           <RichTextEditor
@@ -330,7 +332,7 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
         {/* Attachments */}
         <div className='flex flex-col gap-3 px-4 '>
           <p className="body-3-medium text-neutral-900">
-            Attachments
+            {t("Attachments")}
           </p>
 
           {/* Existing attachments in edit mode */}
@@ -365,13 +367,13 @@ export function AnnouncementForm({ onClose, onSuccess, announcementId, initialDa
       <div className='py-2 border-t border-neutral-200 flex items-center justify-end gap-2 px-4'>
         {!isEditMode && (
           <Button
-            title='Save as Draft'
+            title={t('Save as Draft')}
             onClick={() => submitAnnouncement('DRAFT')}
             style='sub'
           />
         )}
         <Button
-          title={isEditMode ? 'Save Changes' : 'Publish Now'}
+          title={isEditMode ? t('Save Changes') : t('Publish Now')}
           onClick={() => submitAnnouncement('PUBLISHED')}
           style='primary'
           loading={isSubmitting}

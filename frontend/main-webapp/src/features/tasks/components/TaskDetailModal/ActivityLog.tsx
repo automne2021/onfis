@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ActivityItem, Comment } from "./types";
 import { ActivityIcon, SendIcon } from "../../../../components/common/Icons";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface ActivityLogProps {
   activities: ActivityItem[];
@@ -60,6 +61,7 @@ function CommentEntry({ comment }: { comment: Comment }) {
 }
 
 export default function ActivityLog({ activities, comments, onAddComment }: ActivityLogProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"activity" | "comments">("activity");
   const [commentText, setCommentText] = useState("");
 
@@ -92,7 +94,7 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
             : "text-neutral-400 hover:text-neutral-500"
             }`}
         >
-          Activity Log
+          {t("Activity Log")}
           {activeTab === "activity" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
           )}
@@ -104,7 +106,7 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
             : "text-neutral-400 hover:text-neutral-500"
             }`}
         >
-          Discussion ({comments.length})
+          {t("Discussion")} ({comments.length})
           {activeTab === "comments" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
           )}
@@ -119,7 +121,7 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
               <ActivityEntry key={activity.id} activity={activity} />
             ))}
             {sortedActivities.length === 0 && (
-              <p className="text-sm text-neutral-400 py-4">No activity yet</p>
+              <p className="text-sm text-neutral-400 py-4">{t("No activity yet")}</p>
             )}
           </div>
         ) : (
@@ -128,7 +130,7 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
               <CommentEntry key={comment.id} comment={comment} />
             ))}
             {comments.length === 0 && (
-              <p className="text-sm text-neutral-400 py-4">No comments yet</p>
+              <p className="text-sm text-neutral-400 py-4">{t("No comments yet")}</p>
             )}
           </div>
         )}
@@ -146,7 +148,7 @@ export default function ActivityLog({ activities, comments, onAddComment }: Acti
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Write a comment... (Enter to send, Shift+Enter for new line)"
+              placeholder={t("Write a comment... (Enter to send, Shift+Enter for new line)")}
               className="w-full min-h-[60px] max-h-[120px] px-3 py-2 pr-10 text-sm text-neutral-900 placeholder:text-neutral-400 border border-neutral-200 rounded-xl resize-none outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               rows={2}
             />

@@ -1,6 +1,7 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "../../../../components/common/Icons";
 import type { TimelineViewMode } from "./types";
 import { getMonthName } from "./timelineUtils";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface TimelineToolbarProps {
   currentDate: Date;
@@ -15,6 +16,7 @@ export default function TimelineToolbar({
   viewMode,
   onViewModeChange,
 }: TimelineToolbarProps) {
+  const { t } = useLanguage();
   const handlePrev = () => {
     const newDate = new Date(currentDate);
     if (viewMode === "day") {
@@ -44,9 +46,9 @@ export default function TimelineToolbar({
   };
 
   const viewModes: { mode: TimelineViewMode; label: string }[] = [
-    { mode: "day", label: "Day" },
-    { mode: "week", label: "Week" },
-    { mode: "month", label: "Month" },
+    { mode: "day", label: t("Day") },
+    { mode: "week", label: t("Week") },
+    { mode: "month", label: t("Month") },
   ];
 
   return (
@@ -77,7 +79,7 @@ export default function TimelineToolbar({
           onClick={handleToday}
           className="px-2.5 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100 rounded-md transition-colors"
         >
-          Today
+          {t("Today")}
         </button>
       </div>
 

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import type { Stage, Task } from "../types";
 import TaskColumn from "./TaskColumn";
 import { AddIcon } from "../../../components/common/Icons";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface TaskKanbanBoardProps {
   stages: Stage[];
@@ -20,6 +21,7 @@ export default function TaskKanbanBoard({
   onDeleteStage,
   onRenameStage,
 }: TaskKanbanBoardProps) {
+  const { t } = useLanguage();
   const [localStages, setLocalStages] = useState<Stage[]>(stages);
   const [newStageId, setNewStageId] = useState<string | null>(null);
   const [isAddingStage, setIsAddingStage] = useState(false);
@@ -117,7 +119,7 @@ export default function TaskKanbanBoard({
                 type="text"
                 value={newStageName}
                 onChange={(e) => setNewStageName(e.target.value)}
-                placeholder="Stage name..."
+                placeholder={t("Stage name...")}
                 onBlur={confirmAddStage}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") confirmAddStage();
@@ -135,7 +137,7 @@ export default function TaskKanbanBoard({
               className="w-full bg-white border border-neutral-200 rounded-[12px] flex items-center justify-center gap-2 px-3 py-2 text-neutral-400 hover:bg-neutral-50 hover:border-neutral-300 hover:text-neutral-600 transition-all duration-200"
             >
               <AddIcon />
-              <span className="font-medium text-sm leading-5">Stage</span>
+              <span className="font-medium text-sm leading-5">{t("Stage")}</span>
             </button>
           )}
         </div>

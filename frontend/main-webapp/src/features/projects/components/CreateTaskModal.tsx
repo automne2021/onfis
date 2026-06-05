@@ -4,6 +4,7 @@ import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { ErrorIcon, ExpandMoreIcon, DescriptionIcon, ChecklistIcon, PersonAddIcon, DeleteIcon, AddIcon } from "../../../components/common/Icons";
 import FileAttachmentSection, { type AttachmentFile } from "../../../components/common/FileAttachmentSection";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface SubTask {
   id: string;
@@ -58,6 +59,7 @@ export default function CreateTaskModal({
   defaultProjectId,
   onSubmit,
 }: CreateTaskModalProps) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState<TaskFormData>({
     name: "",
     startDate: null,
@@ -177,7 +179,7 @@ export default function CreateTaskModal({
     const nextErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
-      nextErrors.name = "Task name is required";
+      nextErrors.name = t("Task name is required");
     }
 
     if (
@@ -185,7 +187,7 @@ export default function CreateTaskModal({
       formData.endDate &&
       formData.endDate.getTime() < formData.startDate.getTime()
     ) {
-      nextErrors.dateRange = "Task end date must be the same as or after start date.";
+      nextErrors.dateRange = t("Task end date must be the same as or after start date.");;
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -242,7 +244,7 @@ export default function CreateTaskModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Create New Task"
+      title={t("Create New Task")}
       maxWidth="lg"
       footer={
         <>
@@ -250,13 +252,13 @@ export default function CreateTaskModal({
             onClick={handleCancel}
             className="px-4 py-2 text-sm font-bold text-neutral-500 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             onClick={handleSubmit}
             className="px-6 py-2 text-sm font-bold text-white bg-primary hover:bg-primary-hover rounded-lg shadow-md shadow-blue-500/20 transition-all"
           >
-            Create Task
+            {t("Create Task")}
           </button>
         </>
       }
@@ -265,14 +267,14 @@ export default function CreateTaskModal({
         {/* Task Name */}
         <div className="relative group">
           <label className="block text-sm font-semibold text-neutral-900 mb-2">
-            Task Name <span className="text-red-500">*</span>
+          {t("Task Name")} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
               type="text"
               value={formData.name}
               onChange={handleNameChange}
-              placeholder="Enter task name"
+              placeholder={t("Enter task name")}
               className={`
                 w-full px-4 py-3 rounded-lg border 
                 ${errors.name
@@ -308,7 +310,7 @@ export default function CreateTaskModal({
             setFormData((prev) => ({ ...prev, endDate: date }));
             setErrors((prev) => ({ ...prev, dateRange: undefined }));
           }}
-          label="Select Task Duration"
+          label={t("Select Task Duration")}
           disablePast
           allowClear
           showLunarDay
@@ -322,7 +324,7 @@ export default function CreateTaskModal({
           {/* Assignee */}
           <div>
             <label className="block text-sm font-semibold text-neutral-900 mb-2">
-              Assignee
+              {t("Assignee")}
             </label>
             <div className="relative">
               <button
@@ -349,7 +351,7 @@ export default function CreateTaskModal({
                     </span>
                   </>
                 ) : (
-                  <span className="text-neutral-400">Select assignee...</span>
+                  <span className="text-neutral-400">{t("Select assignee...")}</span>
                 )}
               </button>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none flex">
@@ -386,7 +388,7 @@ export default function CreateTaskModal({
           {/* Priority */}
           <div>
             <label className="block text-sm font-semibold text-neutral-900 mb-2">
-              Priority
+              {t("Priority")}
             </label>
             <div className="relative">
               <button
@@ -398,7 +400,7 @@ export default function CreateTaskModal({
                   className={`inline-block size-2 rounded-full ${selectedPriority?.color}`}
                 />
                 <span className="text-neutral-900">
-                  {selectedPriority?.label}
+              {t(selectedPriority?.label ?? "")}
                 </span>
               </button>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none flex">
@@ -424,7 +426,7 @@ export default function CreateTaskModal({
                       <span
                         className={`inline-block size-2 rounded-full ${priority.color}`}
                       />
-                      <span>{priority.label}</span>
+                      <span>{t(priority.label)}</span>
                     </button>
                   ))}
                 </div>
@@ -435,7 +437,7 @@ export default function CreateTaskModal({
           {/* Associated Project */}
           <div>
             <label className="block text-sm font-semibold text-neutral-900 mb-2">
-              Associated Project
+              {t("Associated Project")}
             </label>
             <div className="relative">
               <select
@@ -446,7 +448,7 @@ export default function CreateTaskModal({
                 className="w-full appearance-none pl-4 pr-10 py-3 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 text-sm cursor-pointer"
               >
                 <option disabled value="">
-                  Select a project...
+                  {t("Select a project...")}
                 </option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
@@ -466,7 +468,7 @@ export default function CreateTaskModal({
           {/* Reporter / Reviewer */}
           <div>
             <label className="block text-sm font-semibold text-neutral-900 mb-2">
-              Reporter / Reviewer
+            {t("Reporter / Reviewer")}
             </label>
             <div className="relative">
               <button
@@ -484,7 +486,7 @@ export default function CreateTaskModal({
                     </span>
                   </>
                 ) : (
-                  <span className="text-neutral-400">Select reviewer...</span>
+                  <span className="text-neutral-400">{t("Select reviewer...")}</span>
                 )}
               </button>
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none flex">
@@ -516,7 +518,7 @@ export default function CreateTaskModal({
           {/* Estimated Effort */}
           <div>
             <label className="block text-sm font-semibold text-neutral-900 mb-2">
-              Estimated Effort (hours)
+              {t("Estimated Effort (hours)")}
             </label>
             <input
               type="number"
@@ -535,11 +537,11 @@ export default function CreateTaskModal({
         {/* Shared Tags */}
         <div>
           <label className="block text-sm font-semibold text-neutral-900 mb-2">
-            Tags (Shared In Settings)
+            {t("Tags (Shared In Settings)")}
           </label>
           {availableTags.length === 0 ? (
             <div className="px-3 py-2 text-xs text-neutral-500 bg-neutral-50 border border-dashed border-neutral-200 rounded-lg">
-              No shared tags found. Add tags in Settings first.
+                {t("No shared tags found. Add tags in Settings first.")}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -569,7 +571,7 @@ export default function CreateTaskModal({
           <nav aria-label="Tabs" className="flex gap-8">
             <button className="border-b-2 border-primary py-3 px-1 text-sm font-bold text-primary flex items-center gap-2">
               <DescriptionIcon />
-              Overview
+              {t("Overview")}
             </button>
           </nav>
         </div>
@@ -586,11 +588,10 @@ export default function CreateTaskModal({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
               <span className="text-primary"><ChecklistIcon /></span>
-              Sub-tasks
+              {t("Sub-tasks")}
             </h3>
             <span className="text-xs text-neutral-500">
-              {activeSubtasks.length} sub-task
-              {activeSubtasks.length !== 1 ? "s" : ""} added
+              {activeSubtasks.length} {t("sub-task")}{activeSubtasks.length !== 1 ? t("s") : ""} {t("added")}
             </span>
           </div>
 
@@ -622,7 +623,7 @@ export default function CreateTaskModal({
                     onChange={(e) =>
                       handleSubtaskChange(subtask.id, "name", e.target.value)
                     }
-                    placeholder="Enter sub-task name"
+              placeholder={t("Enter sub-task name")}
                     className="w-full px-2 py-1 rounded border-none bg-transparent focus:ring-0 text-neutral-900 text-sm font-medium placeholder:text-neutral-400"
                   />
                 </div>
@@ -695,13 +696,13 @@ export default function CreateTaskModal({
             className="mt-4 flex items-center gap-2 text-primary font-bold text-sm hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors w-max"
           >
             <AddIcon />
-            Add Sub-task
+            {t("Add Sub-task")}
           </button>
         </div>
 
         {/* Attachments */}
         <FileAttachmentSection
-          title="Attachments"
+          title={t("Attachments")}
           attachments={pendingAttachments}
           onUpload={handleAddPendingFiles}
           onDelete={handleRemovePendingFile}

@@ -4,27 +4,29 @@ import { useState } from "react";
 import { ProfileCard } from "../../../../components/common/Card/ProfileCard";
 import { findUserById } from "../../../../data/mockUserData";
 import type { FullUserProfile } from "../../../../types/userType";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 export function WorkIdentity({ icon, userInfo }: OverviewProps) {
   // Đưa useState lên đầu cho đúng chuẩn React Hooks
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { t } = useLanguage();
 
-  if (!userInfo) return <div className="body-2-regular text-neutral-500">No user available!</div>
+  if (!userInfo) return <div className="body-2-regular text-neutral-500">{t("No user available!")}</div>
 
   const managerProfile = userInfo.reportsToName ? findUserById(userInfo.reportsToName) : undefined;
   const managerName = managerProfile?.name || userInfo.reportsToName || 'N/A';
   const managerAvatar = managerProfile?.avatarUrl || userInfo.reportsToAvatar || avatarImg;
 
   const workIdentityItems = [
-    { label: 'Job title', content: userInfo?.positionName || 'N/A' },
-    { label: 'Team', content: userInfo?.departmentName || 'N/A' },
+    { label: t('Job title'), content: userInfo?.positionName || 'N/A' },
+    { label: t('Team'), content: userInfo?.departmentName || 'N/A' },
     {
-      label: 'Reports to',
+      label: t('Reports to'),
       content: managerName,
       avatarUrl: managerAvatar,
       isClickable: true
     },
-    { label: 'Location', content: userInfo?.workLocation || 'N/A' },
+    { label: t('Location'), content: userInfo?.workLocation || 'N/A' },
   ]
 
   const profileCardData: FullUserProfile = managerProfile ? {
@@ -49,7 +51,7 @@ export function WorkIdentity({ icon, userInfo }: OverviewProps) {
     <div className="profile-section">
       <div className="flex items-center gap-3 text-primary">
         {icon}
-        <p className="header-h6 leading-none text-neutral-900">Work Identity</p>
+        <p className="header-h6 leading-none text-neutral-900">{t("Work Identity")}</p>
       </div>
 
       <div className="flex items-center justify-between">

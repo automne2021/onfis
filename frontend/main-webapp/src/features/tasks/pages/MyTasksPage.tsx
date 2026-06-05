@@ -7,6 +7,7 @@ import type { TaskDetail } from "../components";
 import type { Task, TaskStatus } from "../types";
 import { listMyTasks, reviewTask, updateTask, type ApiTask } from "../../../services/taskService";
 import { useToast } from "../../../contexts/useToast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import FilterDropdown, { type ActiveFilters, type FilterCategory } from "../../../components/common/FilterDropdown";
 import { formatVNDate } from "../../../utils/getTime";
 
@@ -20,19 +21,6 @@ interface TaskPageMeta {
   size: number;
   hasNext: boolean;
 }
-
-const TAB_CONFIG: Record<Tab, { label: string; emptyIcon: string; emptyMsg: string }> = {
-  assigned: {
-    label: "Assigned to Me",
-    emptyIcon: "task_alt",
-    emptyMsg: "No tasks assigned to you right now.",
-  },
-  created: {
-    label: "Created by Me",
-    emptyIcon: "add_task",
-    emptyMsg: "You haven't reported any tasks yet.",
-  },
-};
 
 const KANBAN_COLUMNS: { status: TaskStatus; label: string; color: string; bg: string }[] = [
   { status: "TODO",        label: "To Do",       color: "text-neutral-500", bg: "bg-neutral-100" },
@@ -48,32 +36,6 @@ const PRIORITY_BADGE: Record<string, string> = {
   medium: "bg-amber-50 text-amber-700 border border-amber-200",
   low: "bg-neutral-100 text-neutral-600 border border-neutral-200",
 };
-
-const FILTER_CATEGORIES: FilterCategory[] = [
-  {
-    key: "status",
-    label: "Status",
-    type: "single",
-    options: [
-      { value: "TODO", label: "To Do", color: "bg-neutral-400" },
-      { value: "IN_PROGRESS", label: "In Progress", color: "bg-primary" },
-      { value: "BLOCKED", label: "Blocked", color: "bg-status-off_track" },
-      { value: "IN_REVIEW", label: "In Review", color: "bg-status-on_track" },
-      { value: "DONE", label: "Done", color: "bg-status-done" },
-    ],
-  },
-  {
-    key: "priority",
-    label: "Priority",
-    type: "single",
-    options: [
-      { value: "URGENT", label: "Urgent", color: "bg-[#E7000B]" },
-      { value: "HIGH", label: "High", color: "bg-[#FF6900]" },
-      { value: "MEDIUM", label: "Medium", color: "bg-[#FFD230]" },
-      { value: "LOW", label: "Low", color: "bg-neutral-400" },
-    ],
-  },
-];
 
 const toTaskView = (task: ApiTask): Task => ({
   id: task.id,
@@ -131,6 +93,7 @@ interface KanbanCardProps {
 
 function KanbanCard({ task, onOpen, onDragStart }: KanbanCardProps) {
   const statusCfg = STATUS_CONFIG[task.status];
+  const { t } = useLanguage();
   return (
     <div
       draggable
@@ -161,7 +124,7 @@ function KanbanCard({ task, onOpen, onDragStart }: KanbanCardProps) {
       {task.status === "BLOCKED" && (
         <div className="mt-2 flex items-center gap-1">
           <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusCfg.color}`} />
-          <span className="text-[11px] text-red-600 font-medium">Blocked</span>
+          <span className="text-[11px] text-red-600 font-medium">{t("Blocked")}</span>
         </div>
       )}
     </div>
@@ -184,6 +147,7 @@ interface KanbanColumnProps {
 
 function KanbanColumn({ status, label, color, bg, tasks, searchQuery, onOpenTask, onDragStart, onDrop }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const { t } = useLanguage();
 
   const filteredTasks = useMemo(() => {
     if (!searchQuery.trim()) return tasks;
@@ -212,7 +176,7 @@ function KanbanColumn({ status, label, color, bg, tasks, searchQuery, onOpenTask
           />
         ))}
         {filteredTasks.length === 0 && (
-          <div className="py-6 text-center text-xs text-neutral-300">No tasks</div>
+          <div className="py-6 text-center text-xs text-neutral-300">{t("No tasks")}</div>
         )}
       </div>
     </div>
@@ -230,26 +194,27 @@ interface MoveConfirmProps {
 
 function MoveConfirmModal({ task, targetStatus, onConfirm, onCancel }: MoveConfirmProps) {
   const cfg = STATUS_CONFIG[targetStatus];
+  const { t } = useLanguage();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
       <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm animate-slideUp">
-        <h3 className="text-base font-bold text-neutral-900 mb-2">Move Task</h3>
+        <h3 className="text-base font-bold text-neutral-900 mb-2">{t("Move Task")}</h3>
         <p className="text-sm text-neutral-600 mb-1">
-          Move <span className="font-medium text-neutral-900">"{task.title}"</span>
+          {t("Move")} <span className="font-medium text-neutral-900">"{task.title}"</span>
         </p>
         <p className="text-sm text-neutral-600 mb-4">
-          to <span className={`inline-flex items-center gap-1 font-semibold`}>
+          {t("to")} <span className={`inline-flex items-center gap-1 font-semibold`}>
             <span className={`w-2 h-2 rounded-full inline-block ${cfg.color}`} />
             {cfg.label}
           </span>?
         </p>
         <div className="flex items-center justify-end gap-2">
           <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors">
-            Cancel
+            {t("Cancel")}
           </button>
           <button type="button" onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors">
-            Confirm
+            {t("Confirm")}
           </button>
         </div>
       </div>
@@ -377,6 +342,46 @@ export default function MyTasksPage() {
   const { dbUser: currentUser } = useAuth();
   const { isManagerLike: isManager, isAuthLoading } = useRole();
   const { showToast } = useToast();
+  const { t } = useLanguage();
+  const TAB_CONFIG: Record<Tab, { label: string; emptyIcon: string; emptyMsg: string }> = {
+    assigned: {
+      label: t("Assigned to Me"),
+      emptyIcon: "task_alt",
+      emptyMsg: t("No tasks assigned to you right now."),
+    },
+    created: {
+      label: t("Created by Me"),
+      emptyIcon: "add_task",
+      emptyMsg: t("You haven't reported any tasks yet."),
+    },
+  };
+
+  const FILTER_CATEGORIES: FilterCategory[] = [
+    {
+      key: "status",
+      label: t("Status"),
+      type: "single",
+      options: [
+        { value: "TODO", label: t("To Do"), color: "bg-neutral-400" },
+        { value: "IN_PROGRESS", label: t("In Progress"), color: "bg-primary" },
+        { value: "BLOCKED", label: t("Blocked"), color: "bg-status-off_track" },
+        { value: "IN_REVIEW", label: t("In Review"), color: "bg-status-on_track" },
+        { value: "DONE", label: t("Done"), color: "bg-status-done" },
+      ],
+    },
+    {
+      key: "priority",
+      label: t("Priority"),
+      type: "single",
+      options: [
+        { value: "URGENT", label: t("Urgent"), color: "bg-[#E7000B]" },
+        { value: "HIGH", label: t("High"), color: "bg-[#FF6900]" },
+        { value: "MEDIUM", label: t("Medium"), color: "bg-[#FFD230]" },
+        { value: "LOW", label: t("Low"), color: "bg-neutral-400" },
+      ],
+    },
+  ];
+
   const [activeTab, setActiveTab] = useState<Tab>("assigned");
   const [selectedTask, setSelectedTask] = useState<TaskDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -503,9 +508,9 @@ export default function MyTasksPage() {
           }
         }
         await loadTasks();
-        showToast("Task updated", "success");
+        showToast(t("Task updated"), "success");
       } catch {
-        showToast("Unable to update task", "error");
+        showToast(t("Unable to update task"), "error");
       }
     };
     void run();
@@ -529,9 +534,9 @@ export default function MyTasksPage() {
         });
         // Optimistic update
         setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
-        showToast("Task status updated", "success");
+        showToast(t("Task status updated"), "success");
       } catch {
-        showToast("Unable to update task status", "error");
+        showToast(t("Unable to update task status"), "error");
         await loadTasks();
       }
     };
@@ -547,8 +552,8 @@ export default function MyTasksPage() {
     <div className="onfis-section" ref={topRef}>
       <div className="navbar-style">
         <div>
-          <h1 className="text-xl font-bold text-neutral-900">My Tasks</h1>
-          <p className="text-sm text-neutral-400 mt-0.5">All your tasks across every project</p>
+          <h1 className="text-xl font-bold text-neutral-900">{t("My Tasks")}</h1>
+          <p className="text-sm text-neutral-400 mt-0.5">{t("All your tasks across every project")}</p>
         </div>
       </div>
 
@@ -582,7 +587,7 @@ export default function MyTasksPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(event) => { setSearchQuery(event.target.value); setPage(0); }}
-                placeholder="Search by title, key, project"
+                placeholder={t("Search by title, key, project")}
                 className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
               {!isKanbanView && (
@@ -601,21 +606,21 @@ export default function MyTasksPage() {
                   onChange={(event) => { setSortBy(event.target.value as SortBy); setPage(0); }}
                   className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  <option value="updatedAt">Sort: Updated</option>
-                  <option value="createdAt">Sort: Created</option>
-                  <option value="dueDate">Sort: Due Date</option>
-                  <option value="startDate">Sort: Start Date</option>
-                  <option value="priority">Sort: Priority</option>
-                  <option value="status">Sort: Status</option>
-                  <option value="title">Sort: Title</option>
+                  <option value="updatedAt">{t("Sort: Updated")}</option>
+                  <option value="createdAt">{t("Sort: Created")}</option>
+                  <option value="dueDate">{t("Sort: Due Date")}</option>
+                  <option value="startDate">{t("Sort: Start Date")}</option>
+                  <option value="priority">{t("Sort: Priority")}</option>
+                  <option value="status">{t("Sort: Status")}</option>
+                  <option value="title">{t("Sort: Title")}</option>
                 </select>
                 <select
                   value={sortDir}
                   onChange={(event) => { setSortDir(event.target.value as SortDir); setPage(0); }}
                   className="rounded-lg border border-neutral-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 >
-                  <option value="desc">Newest First</option>
-                  <option value="asc">Oldest First</option>
+                  <option value="desc">{t("Newest First")}</option>
+                  <option value="asc">{t("Oldest First")}</option>
                 </select>
               </div>
             )}
@@ -650,11 +655,11 @@ export default function MyTasksPage() {
 
             {!loading && !error && tasks.length > 0 && (
               <div className="grid grid-cols-[2fr_0.9fr_1fr_1fr_1fr] gap-3 px-4 py-2 bg-neutral-50 border-b border-neutral-100">
-                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Task</span>
-                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Priority</span>
-                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Status</span>
-                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Due</span>
-                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Progress</span>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t("Task")}</span>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t("Priority")}</span>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t("Status")}</span>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t("Due")}</span>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t("Progress")}</span>
               </div>
             )}
 
@@ -678,10 +683,10 @@ export default function MyTasksPage() {
                     disabled={page === 0}
                     className="px-3 py-1.5 text-xs font-medium rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Previous
+                  {t("Previous")}
                   </button>
                   <span className="text-xs text-neutral-500">
-                    Page {page + 1} / {Math.max(pageMeta.totalPages, 1)}
+                    {t("Page")} {page + 1} / {Math.max(pageMeta.totalPages, 1)}
                   </span>
                   <button
                     type="button"
@@ -689,7 +694,7 @@ export default function MyTasksPage() {
                     disabled={!pageMeta.hasNext}
                     className="px-3 py-1.5 text-xs font-medium rounded-md border border-neutral-200 text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {t("Next")}
                   </button>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Modal from "../../../components/common/Modal";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import DateRangePicker from "../../../components/common/DateRangePicker";
 import RichTextEditor from "../../../components/common/RichTextEditor";
 import { ErrorIcon, ExpandMoreIcon, InfoIcon, FlagOutlineIcon as FlagIcon, DeleteIcon, AddCircleIcon } from "../../../components/common/Icons";
@@ -81,6 +82,7 @@ export default function CreateProjectModal({
   availableTags = [],
   onSubmit,
 }: CreateProjectModalProps) {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState<ProjectFormData>({
     name: "",
     customer: "",
@@ -173,21 +175,21 @@ export default function CreateProjectModal({
     const nextErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
-      nextErrors.name = "Project name is required";
+      nextErrors.name = t("Project name is required");
     }
 
     const normalizedStart = formData.startDate ? toDateOnly(formData.startDate) : null;
     const normalizedEnd = formData.endDate ? toDateOnly(formData.endDate) : null;
 
     if (normalizedStart && normalizedEnd && normalizedEnd < normalizedStart) {
-      nextErrors.dateRange = "Project end date must be the same as or after start date.";
+      nextErrors.dateRange = t("Project end date must be the same as or after start date.");
     }
 
     const hasAnyMilestoneDate = formData.milestones.some(
       (milestone) => milestone.targetDate.trim() !== "",
     );
     if (hasAnyMilestoneDate && (!normalizedStart || !normalizedEnd)) {
-      nextErrors.milestone = "Please choose project start and end dates before assigning milestone dates.";
+      nextErrors.milestone = t("Please choose project start and end dates before assigning milestone dates.");
     }
 
     const milestoneById: Record<string, string> = {};
@@ -201,28 +203,28 @@ export default function CreateProjectModal({
       }
 
       if (!milestone.targetDate.trim()) {
-        milestoneById[milestone.id] = "Please choose a target date for this milestone.";
+        milestoneById[milestone.id] = t("Please choose a target date for this milestone.");
         continue;
       }
 
       const parsedTargetDate = parseIsoDate(milestone.targetDate);
       if (!parsedTargetDate) {
-        milestoneById[milestone.id] = "Invalid milestone date.";
+        milestoneById[milestone.id] = t("Invalid milestone date.");
         continue;
       }
 
       if (normalizedStart && parsedTargetDate < normalizedStart) {
-        milestoneById[milestone.id] = "Milestone date must be on or after project start date.";
+        milestoneById[milestone.id] = t("Milestone date must be on or after project start date.");
         continue;
       }
 
       if (normalizedEnd && parsedTargetDate > normalizedEnd) {
-        milestoneById[milestone.id] = "Milestone date must be on or before project end date.";
+        milestoneById[milestone.id] = t("Milestone date must be on or before project end date.");
         continue;
       }
 
       if (previousMilestoneDate && parsedTargetDate < previousMilestoneDate) {
-        milestoneById[milestone.id] = "Milestone date cannot be earlier than the previous milestone.";
+        milestoneById[milestone.id] = t("Milestone date cannot be earlier than the previous milestone.");
         continue;
       }
 
@@ -232,7 +234,7 @@ export default function CreateProjectModal({
     if (Object.keys(milestoneById).length > 0) {
       nextErrors.milestoneById = milestoneById;
       if (!nextErrors.milestone) {
-        nextErrors.milestone = "Please fix milestone date errors.";
+        nextErrors.milestone = t("Please fix milestone date errors.");
       }
     }
 
@@ -293,18 +295,18 @@ export default function CreateProjectModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Create New Project"
+      title={t("Create New Project")}
       maxWidth="xl"
       footer={
         <>
           <Button
-            title="Cancel"
+            title={t("Cancel")}
             onClick={handleCancel}
             style="sub"
             textStyle='body-3-medium'
           />
           <Button
-            title="Create Project"
+            title={t("Create Project")}
             onClick={handleSubmit}
             style="primary"
             textStyle='body-3-medium'
@@ -316,14 +318,14 @@ export default function CreateProjectModal({
         {/* Project Name */}
         <div className="relative group">
           <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
-            Project Name <span className="text-red-500">*</span>
+            {t("Project Name")} <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
               type="text"
               value={formData.name}
               onChange={handleNameChange}
-              placeholder="Enter project name"
+              placeholder={t("Enter project name")}
               className={`
                 w-full px-3 py-2 rounded-lg border focus:outline-none
                 ${errors.name
@@ -350,13 +352,13 @@ export default function CreateProjectModal({
         {/* Customer */}
         <div>
           <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
-            Customer / Client
+            {t("Customer / Client")}
           </label>
           <input
             type="text"
             value={formData.customer}
             onChange={(e) => setFormData((prev) => ({ ...prev, customer: e.target.value }))}
-            placeholder="Enter customer or client name (optional)"
+            placeholder={t("Enter customer or client name (optional)")} 
             className="w-full px-3 py-2 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 placeholder:text-neutral-400 text-sm transition-colors outline-none"
           />
         </div>
@@ -383,7 +385,7 @@ export default function CreateProjectModal({
               milestoneById: undefined,
             }));
           }}
-          label="Select Project Duration"
+          label={t("Select Project Duration")}
           disablePast
           allowClear
           showLunarDay
@@ -395,7 +397,7 @@ export default function CreateProjectModal({
         {/* Project Manager */}
         <div>
           <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
-            Project Manager / Lead
+            {t("Project Manager / Lead")}
           </label>
           
           <div className="relative">
@@ -406,7 +408,7 @@ export default function CreateProjectModal({
               className="w-full appearance-none pl-3 pr-10 py-2 rounded-lg border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-neutral-50 text-neutral-900 text-sm cursor-pointer"
             >
               <option disabled value="">
-                {managers.length === 0 ? "No users available" : "Select a manager..."}
+                {managers.length === 0 ? t("No users available") : t("Select a manager...")}
               </option>
               {managers.map((manager) => (
                 <option key={manager.id} value={manager.id}>
@@ -423,11 +425,11 @@ export default function CreateProjectModal({
         {/* Shared Tags */}
         <div>
           <label className="block text-xs font-semibold text-neutral-900 mb-1.5">
-            Tags (Shared In Settings)
+            {t("Tags (Shared In Settings)")}
           </label>
           {availableTags.length === 0 ? (
             <div className="px-3 py-2 text-xs text-neutral-500 bg-neutral-50 border border-dashed border-neutral-200 rounded-lg">
-              No shared tags found. Add tags in Settings first.
+              {t("No shared tags found. Add tags in Settings first.")}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -457,7 +459,7 @@ export default function CreateProjectModal({
           <nav aria-label="Tabs" className="flex gap-8">
             <button className="border-b-2 border-primary py-2 px-1 text-xs font-bold text-primary flex items-center gap-2">
               <InfoIcon />
-              Overview
+              {t("Overview")}
             </button>
           </nav>
         </div>
@@ -476,21 +478,20 @@ export default function CreateProjectModal({
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
               <span className="text-primary"><FlagIcon /></span>
-              Key Milestones
+              {t("Key Milestones")}
             </h3>
             <span className="text-xs text-neutral-500">
-              {activeMilestones.length} milestone
-              {activeMilestones.length !== 1 ? "s" : ""} added
+              {activeMilestones.length} {activeMilestones.length !== 1 ? t("milestones") : t("milestone")}{t(" added")}
             </span>
           </div>
 
           {/* Header */}
           <div className="grid grid-cols-12 gap-3 mb-2 px-2">
             <div className="col-span-7 text-xs font-semibold text-neutral-500 uppercase">
-              Milestone Name
+              {t("Milestone Name")}
             </div>
             <div className="col-span-4 text-xs font-semibold text-neutral-500 uppercase">
-              Target Date
+              {t("Target Date")}
             </div>
             <div className="col-span-1" />
           </div>
@@ -513,7 +514,7 @@ export default function CreateProjectModal({
                     onChange={(e) =>
                       handleMilestoneChange(milestone.id, "name", e.target.value)
                     }
-                    placeholder="e.g. Design Approval"
+                    placeholder={t("e.g. Design Approval")}
                     className="w-full px-2 py-1.5 rounded-md border border-neutral-200 focus:border-primary focus:ring-1 focus:ring-primary bg-white text-neutral-900 text-sm focus:outline-none"
                   />
                 </div>
@@ -547,7 +548,7 @@ export default function CreateProjectModal({
                     type="button"
                     onClick={() => removeMilestone(milestone.id)}
                     className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete Milestone"
+                    title={t("Delete Milestone")}
                   >
                     <DeleteIcon />
                   </button>
@@ -563,13 +564,13 @@ export default function CreateProjectModal({
             className="mt-3 flex items-center gap-2 text-primary font-bold text-xs hover:bg-blue-50 px-2 py-1.5 rounded-lg transition-colors w-max"
           >
             <AddCircleIcon />
-            Add Milestone
+            {t("Add Milestone")}
           </button>
         </div>
 
         {/* Attachments */}
         <FileAttachmentSection
-          title="Project Files"
+          title={t("Project Files")}
           attachments={pendingAttachments}
           onUpload={handleAddPendingFiles}
           onDelete={handleRemovePendingFile}

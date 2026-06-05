@@ -1,4 +1,4 @@
-import { Hash, Lock, Search, X, User } from 'lucide-react'; 
+import { Hash, Lock, Search, X, User, Bot } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "../../../../components/common/Buttons/Button";
 import type { ActionModalState, ChatChannel } from "../../types/chatTypes";
@@ -6,6 +6,7 @@ import { ChatGroup } from "./ChatGroup";
 import { ChatItem } from "./ChatItem";
 import { CurrentUserFooter } from "./CurrentUserFooter";
 import { useDebounce } from '../../hooks/useDebounce';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 // Import API client của bạn
 import { userApi } from '../../services/userApi';
@@ -53,8 +54,10 @@ export function ChatSidebar({
   channels, activeChannelId, onChannelSelect, icons, onCreateGroupClick, isLoading, onRefreshChannels 
 }: ChatSidebarProps) {
 
-  const pinnedChannels = channels.filter(c => c.isPinned);
-  const unpinned = channels.filter(c => !c.isPinned);
+  const { t } = useLanguage();
+  const assistantChannels = channels.filter(c => c.type === 'assistant');
+  const pinnedChannels = channels.filter(c => c.isPinned && c.type !== 'assistant');
+  const unpinned = channels.filter(c => !c.isPinned && c.type !== 'assistant');
   const projectGroups = unpinned.filter(c => c.type === 'public_group' || c.type === 'private_group');
   const directMessages = unpinned.filter(c => c.type === 'direct').slice(0, 10);
   const selfChats = unpinned.filter(channel => channel.type === 'self');
@@ -188,7 +191,7 @@ export function ChatSidebar({
         
         {/* Header Messages */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200">
-          <p className="header-h6 leading-none text-neutral-900">Messages</p>
+          <p className="header-h6 leading-none text-neutral-900">{t("Messages")}</p>
           <Button
             id="edit-chat"
             iconLeft={icons?.['edit']}
@@ -206,7 +209,7 @@ export function ChatSidebar({
             <Search size={16} className="absolute left-3 text-neutral-400" />
             <input 
               type="text" 
-              placeholder="Search people, groups..."
+              placeholder={t("Search people, groups...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => { if (searchTerm.trim().length > 0) setIsDropdownOpen(true); }}
@@ -226,13 +229,13 @@ export function ChatSidebar({
           {isDropdownOpen && (
             <div className="absolute top-full left-4 right-4 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg overflow-hidden max-h-[350px] overflow-y-auto z-50 flex flex-col custom-scrollbar">
               {isSearching ? (
-                <div className="p-4 text-center text-sm text-neutral-500 animate-pulse">Searching...</div>
+                <div className="p-4 text-center text-sm text-neutral-500 animate-pulse">{t("Searching...")}</div>
               ) : searchResults ? (
                 <>
                   {/* Danh sách Nhân viên (Users) */}
                   {searchResults.users.length > 0 && (
                     <div className="flex flex-col">
-                      <span className="px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider bg-neutral-50 sticky top-0 z-10">People</span>
+                      <span className="px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider bg-neutral-50 sticky top-0 z-10">{t("People")}</span>
                       {searchResults.users.map(u => (
                         <div 
                           key={u.id} 
@@ -258,7 +261,7 @@ export function ChatSidebar({
                   {/* Danh sách Nhóm (Groups) */}
                   {searchResults.groups.length > 0 && (
                     <div className="flex flex-col">
-                      <span className="px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider bg-neutral-50 sticky top-0 z-10">Groups</span>
+                      <span className="px-3 py-2 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider bg-neutral-50 sticky top-0 z-10">{t("Groups")}</span>
                       {searchResults.groups.map(g => (
                         <div 
                           key={g.id} 
@@ -278,7 +281,7 @@ export function ChatSidebar({
                   {searchResults.users.length === 0 && searchResults.groups.length === 0 && (
                     <div className="p-6 flex flex-col items-center justify-center text-center gap-2">
                       <Search size={24} className="text-neutral-300" />
-                      <span className="text-sm text-neutral-500">No results found for "{searchTerm}"</span>
+                      <span className="text-sm text-neutral-500">{t('No results found for')} "{searchTerm}"</span>
                     </div>
                   )}
                 </>
@@ -293,6 +296,21 @@ export function ChatSidebar({
             <SidebarSkeleton />
           ) : (
             <>
+              {/* AI Assistant section — always at the top */}
+              {assistantChannels.length > 0 && (
+                <ChatGroup title="AI Assistant">
+                  {assistantChannels.map((channel) => (
+                    <ChatItem
+                      key={channel.id}
+                      name={channel.name}
+                      isActive={activeChannelId === channel.id}
+                      onClick={() => onChannelSelect(channel.id)}
+                      icon={<Bot size={16} />}
+                    />
+                  ))}
+                </ChatGroup>
+              )}
+
               {pinnedChannels.length > 0 && (
                 <ChatGroup title="Pinned">
                   {pinnedChannels.map((channel) => {

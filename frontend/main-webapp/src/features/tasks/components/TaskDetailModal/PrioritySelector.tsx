@@ -1,4 +1,5 @@
 import type { TaskPriority } from "../../types";
+import { useLanguage } from "../../../../contexts/LanguageContext";
 
 interface PrioritySelectorProps {
   value: TaskPriority;
@@ -32,9 +33,10 @@ const priorityStyles: Record<TaskPriority, { active: string; inactive: string }>
 };
 
 export default function PrioritySelector({ value, onChange }: PrioritySelectorProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-neutral-500">Priority</label>
+      <label className="text-sm font-medium text-neutral-500">{t("Priority")}</label>
       <div className="flex items-center gap-2">
         {priorities.map((priority) => {
           const isActive = value === priority.value;
@@ -48,7 +50,7 @@ export default function PrioritySelector({ value, onChange }: PrioritySelectorPr
                 isActive ? styles.active : styles.inactive
               }`}
             >
-              {priority.label}
+              {t(priority.label)}
             </button>
           );
         })}

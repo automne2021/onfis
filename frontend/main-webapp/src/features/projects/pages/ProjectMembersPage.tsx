@@ -17,6 +17,7 @@ import {
   updateProjectCustomRole,
 } from "../../../services/projectService";
 import { useToast } from "../../../contexts/useToast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 // ── Avatar util ────────────────────────────────────────────────────────────────
 function Avatar({ name, avatar, size = 48 }: { name: string; avatar?: string; size?: number }) {
@@ -51,6 +52,7 @@ interface ProjectRolesManagerProps {
 
 function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted }: ProjectRolesManagerProps) {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
@@ -68,9 +70,9 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
       onCreated(role);
       setNewName("");
       setNewColor(PRESET_COLORS[0]);
-      showToast("Custom role created", "success");
+      showToast(t("Custom role created"), "success");
     } catch {
-      showToast("Failed to create role", "error");
+      showToast(t("Failed to create role"), "error");
     } finally {
       setSaving(false);
     }
@@ -89,9 +91,9 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
       const updated = await updateProjectCustomRole(projectId, roleId, { name, color: editColor });
       onUpdated(updated);
       setEditingId(null);
-      showToast("Role updated", "success");
+      showToast(t("Role updated"), "success");
     } catch {
-      showToast("Failed to update role", "error");
+      showToast(t("Failed to update role"), "error");
     }
   };
 
@@ -100,9 +102,9 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
       await deleteProjectCustomRole(projectId, roleId);
       onDeleted(roleId);
       setDeletingId(null);
-      showToast("Role deleted", "success");
+      showToast(t("Role deleted"), "success");
     } catch {
-      showToast("Failed to delete role", "error");
+      showToast(t("Failed to delete role"), "error");
     }
   };
 
@@ -110,7 +112,7 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
     <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-5 flex flex-col gap-4">
       <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
         <span className="material-symbols-rounded text-primary" style={{ fontSize: 18 }}>label</span>
-        Project Roles
+        {t("Project Roles")}
       </h3>
 
       {/* Existing roles */}
@@ -180,7 +182,7 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
 
       {/* Create new role */}
       <div className="flex flex-col gap-2 pt-2 border-t border-neutral-100">
-        <p className="text-xs font-medium text-neutral-500">New role</p>
+        <p className="text-xs font-medium text-neutral-500">{t("New role")}</p>
         <div className="flex gap-1 flex-wrap">
           {PRESET_COLORS.map((c) => (
             <button
@@ -195,7 +197,7 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Role name…"
+            placeholder={t("Role name…")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); }}
@@ -208,7 +210,7 @@ function ProjectRolesManager({ projectId, roles, onCreated, onUpdated, onDeleted
             onClick={() => void handleCreate()}
             className="px-3 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Add
+            {t("Add")}
           </button>
         </div>
       </div>
@@ -226,6 +228,7 @@ interface AddMemberModalProps {
 
 function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberModalProps) {
   const [search, setSearch] = useState("");
+  const { t } = useLanguage();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; avatar?: string }[]>([]);
@@ -269,7 +272,7 @@ function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberM
       <div className="relative w-full max-w-[420px] bg-white rounded-xl shadow-xl overflow-hidden border border-neutral-200 z-10 animate-slideUp">
         {/* Header */}
         <div className="flex items-center justify-between px-5 h-[52px] border-b border-neutral-200">
-          <h2 className="text-base font-bold text-neutral-900">Add Member</h2>
+          <h2 className="text-base font-bold text-neutral-900">{t("Add Member")}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -285,7 +288,7 @@ function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberM
             <span className="material-symbols-rounded text-neutral-400" style={{ fontSize: 18 }}>search</span>
             <input
               type="text"
-              placeholder="Search by name..."
+              placeholder={t("Search by name...")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 text-sm outline-none bg-transparent text-neutral-900 placeholder:text-neutral-400"
@@ -295,9 +298,9 @@ function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberM
 
           {/* User list */}
           <div className="flex flex-col gap-0.5 max-h-44 overflow-y-auto custom-scrollbar">
-            {searching && <p className="text-sm text-neutral-400 text-center py-4">Searching...</p>}
+            {searching && <p className="text-sm text-neutral-400 text-center py-4">{t("Searching...")}</p>}
             {!searching && availableUsers.length === 0 && (
-              <p className="text-sm text-neutral-400 text-center py-4">No users found</p>
+              <p className="text-sm text-neutral-400 text-center py-4">{t("No users found")}</p>
             )}
             {availableUsers.map((user) => (
               <button
@@ -320,7 +323,7 @@ function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberM
           {/* Custom role chips */}
           {customRoles.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium text-neutral-700">Assign roles <span className="text-neutral-400 font-normal">(optional)</span></p>
+              <p className="text-sm font-medium text-neutral-700">{t("Assign roles")} <span className="text-neutral-400 font-normal">{t("(optional)")}</span></p>
               <div className="flex flex-wrap gap-1.5">
                 {customRoles.map((r) => {
                   const selected = selectedRoleIds.includes(r.id);
@@ -355,7 +358,7 @@ function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberM
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             type="button"
@@ -363,7 +366,7 @@ function AddMemberModal({ existingIds, customRoles, onAdd, onClose }: AddMemberM
             onClick={() => selectedUserId && onAdd(selectedUserId, selectedRoleIds)}
             className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Add Member
+            {t("Add Member")}
           </button>
         </div>
       </div>
@@ -384,6 +387,7 @@ interface MemberCardProps {
 
 function MemberCard({ member, isManager, availableCustomRoles, onRemove, onAssignCustomRole, onRemoveCustomRole }: MemberCardProps) {
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const { t } = useLanguage();
   const [showCustomRoleMenu, setShowCustomRoleMenu] = useState(false);
   const customRoleMenuRef = useRef<HTMLDivElement>(null);
 
@@ -408,7 +412,7 @@ function MemberCard({ member, isManager, availableCustomRoles, onRemove, onAssig
         <Avatar name={member.name} avatar={member.avatar} size={56} />
         <div>
           <p className="font-semibold text-sm text-neutral-900 leading-tight">{member.name}</p>
-          <p className="text-xs text-neutral-400 mt-0.5">Joined {member.joinedAt}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">{t("Joined")} {member.joinedAt}</p>
         </div>
       </div>
 
@@ -470,7 +474,7 @@ function MemberCard({ member, isManager, availableCustomRoles, onRemove, onAssig
       {/* Task count */}
       <div className="flex items-center justify-center gap-1.5 text-sm text-neutral-500">
         <span className="material-symbols-rounded" style={{ fontSize: 16 }}>task_alt</span>
-        <span>{member.taskCount} task{member.taskCount !== 1 ? "s" : ""} assigned</span>
+        <span>{member.taskCount} {member.taskCount !== 1 ? t("tasks") : t("task")} {t("assigned")}</span>
       </div>
 
       {/* Manager-only: remove button */}
@@ -483,7 +487,7 @@ function MemberCard({ member, isManager, availableCustomRoles, onRemove, onAssig
               className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
             >
               <span className="material-symbols-rounded" style={{ fontSize: 14 }}>delete</span>
-              Remove
+              {t("Remove")}
             </button>
           ) : (
             <div className="flex gap-2">
@@ -492,14 +496,14 @@ function MemberCard({ member, isManager, availableCustomRoles, onRemove, onAssig
                 onClick={() => setConfirmRemove(false)}
                 className="flex-1 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors"
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => onRemove(member.id)}
                 className="flex-1 py-1.5 text-xs text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors font-medium"
               >
-                Confirm
+                {t("Confirm")}
               </button>
             </div>
           )}
@@ -514,6 +518,7 @@ export default function ProjectMembersPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { withTenant } = useTenantPath();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const [isManager, setIsManager] = useState(false);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [customRoles, setCustomRoles] = useState<ProjectCustomRole[]>([]);
@@ -538,7 +543,7 @@ export default function ProjectMembersPage() {
           customRoles: m.customRoles ?? [],
         })));
       } catch {
-        showToast("Failed to load project members", "error");
+        showToast(t("Failed to load project members"), "error");
         setMembers([]);
       } finally {
         setLoading(false);
@@ -553,10 +558,10 @@ export default function ProjectMembersPage() {
     setMembers((prev) => prev.filter((m) => m.id !== id));
     try {
       await removeProjectMember(projectId, id);
-      showToast("Member removed", "success");
+      showToast(t("Member removed"), "success");
     } catch {
       setMembers(previous);
-      showToast("Unable to remove member", "error");
+      showToast(t("Unable to remove member"), "error");
     }
   };
 
@@ -580,9 +585,9 @@ export default function ProjectMembersPage() {
         },
       ]);
       setIsAddModalOpen(false);
-      showToast("Member added", "success");
+      showToast(t("Member added"), "success");
     } catch {
-      showToast("Unable to add member", "error");
+      showToast(t("Unable to add member"), "error");
     }
   };
 
@@ -605,7 +610,7 @@ export default function ProjectMembersPage() {
           m.id === memberId ? { ...m, customRoles: m.customRoles.filter((cr) => cr.id !== roleId) } : m
         )
       );
-      showToast("Failed to assign role", "error");
+      showToast(t("Failed to assign role"), "error");
     }
   };
 
@@ -627,7 +632,7 @@ export default function ProjectMembersPage() {
           )
         );
       }
-      showToast("Failed to remove role", "error");
+      showToast(t("Failed to remove role"), "error");
     }
   };
 
@@ -636,11 +641,11 @@ export default function ProjectMembersPage() {
       {/* Breadcrumb */}
       <nav className="navbar-style">
         <div className="flex items-center gap-1 text-sm text-neutral-500">
-          <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">Projects</Link>
+          <Link to={withTenant("/projects")} className="hover:text-primary transition-colors">{t("Projects")}</Link>
           <span>/</span>
-          <Link to={withTenant(`/projects/${projectId ?? ""}`)} className="hover:text-primary transition-colors">Overview</Link>
+          <Link to={withTenant(`/projects/${projectId ?? ""}`)} className="hover:text-primary transition-colors">{t("Overview")}</Link>
           <span>/</span>
-          <span className="text-primary font-medium">Team</span>
+          <span className="text-primary font-medium">{t("Team")}</span>
         </div>
         {isManager && (
           <button
@@ -649,11 +654,10 @@ export default function ProjectMembersPage() {
             className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
           >
             <span className="material-symbols-rounded" style={{ fontSize: 16 }}>person_add</span>
-            Add Member
+            {t("Add Member")}
           </button>
         )}
       </nav>
-
       {/* Header */}
       <div className="mt-3 mb-4 flex items-center gap-3">
         <h1 className="text-2xl font-bold text-neutral-900">Team</h1>
@@ -662,7 +666,7 @@ export default function ProjectMembersPage() {
         </span>
       </div>
 
-      {loading && <div className="text-sm text-neutral-500 mb-3">Loading members...</div>}
+      {loading && <div className="text-sm text-neutral-500 mb-3">{t("Loading members...")}</div>}
 
       {/* Manager: project roles manager panel */}
       {isManager && projectId && (
@@ -704,7 +708,7 @@ export default function ProjectMembersPage() {
             className="bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-xl p-5 flex flex-col items-center justify-center gap-2 text-neutral-400 hover:border-primary hover:text-primary hover:bg-primary/3 transition-colors min-h-[180px] cursor-pointer"
           >
             <span className="material-symbols-rounded" style={{ fontSize: 28 }}>person_add</span>
-            <span className="text-xs font-medium">Add Member</span>
+            <span className="text-xs font-medium">{t("Add Member")}</span>
           </button>
         )}
       </div>
